@@ -23,6 +23,51 @@ import { BUILD_DIR, ROOT } from './paths.ts';
 import type { Observation, Status } from './types.ts';
 
 /**
+ * Why the server did not report back, read out of the log rather than assumed.
+ *
+ * This message used to be a single hypothesis stated with confidence: "the likeliest cause is
+ * the whole behavior pack being rejected over a script module pin". Which is a good guess, and
+ * it is what happens most of the time — but the first time it was wrong, the log said
+ * `Port [19132] may be in use` two lines above and the tool blamed the manifest anyway. Half an
+ * hour went into a pin that was fine.
+ *
+ * That is precisely the failure this whole project is about, arriving through the error handler:
+ * a confident answer to a question nobody measured. So the guess is now the LAST branch, and it
+ * is labelled as a guess.
+ */
+const CAUSES: [RegExp, string][] = [
+  [
+    /Port \[(\d+)\] may be in use/,
+    'the server could not bind its port — something else is already on it. Nothing here says ' +
+      'anything about Bedrock or about the pack; free the port and run again.',
+  ],
+  [
+    /Failed to (?:load|register) script|script module .* not found|Unknown module|no version of module/i,
+    'the script module pin was rejected. The behavior pack loads and then does nothing, which ' +
+      'looks identical to a pack with no findings. Check `script.modules` in content/pack.yaml ' +
+      'against what this server build actually offers.',
+  ],
+  [
+    /Pack Stack - \[\d+\](?!.*bedshock)[\s\S]*?Server started/i,
+    'the server started without the bedshock behavior pack in its pack stack, so the battery was ' +
+      'never loaded at all.',
+  ],
+  [/No such file or directory|Permission denied/, 'the server binary could not be run — see the log for which file.'],
+];
+
+export function diagnose(log: string): string {
+  const preamble = 'A battery that did not report back measured nothing.';
+  for (const [pattern, why] of CAUSES) {
+    if (pattern.test(log)) return `${preamble} From the log: ${why}`;
+  }
+  return (
+    `${preamble} Nothing in the log names a cause this tool recognises, so read it rather than ` +
+    `trusting a guess. The usual culprit is the whole behavior pack being rejected over a script ` +
+    `module pin, which says everything about the manifest and nothing about the game.`
+  );
+}
+
+/**
  * Which probes are worth a boot on a given version, and why.
  *
  * `open`      no usable answer here. Never measured, or the apparatus failed, or two runs
@@ -190,9 +235,8 @@ export async function run(opts: RunOptions = {}): Promise<RunResult> {
     if (result.status !== 0) {
       throw new Error(
         `the server run failed (exit ${result.status}). Nothing has been recorded.\n` +
-          `A battery that did not report back measured nothing — the likeliest cause is the whole ` +
-          `behavior pack being rejected over a script module pin, which says everything about the ` +
-          `manifest and nothing about the game. The log is at ${logPath}`,
+          `${diagnose(existsSync(logPath) ? readFileSync(logPath, 'utf8') : '')}\n` +
+          `The log is at ${logPath}`,
       );
     }
   }

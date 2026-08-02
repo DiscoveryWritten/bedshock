@@ -44,10 +44,33 @@ function reportedCapabilities(bundle: string): Set<string> {
   return ids;
 }
 
-function crossCheck(bundle: string): string[] {
+/**
+ * The embedded catalog put every id in the bundle, and quietly switched this check off.
+ *
+ * The session carries its questions as data because a client cannot fetch them. That data is a
+ * JSON literal full of capability ids, so from the day it was added the scan above matched every
+ * row in the catalog and the "no runtime for this" warning stopped ever firing — with no error,
+ * no failing test, and a build that looked exactly as clean as it had the day before. A check
+ * that cannot fail is worse than no check, because people believe it.
+ *
+ * The two are told apart by SHAPE rather than by id, because a solved row legitimately appears in
+ * both: `"id": "x"` is a row of embedded data, and a bare `"x"` is code naming the capability it
+ * reports. Subtracting by id would have marked every solved probe unimplemented the moment its
+ * question was embedded.
+ *
+ * What being embedded DOES buy is the guided session: an `observed` row in `QUESTIONS` is one a
+ * person can genuinely be asked, and that is its runtime. So those are credited back.
+ */
+const DATA_ID = /(["']?id["']?\s*:\s*)(["'])[^"']+\2/g;
+
+export function crossCheck(bundle: string, embedded: string): string[] {
   const catalog = loadCatalog();
   const warnings: string[] = [];
-  const reported = reportedCapabilities(bundle);
+  const carried = reportedCapabilities(embedded);
+  const reported = reportedCapabilities(bundle.replace(DATA_ID, '$1$2$2'));
+  for (const cap of catalog.capabilities) {
+    if (cap.method === 'observed' && carried.has(cap.id)) reported.add(cap.id);
+  }
 
   const measurable = catalog.capabilities.filter((c) => c.method !== 'derived');
   const unimplemented = measurable.filter((c) => !reported.has(c.id));
@@ -85,10 +108,8 @@ export async function build(config: PackConfig = loadPackConfig()): Promise<Buil
   // version" means in practice: this pack and the manifest beside it are one artifact.
   const observations = readLedger();
   const snapshotVersion = latestVersion(observations) ?? config.min_engine_version.join('.');
-  writeFileSync(
-    join(PACK_DIR, 'scripts', 'catalog.generated.ts'),
-    sessionModule(loadCatalog(), observations, snapshotVersion),
-  );
+  const embedded = sessionModule(loadCatalog(), observations, snapshotVersion);
+  writeFileSync(join(PACK_DIR, 'scripts', 'catalog.generated.ts'), embedded);
 
   const files: OutFile[] = packFiles(config);
 
@@ -109,7 +130,7 @@ export async function build(config: PackConfig = loadPackConfig()): Promise<Buil
   });
 
   const bundle = readFileSync(bundleOut, 'utf8');
-  const warnings = crossCheck(bundle);
+  const warnings = crossCheck(bundle, embedded);
 
   for (const file of files) {
     const path = join(BUILD_DIR, file.path);

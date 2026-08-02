@@ -13,7 +13,17 @@ export interface SessionQuestion {
   outcomes: SessionOutcome[];
 }
 
-export const CATALOG_REVISION = "r5befa0be";
+export interface SolveSpec {
+  id: string;
+  probe: string;
+  unit: string;
+  direction: 'minimum' | 'maximum';
+  from: number;
+  to: number;
+  tolerance: number;
+}
+
+export const CATALOG_REVISION = "rf1fd17a4";
 export const SNAPSHOT_VERSION = "1.21.120";
 export const QUESTIONS: SessionQuestion[] = [
   {
@@ -1097,5 +1107,43 @@ export const QUESTIONS: SessionQuestion[] = [
         "means": ""
       }
     ]
+  }
+];
+export const SOLVES: SolveSpec[] = [
+  {
+    "id": "physics.falling_block.gravity_curve",
+    "probe": "fallcurve",
+    "unit": "blocks_per_tick",
+    "direction": "maximum",
+    "from": -4,
+    "to": 0,
+    "tolerance": 0.01
+  },
+  {
+    "id": "physics.falling_block.min_clearance_under_a_falling_anvil",
+    "probe": "anvilgap",
+    "unit": "blocks",
+    "direction": "minimum",
+    "from": 0,
+    "to": 8,
+    "tolerance": 0.6
+  },
+  {
+    "id": "physics.knockback.blocks_per_unit",
+    "probe": "knockback",
+    "unit": "blocks_per_unit",
+    "direction": "maximum",
+    "from": 0,
+    "to": 20,
+    "tolerance": 0.1
+  },
+  {
+    "id": "physics.throw.item_travel_distance",
+    "probe": "throw",
+    "unit": "blocks",
+    "direction": "maximum",
+    "from": 0,
+    "to": 32,
+    "tolerance": 0.25
   }
 ];

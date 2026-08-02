@@ -10,6 +10,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { loadCatalog } from './catalog.ts';
+import { diagnose } from './run.ts';
 import { collect, versionFromLog } from './collect.ts';
 
 const catalog = loadCatalog();
@@ -113,4 +114,39 @@ test('a malformed payload still records the verdict', () => {
 test('the server version is read out of its own log', () => {
   assert.equal(versionFromLog('[2026-08-02 INFO] Version: 1.21.120.03'), '1.21.120.03');
   assert.equal(versionFromLog('nothing here'), undefined);
+});
+
+// ---------------------------------------------------------------------------
+// Diagnosing a run that never reported
+// ---------------------------------------------------------------------------
+
+/**
+ * The error handler is allowed to guess. It is not allowed to guess when the log already says.
+ *
+ * This message used to be one confident hypothesis — "the likeliest cause is the whole behavior
+ * pack being rejected over a script module pin" — printed whatever the log contained. The first
+ * time it was wrong the log read `Port [19132] may be in use` two lines above, and the blame
+ * landed on a manifest that was fine. A confident answer to a question nobody measured is the
+ * exact failure this project exists to prevent; it does not get an exemption for being in an
+ * error path.
+ */
+test('a run that failed for a reason the log states is not blamed on the module pin', () => {
+  const port = diagnose('[ERROR] Port [19132] may be in use by another process\n[ERROR] Exiting program\n');
+  assert.match(port, /could not bind its port/);
+  assert.ok(!/module pin/.test(port), 'the log named the cause and the tool guessed anyway');
+
+  const modules = diagnose('[ERROR] Failed to load script module @minecraft/server\n');
+  assert.match(modules, /script module pin was rejected/);
+});
+
+test('with nothing recognisable in the log, the guess is offered as a guess', () => {
+  const blind = diagnose('[INFO] Server started.\n');
+  assert.match(blind, /read it rather than trusting a guess/);
+  assert.match(blind, /usual culprit/);
+});
+
+test('every diagnosis says the run recorded nothing, because that is the part that matters', () => {
+  for (const log of ['Port [19132] may be in use', 'Failed to load script module', '', 'nothing familiar']) {
+    assert.match(diagnose(log), /measured nothing/);
+  }
 });

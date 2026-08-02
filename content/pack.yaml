@@ -183,3 +183,47 @@ probes:
     # How far above the sample point to spawn it, and how long to watch.
     drop_height: 12
     watch_ticks: 40
+
+  # --- anvil clearance ------------------------------------------------------
+  #
+  # THE OBSTRUCTION VACATES; IT DOES NOT APPEAR. That is the whole design of this apparatus and
+  # it took two wrong shapes to get to.
+  #
+  # The obvious build is to make a block appear beneath a falling anvil at a chosen clearance.
+  # It does not work, because the clearance you can ASK for is not the clearance you can HIT: the
+  # anvil only exists at tick-spaced positions, so below one tick of travel there is simply no
+  # moment at which it is 0.3 blocks above anything. Every trial below that resolution has to
+  # abort, including the tight bound -- and a search whose tight bound cannot be evaluated cannot
+  # be run at all.
+  #
+  # Removing a block that was already there inverts the failure into the correct answer. Ask for
+  # a clearance too small to hit, and the anvil lands on the obstruction before it is taken away:
+  # CAUGHT, which is exactly what a clearance that tight means. The search stays monotone, both
+  # bounds are reachable by construction, and the tick lattice becomes the resolution rather than
+  # an abort.
+  #
+  # It is also nearer the question. Something moves out from under a falling anvil; how late can
+  # it leave.
+  anvilgap:
+    block: 'minecraft:anvil'
+    # Not gravity-affected, or the obstruction would fall out of the way on its own and the
+    # probe would measure the wrong block leaving.
+    obstruction: 'minecraft:stone'
+    # Where the obstruction sits, above the sample point.
+    plane_height: 4
+    # How far above the obstruction's top face the anvil starts. The catalog's search range must
+    # extend PAST this, or the loose bound cannot hold by construction -- there is no clearance
+    # wider than the drop. `bedshock test` pins that.
+    drop_height: 6
+    # Long enough for the whole fall at Bedrock's leisurely gravity curve, which is far slower
+    # than intuition suggests: about 0.33 blocks/tick after ten ticks.
+    watch_ticks: 80
+    # How many times a clearance has to survive to count as surviving. Two, because the question
+    # is whether a pass-under works RELIABLY at that clearance and a single lucky tick alignment
+    # is not a design anyone can build on. Raising it costs run time linearly and buys confidence
+    # against tick phase, which is this apparatus's main source of jitter.
+    repeats: 2
+    # A ceiling, not a schedule. Reached only if trials keep disagreeing with themselves, which
+    # is itself the finding -- and it comes back INCONCLUSIVE rather than as a half-narrowed
+    # bracket dressed up as a number.
+    max_trials: 40

@@ -1218,11 +1218,11 @@ The measurable constants of Bedrock's own behaviour: how fast things fall, how f
 
 <sub>method: `solved` · surface: `engine` · probe: `anvilgap`</sub>
 
-*Solves for the minimum* in `blocks`, tolerating ±0.07 before a move counts as a finding, searching 0…4.
+*Solves for the minimum* in `blocks`, tolerating ±0.6 before a move counts as a finding, searching 0…8.
 
 **Never measured.** This row is a guess, however confident the prose around it sounds.
 
-> THE FAILURE MODE TO WATCH FOR is a solve that converges on its own search bound. A result sitting exactly at `from` or `to` usually means the trial never actually failed, or never actually passed -- so the probe reports INCONCLUSIVE at a bound rather than recording the bound as an answer. A number that is really the edge of the search is not a measurement of anything.
+> THE FAILURE MODE TO WATCH FOR is a solve that converges on its own search bound. A result sitting exactly at `from` or `to` usually means the trial never actually failed, or never actually passed -- so the probe reports INCONCLUSIVE at a bound rather than recording the bound as an answer. A number that is really the edge of the search is not a measurement of anything. WHAT THIS NUMBER IS PHYSICALLY. The obstruction is removed from under the anvil at the requested clearance, so the answer is how late something can leave before the anvil has already committed to landing on it. That is the same quantity a pass-under mechanic has to respect, and it is close kin to the tunnelling threshold: a fast enough mover crosses a whole block between two ticks and is never seen in it at all.
 
 ### `physics.throw.item_travel_distance`
 

@@ -16,6 +16,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { PNG } from 'pngjs';
 
+import { crossCheck } from './build.ts';
 import { loadCatalog } from './catalog.ts';
 import { loadPackConfig, validatePackConfig, type PackConfig } from './config.ts';
 import { minimumRowSeparation, RULER_ROWS, glyphPage, rulerSprite, flipbookStrip } from './gen/assets.ts';
@@ -261,15 +262,72 @@ test('the probes not yet ported are exactly the ones we know about', () => {
   const catalog = loadCatalog();
   const implemented = new Set([
     'durability', 'dynprops', 'container', 'offhand', 'menu', 'fallingblock',
-    'fallcurve', 'repair', 'ruler', 'glyphs', 'flipbook', 'formicon',
+    'fallcurve', 'anvilgap', 'repair', 'ruler', 'glyphs', 'flipbook', 'formicon',
   ]);
   const missing = [...new Set(
     catalog.capabilities.filter((c) => c.probe && !implemented.has(c.probe)).map((c) => c.probe!),
   )].sort();
-  // `anvilgap`, `knockback` and `throw` are newly-declared SOLVED questions whose search
-  // harness is not written yet. Listed rather than quietly omitted, because the build prints
-  // this same set on every run and a shrinking list is the only progress bar there is.
-  assert.deepEqual(missing, ['anvilgap', 'attachable', 'attachable_pose', 'knockback', 'stash', 'throw']);
+  // `knockback` and `throw` are declared SOLVED questions with no trial written yet. Both are
+  // now a trial away rather than a harness away — `solve.ts` is the reusable part and `anvilgap`
+  // is the worked example. Listed rather than quietly omitted, because the build prints this
+  // same set on every run and a shrinking list is the only progress bar there is.
+  assert.deepEqual(missing, ['attachable', 'attachable_pose', 'knockback', 'stash', 'throw']);
+});
+
+/**
+ * The check that stopped being able to fail.
+ *
+ * The build warns about capabilities with no runtime. Then the guided session's questions were
+ * embedded in the pack — a JSON literal full of capability ids — and every row in the catalog
+ * started matching the scan. The warning went quiet, no test failed, and the build looked
+ * exactly as clean as it had the day before. That is the worst shape a check can take: people
+ * believe it.
+ *
+ * So the check is now checked. Embedded data and reporting code are told apart by shape, and
+ * both directions are pinned here because neither is visible by reading a build log.
+ */
+test('a capability carried only as embedded data is not credited with a runtime', () => {
+  const catalog = loadCatalog();
+  const solved = catalog.capabilities.find((c) => c.method === 'solved')!;
+  const observed = catalog.capabilities.find((c) => c.method === 'observed')!;
+  // A bundle containing nothing but the embedded questions, exactly as `sessionModule` writes
+  // them. Every id in the catalog appears in it.
+  const embedded = catalog.capabilities.map((c) => `  { "id": ${JSON.stringify(c.id)}, "probe": "x" },`).join('\n');
+
+  const blind = crossCheck(embedded, embedded).join('\n');
+  assert.match(blind, /have no runtime in this pack/, 'the embedded catalog credited itself');
+  assert.ok(blind.includes(solved.id), 'a solved row with no probe code was reported as implemented');
+
+  // An `observed` row is different: being in the embedded questions IS its runtime, because the
+  // guided session is what asks it.
+  assert.ok(!blind.includes(observed.id), 'an eyes-only row the session can ask was called unimplemented');
+
+  // And code naming the capability still counts, even though the same id is in the data.
+  const withCode = crossCheck(`${embedded}\nvar CAPABILITY = ${JSON.stringify(solved.id)};`, embedded);
+  assert.ok(!withCode.join('\n').includes(solved.id), 'a probe that names its capability was not credited');
+});
+
+/**
+ * A solve's two halves have to agree, and nothing in either file can see the other.
+ *
+ * The catalog owns the RANGE (it is part of what is being asked); `content/pack.yaml` owns the
+ * DROP (it is the instrument). If the range does not reach past the drop, the loose bound is a
+ * clearance the anvil never has — so the bound check that exists to catch a broken apparatus
+ * becomes a coin flip on tick phase, and the search's first line of defence is gone with no
+ * error anywhere.
+ */
+test('the anvil search reaches past the drop, so its loose bound holds by construction', () => {
+  const cap = loadCatalog().byId.get('physics.falling_block.min_clearance_under_a_falling_anvil')!;
+  const search = cap.measures!.search!;
+  assert.equal(cap.measures!.direction, 'minimum');
+  assert.ok(
+    search.to > config.probes.anvilgap.drop_height,
+    `the search stops at ${search.to} but the anvil only falls ${config.probes.anvilgap.drop_height} ` +
+      `blocks, so no trial can ever ask for a clearance that wide`,
+  );
+  // And the tolerance has to stay above one tick of travel, or the bisection narrows past what
+  // tick-spaced positions can distinguish and reports DRIFT on phase forever.
+  assert.ok(cap.measures!.tolerance >= 0.3, 'the tolerance is finer than one tick of falling');
 });
 
 /**

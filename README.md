@@ -358,6 +358,30 @@ answers has a better proof than one citing ours, and the code that enforces the 
 append-only answers, an enumerated answer space, an absent run never recorded as a negative — is
 the part worth sharing. The questions in this repository are one instance of it.
 
+### Solving for your own numbers
+
+Vendoring gets you the apparatus, and the apparatus includes the search. `bedshock init` writes a
+catalog, a probe and an empty ledger that already validate:
+
+```
+bedshock init capabilities --domain portals --bedshock ../vendor/bedshock
+```
+
+The probe it writes imports from [`pack/scripts/harness.ts`](pack/scripts/harness.ts), which is
+the contract for somebody else's pack — `solve`, `bisect`, and the wire format. Write a trial,
+declare a range and a tolerance, and your numbers come out in the same shape ours do: same
+collector, same drift detection, same log-scale column, your own manifest with its own release
+tag.
+
+This matters because a capability battery has two halves and only one of them generalises. Nobody
+else can ask how much upward boost your horizontal portal needs to clear the floor on exit, or
+the speed above which something crossing your trigger volume is never seen inside it. Those are
+questions about your code — but they are the same *kind* of question, and a boundary that moves
+between Minecraft versions is worth knowing about whoever owns it.
+
+[`docs/SOLVING.md`](docs/SOLVING.md) is the walk through, including the three ways a search
+converges on a number that is not a measurement, and what this does about each.
+
 The server is a seam too: `server-url` takes any Bedrock Dedicated Server zip, and `log` skips
 the server entirely so a harness this action does not know how to start can feed a battery log in
 and get the same collection rules applied to it.
@@ -370,10 +394,12 @@ and get the same collection rules applied to it.
 | [`docs/versions/`](docs/versions/) | One report per Minecraft version. **Generated** |
 | [`docs/DESIGN.md`](docs/DESIGN.md) | Why it is shaped this way, and which failures each rule is for |
 | [`docs/PORTING.md`](docs/PORTING.md) | Moving a messy in-repo test battery onto this |
+| [`docs/SOLVING.md`](docs/SOLVING.md) | Measuring a number instead of a yes — and doing it with your own questions |
 | [`content/capabilities/`](content/capabilities/) | The questions |
 | [`content/pack.yaml`](content/pack.yaml) | The probe pack's identity and every apparatus parameter |
 | [`ledger/`](ledger/) | The answers |
 | [`pack/scripts/`](pack/scripts/) | The in-game runtime |
+| [`pack/scripts/harness.ts`](pack/scripts/harness.ts) | The entry point for somebody else's pack |
 | [`tools/`](tools/) | Everything else, and its tests |
 
 ## Commands
@@ -392,6 +418,7 @@ and get the same collection rules applied to it.
 | `bedshock export [--version v] [--out f]` | The machine-readable manifest |
 | `bedshock diff <a.json> <b.json>` | What moved between two manifests |
 | `bedshock status [prefix]` | What the ledger says right now |
+| `bedshock init [dir] [--domain d]` | A catalog, probe and ledger of your *own* questions |
 | `bedshock tidy` | Sort the ledger file. Never alters a line |
 
 ---

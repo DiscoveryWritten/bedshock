@@ -57,16 +57,32 @@ capabilities:
     measures:
       unit: blocks
       direction: minimum
-      # The probe steps in sixteenths of a block; anything under that is below its own
-      # resolution and cannot be attributed to the game.
-      tolerance: 0.07
-      search: { from: 0, to: 4 }
+      # ONE TICK OF TRAVEL, and this number is the apparatus rather than an ambition.
+      #
+      # The anvil only exists at tick-spaced positions, so the finest clearance the probe can
+      # distinguish is how far it moves in one tick -- about 0.6 blocks by the time it reaches
+      # the plane after a six-block drop. Asking for finer would report DRIFT on tick phase
+      # forever, and a drift report people learn to ignore is worse than no drift report.
+      #
+      # Shorten the drop and this gets finer; lengthen it and it gets coarser. If the drop in
+      # `content/pack.yaml` changes, this has to change with it.
+      tolerance: 0.6
+      # Past the drop height on purpose. A clearance wider than the whole drop must hold by
+      # construction, which is what makes the loose bound a real check on the apparatus rather
+      # than a coin flip. `bedshock test` pins that this stays true.
+      search: { from: 0, to: 8 }
     notes: >-
       THE FAILURE MODE TO WATCH FOR is a solve that converges on its own search bound. A result
       sitting exactly at `from` or `to` usually means the trial never actually failed, or never
       actually passed -- so the probe reports INCONCLUSIVE at a bound rather than recording the
       bound as an answer. A number that is really the edge of the search is not a measurement of
       anything.
+
+      WHAT THIS NUMBER IS PHYSICALLY. The obstruction is removed from under the anvil at the
+      requested clearance, so the answer is how late something can leave before the anvil has
+      already committed to landing on it. That is the same quantity a pass-under mechanic has to
+      respect, and it is close kin to the tunnelling threshold: a fast enough mover crosses a
+      whole block between two ticks and is never seen in it at all.
 
   - id: physics.throw.item_travel_distance
     question: How far does a thrown item travel before coming to rest on flat ground?

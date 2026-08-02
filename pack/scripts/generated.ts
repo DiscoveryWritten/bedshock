@@ -213,6 +213,15 @@ export const PARAMS = {
     "block": "minecraft:anvil",
     "drop_height": 12,
     "watch_ticks": 40
+  },
+  "anvilgap": {
+    "block": "minecraft:anvil",
+    "obstruction": "minecraft:stone",
+    "plane_height": 4,
+    "drop_height": 6,
+    "watch_ticks": 80,
+    "repeats": 2,
+    "max_trials": 40
   }
 } as const;
 export const GLYPHS = ["","","",""];

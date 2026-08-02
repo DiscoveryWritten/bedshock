@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "minecraft": "1.21.120",
-  "catalog_revision": "r5befa0be",
-  "release": "mc-1.21.120-r5befa0be",
+  "catalog_revision": "rf1fd17a4",
+  "release": "mc-1.21.120-rf1fd17a4",
   "measured_through": "2026-08-02T05:01:00Z",
   "counts": {
     "SETTLED": 22,
@@ -1380,10 +1380,10 @@
       "measures": {
         "unit": "blocks",
         "direction": "minimum",
-        "tolerance": 0.07,
+        "tolerance": 0.6,
         "search": {
           "from": 0,
-          "to": 4
+          "to": 8
         }
       }
     },
