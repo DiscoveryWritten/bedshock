@@ -149,7 +149,12 @@ if [ "$started" -eq 1 ]; then
   # Each invocation prints its own DONE, so waiting for that many is how a narrowed run knows
   # it finished rather than guessing from a timeout.
   for _ in $(seq 1 "$BATTERY_TIMEOUT"); do
-    seen="$(grep -c "BEDSHOCK DONE" "$LOG" 2>/dev/null || echo 0)"
+    # `grep -c` prints its count AND exits 1 when the count is zero, so `|| echo 0` appends a
+    # second line and the comparison below sees "0\n0" -- which bash reports as
+    # "integer expression expected" and treats as false. Harmless while the battery finishes
+    # anyway, and a hang the one time it does not.
+    seen="$(grep -c "BEDSHOCK DONE" "$LOG" 2>/dev/null)" || seen=0
+    [ -n "$seen" ] || seen=0
     if [ "$seen" -ge "$wanted" ]; then battery_ran=1; break; fi
     if ! kill -0 "$BDS_PID" 2>/dev/null; then break; fi
     sleep 1

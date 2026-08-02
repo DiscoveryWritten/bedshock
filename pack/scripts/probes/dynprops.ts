@@ -25,7 +25,7 @@
 import { ItemStack, world, type Player } from '@minecraft/server';
 
 import { IDS } from '../generated.ts';
-import { firstLine, result, look, skipped, type Ctx } from '../emit.ts';
+import { firstLine, result, look, skipped, HEADLESS_AT, type Ctx } from '../emit.ts';
 
 /**
  * New on every world load, by construction rather than by discipline.
@@ -52,11 +52,29 @@ export function run(ctx: Ctx): void {
   let survived: boolean;
   let readBack: unknown;
   try {
-    const holder = world.getDimension('overworld').spawnEntity('minecraft:armor_stand', { x: 0.5, y: 8, z: 0.5 });
+    // Round trip through one of OUR container entities rather than a vanilla stand.
+    //
+    // The first server run used `minecraft:armor_stand` and reported INCONCLUSIVE with "no
+    // container to round trip through" -- an armor stand carries equipment slots, not a
+    // `minecraft:inventory`, so there was nothing to put an item into. A probe measuring its
+    // own choice of prop rather than the game, which is the failure this battery exists to
+    // catch and is no less embarrassing for being caught by itself.
+    //
+    // The probe entities are known-good by construction: the container probe verifies in the
+    // same run that they spawn and that script can read and write their slots. If that row is
+    // not YES, this one has no business reporting anything either.
+    const holderId = IDS.containers[0]?.id;
+    if (!holderId) {
+      result(ctx, 'item.dynamic_properties.survive_get_set_round_trip', 'INCONCLUSIVE', undefined,
+        'no probe container entity is declared to round trip through');
+      return;
+    }
+    const holder = world.getDimension('overworld').spawnEntity(holderId, HEADLESS_AT);
     const container = holder.getComponent('minecraft:inventory')?.container;
     if (!container) {
       result(ctx, 'item.dynamic_properties.survive_get_set_round_trip', 'INCONCLUSIVE', undefined,
-        'no container to round trip through — the apparatus failed, not the game');
+        `${holderId} spawned but carries no container — the apparatus failed, not the game. ` +
+          'Check entity.container.storage_via_inventory_component in this same run.');
       holder.remove();
       return;
     }
