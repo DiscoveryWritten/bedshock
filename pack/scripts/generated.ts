@@ -219,6 +219,7 @@ export const PARAMS = {
     "obstruction": "minecraft:stone",
     "plane_height": 4,
     "drop_height": 6,
+    "vacate_ticks": 6,
     "watch_ticks": 80,
     "repeats": 2,
     "max_trials": 40

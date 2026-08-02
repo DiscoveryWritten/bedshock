@@ -56,14 +56,14 @@ else in a test suite notices that, and it is the failure most likely to survive 
 
 ```yaml
 - id: physics.falling_block.min_clearance_under_a_falling_anvil
-  question: How close can a moving block pass beneath a falling anvil without interrupting its fall?
+  question: How far above a falling anvil can a block vacate its path and still be clear?
   decides: The tightest a pass-under mechanic can be built before it becomes unreliable.
   method: solved
   surface: engine
   probe: anvilgap
   measures:
     unit: blocks
-    direction: minimum          # the SMALLEST value that still holds
+    direction: maximum          # the LARGEST value that still holds
     tolerance: 0.6              # one tick of travel — see below
     search: { from: 0, to: 8 }
 ```
@@ -215,24 +215,37 @@ whole reason the row records a number.
 ## Worked example
 
 `pack/scripts/probes/anvilgap.ts` is the one to read, and mostly for the apparatus rather than
-the code.
+the code. It took three shapes, and the two failures are worth more than the working version.
 
-The obvious build is to make a block **appear** beneath a falling anvil at a chosen clearance. It
-cannot be run at all: the anvil only exists at tick-spaced positions, so below one tick of travel
-there is no moment at which it is 0.3 blocks above anything, and every trial finer than that has
-to abort — including the tight bound. A search whose tight bound cannot be evaluated has nothing
-to bisect between.
+**Make a block appear** beneath a falling anvil at a chosen clearance. Cannot be run at all: the
+anvil only exists at tick-spaced positions, so below one tick of travel there is no moment at
+which it is 0.3 blocks above anything, and every trial finer than that has to abort — *including
+the tight bound*. A search whose tight bound cannot be evaluated has nothing to bisect between.
 
-Removing a block that was **already there** turns the same limit into the right answer. Ask for a
-clearance too fine to hit and the anvil lands before the block is taken away: caught, which is
-precisely what a clearance that tight means. The tick lattice becomes the resolution instead of
-an abort.
+**Remove a block that was already there**, at the chosen clearance. Runs, and measures nothing.
+Bedrock 1.26.36.1 came back with `held even at 0, the tight end of the search` — the anvil got
+through even when the block left at the instant of contact. Obvious in hindsight: removal keyed
+to the anvil's own arrival is never late. The trial was reporting its own trigger condition and
+would have reported the same number on every version of the game. Nothing about reading the code
+showed that. It took a run, and the only reason it was caught rather than recorded is that the
+search refuses to converge on a bound.
 
-The general lesson is worth more than the anvil: **if a search cannot evaluate one of its bounds,
-change the apparatus rather than the range.** Every version of this problem has a phrasing where
-the unreachable case is a legitimate answer instead of a failure, and finding it is most of the
-work of writing a solve.
+**Remove it and put it back** after a fixed window. Now the clearance sets how *early* the mover
+leaves, and the anvil decides whether that was too early. Both ends are grounded in a
+measurement rather than in reasoning, and the row can move when the game does.
 
-That row is also the tunnelling threshold wearing different clothes — a mover fast enough to
-cross a block between two ticks is never observed inside it. If it moves, treat every threshold
-built on "it will be there when I look" as suspect, including the ones in your own code.
+Three general lessons, in the order they cost the most:
+
+1. **If a search cannot evaluate one of its bounds, change the apparatus rather than the range.**
+   Every version of this problem has a phrasing where the unreachable case is a legitimate answer
+   instead of a failure, and finding it is most of the work of writing a solve.
+2. **A row that cannot move is not a row worth watching.** If a trial's outcome is fixed by its
+   own trigger, it will report the same number forever and look like a stable measurement.
+3. **A parameter that changes what the number MEANS is part of the question**, not tuning. The
+   vacate window here is one, and it is documented as such — readings taken either side of a
+   change to it are not comparable, whatever the tolerance says.
+
+That row is also the tunnelling threshold wearing different clothes — what it really measures is
+how far the anvil travels while the plane is empty, so anything watching for an intersection
+rather than integrating a path inherits it. If it moves, treat every threshold built on "it will
+be there when I look" as suspect, including the ones in your own code.

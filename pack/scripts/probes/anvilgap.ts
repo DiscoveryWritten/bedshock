@@ -1,31 +1,39 @@
 /**
- * How late can something get out from under a falling anvil?
+ * How early can something start getting out from under a falling anvil, and still be clear?
  *
  * A `solved` probe, and the first one built on `solve.ts`. There is no yes here: there is a
  * clearance, and the clearance is the answer.
  *
  * THE APPARATUS. A stone block sits on a plane with an anvil falling towards it. At the tick
  * where the anvil is within the requested clearance of the block's top face, the block is
- * REMOVED. Either it left in time and the anvil falls past, or it did not and the anvil lands
- * on it. The search is for the smallest clearance where leaving still works.
+ * REMOVED — and then PUT BACK a fixed number of ticks later. Either the plane was still empty
+ * when the anvil arrived and it fell past, or the block was back in time and the anvil landed on
+ * it. The search is for the largest clearance at which leaving that early still works.
  *
- * WHY THE BLOCK LEAVES RATHER THAN ARRIVES, because the obvious build is the other way round
- * and it cannot be run at all. Making a block APPEAR at a chosen clearance requires a tick at
- * which the anvil is at that clearance, and the anvil only exists at tick-spaced positions —
- * below one tick of travel there is no such moment. Every trial finer than that has to abort,
- * including the tight bound, and a search whose tight bound cannot be evaluated has nothing to
- * bisect between.
+ * WHY THE BLOCK GOES AND RETURNS, and this took three shapes with a real server correcting the
+ * third-to-last:
  *
- * Removing a block that was already there turns that same limit into the right answer. Ask for a
- * clearance too fine to hit and the anvil lands before the block is taken away — CAUGHT, which is
- * precisely what a clearance that tight means. The tick lattice becomes the resolution instead of
- * an abort, which is why the tolerance on this row is one tick of travel and says so.
+ *   Making a block APPEAR at a chosen clearance cannot be run at all. It needs a tick at which
+ *   the anvil is at that clearance, and the anvil only exists at tick-spaced positions — below
+ *   one tick of travel there is no such moment. Every fine trial aborts, INCLUDING the tight
+ *   bound, and a search whose tight bound cannot be evaluated has nothing to bisect between.
  *
- * WHAT IT IS KIN TO. This is the tunnelling threshold wearing different clothes. A mover fast
- * enough to cross a block between two ticks is never observed inside it, and anything that
- * watches for an intersection rather than integrating a path will miss it. That is the same
- * failure a portal has when something enters too fast to be seen entering — so if this number
- * moves, treat every threshold built on "it will be there when I look" as suspect.
+ *   Merely REMOVING a block runs, and measures nothing. Bedrock 1.26.36.1 said `held even at 0,
+ *   the tight end of the search`: the anvil got through even when the block left at the instant
+ *   of contact. Of course it did — removal keyed to the anvil's own arrival is never late. The
+ *   trial was reporting its trigger condition, and would have reported the same number on every
+ *   version of the game. Nothing about reading the code showed that; it took a run.
+ *
+ *   Removing it and putting it BACK makes the clearance mean something. It now sets how EARLY
+ *   the mover leaves, and the anvil decides whether that was too early. Leave late and it slips
+ *   through; leave early and the stone is home before it arrives. That is a pass-under's real
+ *   timing budget, and it is the number a mechanic actually has to respect.
+ *
+ * WHAT IT IS KIN TO. This is a tunnelling threshold wearing different clothes. What it really
+ * measures is how far the anvil travels while the plane is empty — so anything that watches for
+ * an intersection rather than integrating a path inherits it. That is the same failure a portal
+ * has when something enters too fast to be seen entering, so if this number moves, treat every
+ * threshold built on "it will be there when I look" as suspect.
  */
 
 import { system, world, type Vector3 } from '@minecraft/server';
@@ -97,7 +105,9 @@ export function run(ctx: Ctx): void {
     }
 
     let ticks = 0;
-    let removed = false;
+    /** The tick the stone left, or nothing while it is still there. */
+    let leftAt: number | undefined;
+    let restored = false;
     let sighted = false;
     let lowest = sourceY;
 
@@ -128,20 +138,39 @@ export function run(ctx: Ctx): void {
       }
 
       // The one moment that defines the trial: the block leaves.
-      if (!removed && y !== undefined && y - planeTop <= clearance) {
+      if (leftAt === undefined && y !== undefined && y - planeTop <= clearance) {
         try {
           dimension.getBlock(columnAt(planeY))?.setType('minecraft:air');
         } catch (err) {
           finish(null, `could not remove the obstruction: ${firstLine(err)}`);
           return;
         }
-        removed = true;
+        leftAt = ticks;
       }
 
       // Below the plane and still an entity: it went past. That is the property holding.
+      //
+      // Checked BEFORE the block is put back, which is what stops a caught anvil from being read
+      // as a passing one. A landed anvil is a block resting on the plane, and restoring the stone
+      // under a block that is already there does not move it — but an anvil is gravity-affected,
+      // so had the stone stayed away it would simply have fallen again and been sighted below.
       if (y !== undefined && y < planeTop - 0.5) {
-        finish(true, `passed the plane with the obstruction removed at ${round(clearance)} blocks`);
+        finish(
+          true,
+          `passed: the plane was still empty when it arrived, having left at ${round(clearance)} blocks`,
+        );
         return;
+      }
+
+      // And the block comes home. Everything the clearance means lives in this window.
+      if (leftAt !== undefined && !restored && ticks - leftAt >= p.vacate_ticks) {
+        try {
+          dimension.getBlock(columnAt(planeY))?.setType(p.obstruction);
+        } catch (err) {
+          finish(null, `could not put the obstruction back: ${firstLine(err)}`);
+          return;
+        }
+        restored = true;
       }
 
       // No entity left, and something is sitting on the plane: it landed. Checked only once the
@@ -151,7 +180,7 @@ export function run(ctx: Ctx): void {
         finish(
           false,
           landed === p.block
-            ? `landed on the plane at ${round(clearance)} blocks of clearance`
+            ? `caught: the stone was back before it arrived, having left at ${round(clearance)} blocks`
             : `stopped being a falling block above the plane (found "${landed ?? 'nothing'}" there)`,
         );
         return;
@@ -161,7 +190,8 @@ export function run(ctx: Ctx): void {
       finish(
         null,
         sighted
-          ? `neither landed nor passed within ${ticks} ticks; lowest sighting was ${round(lowest - planeTop)} above the plane`
+          ? `neither landed nor passed within ${ticks} ticks; lowest sighting was ` +
+              `${round(lowest - planeTop)} above the plane, stone ${leftAt === undefined ? 'never left' : restored ? 'left and returned' : 'still away'}`
           : `the source block never became a falling ${p.block}`,
       );
     }, 1);

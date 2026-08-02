@@ -23,7 +23,7 @@ export interface SolveSpec {
   tolerance: number;
 }
 
-export const CATALOG_REVISION = "rf1fd17a4";
+export const CATALOG_REVISION = "rd912823c";
 export const SNAPSHOT_VERSION = "1.21.120";
 export const QUESTIONS: SessionQuestion[] = [
   {
@@ -1123,7 +1123,7 @@ export const SOLVES: SolveSpec[] = [
     "id": "physics.falling_block.min_clearance_under_a_falling_anvil",
     "probe": "anvilgap",
     "unit": "blocks",
-    "direction": "minimum",
+    "direction": "maximum",
     "from": 0,
     "to": 8,
     "tolerance": 0.6

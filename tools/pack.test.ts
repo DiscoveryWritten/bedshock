@@ -316,10 +316,14 @@ test('a capability carried only as embedded data is not credited with a runtime'
  * becomes a coin flip on tick phase, and the search's first line of defence is gone with no
  * error anywhere.
  */
-test('the anvil search reaches past the drop, so its loose bound holds by construction', () => {
+test('the anvil search reaches past the drop, so its tight bound fails by construction', () => {
   const cap = loadCatalog().byId.get('physics.falling_block.min_clearance_under_a_falling_anvil')!;
   const search = cap.measures!.search!;
-  assert.equal(cap.measures!.direction, 'minimum');
+  // MAXIMUM: leaving EARLY is what eventually fails. The first runnable apparatus searched for a
+  // minimum and a real server answered `held even at 0` — removal keyed to the anvil's own
+  // arrival is never late, so every clearance passed and the row could not have moved between
+  // versions. If this flips back to `minimum`, that measurement is being un-learned.
+  assert.equal(cap.measures!.direction, 'maximum');
   assert.ok(
     search.to > config.probes.anvilgap.drop_height,
     `the search stops at ${search.to} but the anvil only falls ${config.probes.anvilgap.drop_height} ` +

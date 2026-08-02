@@ -46,6 +46,7 @@ export interface ProbeConfig {
     obstruction: string;
     plane_height: number;
     drop_height: number;
+    vacate_ticks: number;
     watch_ticks: number;
     repeats: number;
     max_trials: number;
@@ -136,6 +137,20 @@ export function validatePackConfig(c: PackConfig): string[] {
       );
     }
     if (a.repeats < 1) problems.push('probes.anvilgap.repeats below 1 means no trial is ever run');
+    // Zero ticks out of the way is no window at all: the block leaves and returns in the same
+    // tick, nothing ever gets through, and every trial reports caught. That reads as a game that
+    // never lets anything pass, which is a statement about the probe.
+    if (a.vacate_ticks < 1) {
+      problems.push('probes.anvilgap.vacate_ticks below 1 leaves no window for anything to pass through');
+    }
+    // And a window longer than the fall means the block is still away when the anvil arrives at
+    // every clearance, so nothing is ever caught and the search has no tight bound.
+    if (a.vacate_ticks >= a.watch_ticks) {
+      problems.push(
+        `probes.anvilgap.vacate_ticks (${a.vacate_ticks}) is not shorter than the whole watch ` +
+          `window, so the obstruction never returns and no trial can fail`,
+      );
+    }
     // Two bound checks plus the halvings, times the repeats. A ceiling under that turns every
     // run into "ran out of trials", which reports as INCONCLUSIVE and looks like a broken game.
     if (a.max_trials < (2 + 6) * Math.max(1, a.repeats)) {
