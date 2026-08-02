@@ -19,6 +19,7 @@ capabilities:
       Whether custom storage costs an entity -- with everything that implies about collision,
       persistence and chunk loading -- or can be a block like a chest.
     method: derived
+    surface: content
     established_by: >-
       Blocks cannot be containers on Bedrock; only entities carry `minecraft:inventory`.
 
@@ -30,6 +31,7 @@ capabilities:
       Whether the storage half of a custom container works at all, before asking the harder
       question of whether a player can reach it.
     method: automated
+    surface: script
     probe: container
     legacy: P11
     notes: >-
@@ -46,6 +48,7 @@ capabilities:
       is a different question from what the SCREEN draws, and conflating them would overstate
       the finding.
     method: automated
+    surface: script
     probe: container
     depends_on: [entity.container.storage_via_inventory_component]
     legacy: P11
@@ -56,6 +59,7 @@ capabilities:
       Whether player-facing custom storage is possible at all. Storage existing does not mean a
       player can get at it, and this is the half that decides whether the route is usable.
     method: observed
+    surface: engine
     probe: container
     look_at: >-
       Interact with the entity labelled `horse5`. A failure here means "this recipe does not
@@ -83,6 +87,7 @@ capabilities:
       template with only `container_type` substituted -- so this is a single-variable
       comparison rather than a guess about which of a dozen ingredients mattered.
     method: observed
+    surface: engine
     probe: container
     look_at: Interact with the entity labelled `chest5`, next to the horse one.
     outcomes:
@@ -106,6 +111,7 @@ capabilities:
       you assumed the screen shows what you stored, and a genuinely useful PRIMITIVE if you
       wanted storage a player cannot touch.
     method: observed
+    surface: engine
     probe: container
     look_at: >-
       Three entities bracket this: `horse1` declares 1, `horse5` declares 5, `horse15` declares
@@ -145,6 +151,7 @@ capabilities:
       sink the whole route: a horse screen's slots are normally typed, and a container
       inheriting that would be useless.
     method: observed
+    surface: engine
     probe: container
     look_at: >-
       The open `horse5` screen. Script has already put a diamond in slot 0, so it should be
@@ -168,6 +175,7 @@ capabilities:
       Whether script and the player are looking at the same container, or at two views that can
       disagree.
     method: observed
+    surface: script
     probe: container
     look_at: The diamond script placed in slot 0 of `horse5`, once the screen is open.
     outcomes:
@@ -188,6 +196,7 @@ capabilities:
     decides: >-
       Whether a container screen carries free identity, or needs a title to say what it is.
     method: observed
+    surface: engine
     probe: container
     look_at: The left-hand panel of the open container screen. Move the cursor across it.
     outcomes:
@@ -214,6 +223,7 @@ capabilities:
     decides: >-
       Whether anything that must be walked AROUND can be an entity, or needs a real block.
     method: derived
+    surface: engine
     established_by: >-
       Measured in play on two separate custom entities: you walk through them. `collision_box`
       governs hit detection and entity-entity pushing, not player blocking.
@@ -222,6 +232,7 @@ capabilities:
     question: Can another entity stand on a custom entity?
     decides: Whether an entity can serve as a platform or a landing target.
     method: derived
+    surface: engine
     established_by: >-
       Measured: a dropped anvil passes through a custom entity and lands in its cell. The other
       half of the same fact as the player row above.
@@ -237,6 +248,7 @@ capabilities:
       and banners -- handing one back would hand back an empty one. Moving the real stack
       removes the whole problem, because nothing is ever read or rebuilt.
     method: observed
+    surface: script
     probe: stash
     look_at: >-
       Hold an item with state the script API cannot read -- a shulker box YOU HAVE PUT THINGS
@@ -279,6 +291,7 @@ capabilities:
       holder PER ITEM -- small, local, no world fixtures. If it is only findable while loaded,
       it has to be a VAULT: a holder in a permanently ticking area at a fixed world location.
     method: observed
+    surface: script
     probe: stash
     look_at: >-
       Stash something, then walk far enough away that the chunk unloads, come back, and fetch.
@@ -309,6 +322,7 @@ capabilities:
       stress most likely to break entity-id persistence, and it is the one that actually picks
       the design.
     method: observed
+    surface: script
     probe: stash
     look_at: >-
       Stash, then QUIT TO TITLE and reload, then fetch. The probe stamps a per-load session
@@ -340,6 +354,7 @@ capabilities:
       Whether a mechanic built around a falling vanilla block can be driven by watching the
       real entity, or needs a custom mover standing in for it.
     method: automated
+    surface: script
     probe: fallingblock
     notes: >-
       The measurement records the sampled velocities as well as the sighting count. Vanilla

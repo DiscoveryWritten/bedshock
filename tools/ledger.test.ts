@@ -19,6 +19,7 @@ const cap = (over: Partial<Capability> = {}): Capability => ({
   question: 'q',
   decides: 'd',
   method: 'automated',
+  surface: 'script',
   probe: 'thing',
   ...over,
 });

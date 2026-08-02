@@ -17,6 +17,7 @@ capabilities:
       creative menu. That is the difference between 48 real items and 48 PNGs, and this is the
       only surface in the game where an arbitrary picture can be drawn per stack.
     method: observed
+    surface: script
     probe: formicon
     look_at: >-
       Button 1 in the form the probe opens. Its texture is written to `textures/probe/` and
@@ -42,6 +43,7 @@ capabilities:
       Whether a runtime-computed reference can be an atlas key -- which a generator already
       knows -- or has to be a full path, which it has to be taught.
     method: observed
+    surface: script
     probe: formicon
     look_at: Button 3, which passes a bare atlas key rather than a path. Expected to fail.
     outcomes:
@@ -64,6 +66,7 @@ capabilities:
       looks: a UI that computes paths at runtime and fails silently is a UI where a typo is
       invisible forever.
     method: observed
+    surface: script
     probe: formicon
     look_at: Button 4, which points at a path that deliberately does not exist.
     outcomes:
@@ -85,6 +88,7 @@ capabilities:
       Whether a container screen can be part of a scripted flow, or is always something the
       player has to reach for themselves.
     method: derived
+    surface: script
     established_by: There is no `player.openContainer` in the script API.
 
   - id: ui.container.emits_a_change_event
@@ -93,6 +97,7 @@ capabilities:
       Whether watching a container costs a poll. Cheap for one open container; a real cost if a
       design wants many.
     method: derived
+    surface: script
     established_by: >-
       No container-change event exists; contents must be polled.
 
@@ -102,6 +107,7 @@ capabilities:
       Whether the enchanting table is a route to a custom "attach"-style interaction. It is a
       tempting one because the UI already exists and reads as native.
     method: derived
+    surface: engine
     established_by: >-
       Custom enchantments cannot be defined and the enchanting-table UI cannot be intercepted.
       The glint still requires a real vanilla enchantment.
@@ -113,6 +119,7 @@ capabilities:
       anything that wants to needs a generated id-to-path table plus a placeholder for
       everything unrecognised.
     method: derived
+    surface: script
     established_by: >-
       Form button `iconPath` is a texture path rather than an item id, and no runtime API maps
       one to the other. Our own art is unaffected because we control those paths.

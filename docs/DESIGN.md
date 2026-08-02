@@ -101,6 +101,53 @@ declared *expecting* the game to mishandle them, and the mishandling IS the meas
 how a wrap is told from a clamp. A ceiling list with no above-boundary entry would measure only
 the comfortable half, and `config.ts` refuses one.
 
+## 4c. Some questions have a number for an answer
+
+`method: solved` rows do not report yes or no. They report a value, and the verdict says only
+whether the search converged.
+
+**They are the only rows that can catch a whole class of change.** Everything else here notices
+when a capability appears or disappears. A solved row notices when the game's constants move
+under an implementation that still runs and still passes — a reference implementation tuned to
+the old number, now subtly wrong, with nothing failing. That change survives a release precisely
+because nothing shouts about it.
+
+Which means the drift rule has to be different. A solved row drifts on its **value**: two runs
+both converging is not agreement if they converged somewhere else, and comparing verdicts would
+call it agreement. The tolerance lives on the capability rather than in the rollup, because only
+the probe's own resolution knows how much movement is the apparatus. `catalog.ts` refuses a
+tolerance of zero — that reports drift on noise, and a drift people learn to ignore is worse than
+no drift check.
+
+Two failure modes are worth naming because they produce confident numbers:
+
+**A solve that lands on its own search bound is not a measurement.** It usually means the trial
+never actually failed, or never actually passed. Those rows report INCONCLUSIVE at a bound rather
+than recording the bound as an answer.
+
+**A value with no control is uninterpretable.** `physics.falling_block.gravity_curve` exists
+partly to be that control: if the engine's integration changed, every other physics reading
+differs for a reason that has nothing to do with what it was measuring. When a sweep reports
+several values moving at once, that row is the one to read first.
+
+## 4d. What would have to change, per row
+
+Every capability declares a `surface` — `engine`, `script` or `content` — and it is required
+rather than defaulted.
+
+The question it answers is the one a consumer actually has: *will this still hold if I raise my
+script pin?* An `engine` row does not care. A `script` row might. A row guessed into the wrong
+bucket tells someone their pin is irrelevant when it is not, which is worse than the field being
+absent.
+
+It also changes how a sweep reads. Several `engine` rows moving together is a gameplay change;
+several `script` rows moving together is usually an API change. Same diff, different news.
+
+**And it is why this pack pins the newest API rather than the oldest.** A shipping mod pins low
+because every version it raises costs it players. This ships to nobody, so a low pin buys nothing
+and costs the ability to *ask* — an old pin does not make a newer capability `OPEN`, it makes it
+unaskable, which is the failure this repository exists to prevent arriving through the manifest.
+
 ## 5. `LOOK` is not a result, and cannot be made into one
 
 The runtime has separate verbs. `run.ts` records `RESULT` lines and refuses `LOOK` lines — and

@@ -78,6 +78,11 @@ is how you find out the day it starts working.
 | `item.durability.anvil_or_grindstone_can_reach_a_custom_item` | · |
 | `item.durability.omitting_repairable_blocks_external_writes` | · |
 | `item.durability.ordinary_use_consumes_it` | · |
+| **physics** |  |
+| `physics.falling_block.gravity_curve` | · |
+| `physics.falling_block.min_clearance_under_a_falling_anvil` | · |
+| `physics.throw.item_travel_distance` | · |
+| `physics.knockback.blocks_per_unit` | · |
 | **render** |  |
 | `render.molang.unknown_query_resolves_to_zero` | — |
 | `render.molang.integer_precision` | — |
@@ -124,6 +129,15 @@ bedshock amend --negative        --version <new>
 | `equipment.offhand.script_placed_item_persists` | Whether the off-hand is free in-world rendering of an arbitrary item -- modded ones included -- with no attachable work at all. If it is, a whole class of display problem has a shortcut. If it is not, rendering an arbitr |
 | `render.attachable.reads_held_item_durability` | The largest single consequence in this battery. If yes, ONE item type renders every configuration in the hand and hundreds of baked sprites go away. If no, the item looks identical in every configuration and its state ha |
 
+## Measured quantities
+
+Solved rather than answered: each of these is a search for a boundary, and the value is the
+answer. Shown on 1.21.120.
+
+*None measured yet. The questions are written; nobody has run them.*
+
+4 solved row(s) have no value yet: `physics.falling_block.gravity_curve`, `physics.falling_block.min_clearance_under_a_falling_anvil`, `physics.throw.item_travel_distance`, `physics.knockback.blocks_per_unit`
+
 ## entity
 
 Entities are the only container host Bedrock offers, so every design that needs to hold an arbitrary item ends up here. Storage via `minecraft:inventory` is documented and its knobs are known; what is not documented is how a fully custom entity gets its container OPENED, because on Bedrock that is welded to chest-boat and horse machinery rather than exposed as a component.
@@ -134,7 +148,7 @@ Entities are the only container host Bedrock offers, so every design that needs 
 
 *Decides:* Whether custom storage costs an entity -- with everything that implies about collision, persistence and chunk loading -- or can be a block like a chest.
 
-<sub>method: `derived`</sub>
+<sub>method: `derived` · surface: `content`</sub>
 
 *Established by:* Blocks cannot be containers on Bedrock; only entities carry `minecraft:inventory`.
 
@@ -144,7 +158,7 @@ Entities are the only container host Bedrock offers, so every design that needs 
 
 *Decides:* Whether the storage half of a custom container works at all, before asking the harder question of whether a player can reach it.
 
-<sub>method: `automated` · probe: `container` · formerly: P11</sub>
+<sub>method: `automated` · surface: `script` · probe: `container` · formerly: P11</sub>
 
 | Version | Answer | How | Evidence |
 |---|---|---|---|
@@ -186,7 +200,7 @@ Entities are the only container host Bedrock offers, so every design that needs 
 
 *Decides:* Whether declared storage capacity is real as far as script is concerned. Note that this is a different question from what the SCREEN draws, and conflating them would overstate the finding.
 
-<sub>method: `automated` · probe: `container` · formerly: P11 · rests on: `entity.container.storage_via_inventory_component`</sub>
+<sub>method: `automated` · surface: `script` · probe: `container` · formerly: P11 · rests on: `entity.container.storage_via_inventory_component`</sub>
 
 | Version | Answer | How | Evidence |
 |---|---|---|---|
@@ -222,7 +236,7 @@ Entities are the only container host Bedrock offers, so every design that needs 
 
 *Decides:* Whether player-facing custom storage is possible at all. Storage existing does not mean a player can get at it, and this is the half that decides whether the route is usable.
 
-<sub>method: `observed` · probe: `container` · formerly: P11 · rests on: `entity.container.storage_via_inventory_component`</sub>
+<sub>method: `observed` · surface: `engine` · probe: `container` · formerly: P11 · rests on: `entity.container.storage_via_inventory_component`</sub>
 
 | Version | Answer | How | Evidence |
 |---|---|---|---|
@@ -244,7 +258,7 @@ Entities are the only container host Bedrock offers, so every design that needs 
 
 *Decides:* Which `container_type` to use. The two probe entities are otherwise identical -- same components, same `private: false`, same `is_chested`, same size, generated from one template with only `container_type` substituted -- so this is a single-variable comparison rather than a guess about which of a dozen ingredients mattered.
 
-<sub>method: `observed` · probe: `container` · formerly: P11 · rests on: `entity.container.storage_via_inventory_component`</sub>
+<sub>method: `observed` · surface: `engine` · probe: `container` · formerly: P11 · rests on: `entity.container.storage_via_inventory_component`</sub>
 
 | Version | Answer | How | Evidence |
 |---|---|---|---|
@@ -266,7 +280,7 @@ Entities are the only container host Bedrock offers, so every design that needs 
 
 *Decides:* Whether `container.size` and what the player sees are one number or two. If two, slots above the drawn count are script-writable and player-unreachable -- which is a HAZARD if you assumed the screen shows what you stored, and a genuinely useful PRIMITIVE if you wanted storage a player cannot touch.
 
-<sub>method: `observed` · probe: `container` · formerly: P11 · rests on: `entity.container.opens_with_container_type_horse`</sub>
+<sub>method: `observed` · surface: `engine` · probe: `container` · formerly: P11 · rests on: `entity.container.opens_with_container_type_horse`</sub>
 
 | Version | Answer | How | Evidence |
 |---|---|---|---|
@@ -290,7 +304,7 @@ Entities are the only container host Bedrock offers, so every design that needs 
 
 *Decides:* Whether the container is usable for arbitrary items. This was the thing most likely to sink the whole route: a horse screen's slots are normally typed, and a container inheriting that would be useless.
 
-<sub>method: `observed` · probe: `container` · formerly: P11 · rests on: `entity.container.opens_with_container_type_horse`</sub>
+<sub>method: `observed` · surface: `engine` · probe: `container` · formerly: P11 · rests on: `entity.container.opens_with_container_type_horse`</sub>
 
 | Version | Answer | How | Evidence |
 |---|---|---|---|
@@ -312,7 +326,7 @@ Entities are the only container host Bedrock offers, so every design that needs 
 
 *Decides:* Whether script and the player are looking at the same container, or at two views that can disagree.
 
-<sub>method: `observed` · probe: `container` · formerly: P11 · rests on: `entity.container.opens_with_container_type_horse`</sub>
+<sub>method: `observed` · surface: `script` · probe: `container` · formerly: P11 · rests on: `entity.container.opens_with_container_type_horse`</sub>
 
 | Version | Answer | How | Evidence |
 |---|---|---|---|
@@ -334,7 +348,7 @@ Entities are the only container host Bedrock offers, so every design that needs 
 
 *Decides:* Whether a container screen carries free identity, or needs a title to say what it is.
 
-<sub>method: `observed` · probe: `container` · formerly: P11 · rests on: `entity.container.opens_with_container_type_horse`</sub>
+<sub>method: `observed` · surface: `engine` · probe: `container` · formerly: P11 · rests on: `entity.container.opens_with_container_type_horse`</sub>
 
 | Version | Answer | How | Evidence |
 |---|---|---|---|
@@ -357,7 +371,7 @@ Entities are the only container host Bedrock offers, so every design that needs 
 
 *Decides:* Whether anything that must be walked AROUND can be an entity, or needs a real block.
 
-<sub>method: `derived`</sub>
+<sub>method: `derived` · surface: `engine`</sub>
 
 *Established by:* Measured in play on two separate custom entities: you walk through them. `collision_box` governs hit detection and entity-entity pushing, not player blocking.
 
@@ -367,7 +381,7 @@ Entities are the only container host Bedrock offers, so every design that needs 
 
 *Decides:* Whether an entity can serve as a platform or a landing target.
 
-<sub>method: `derived`</sub>
+<sub>method: `derived` · surface: `engine`</sub>
 
 *Established by:* Measured: a dropped anvil passes through a custom entity and lands in its cell. The other half of the same fact as the player row above.
 
@@ -377,7 +391,7 @@ Entities are the only container host Bedrock offers, so every design that needs 
 
 *Decides:* Whether an item can be stored WITHOUT taking it apart. Any codec that reads an item into JSON and rebuilds it must refuse shulker boxes, written books, potions, fireworks, maps and banners -- handing one back would hand back an empty one. Moving the real stack removes the whole problem, because nothing is ever read or rebuilt.
 
-<sub>method: `observed` · probe: `stash` · formerly: P12 · rests on: `entity.container.storage_via_inventory_component`</sub>
+<sub>method: `observed` · surface: `script` · probe: `stash` · formerly: P12 · rests on: `entity.container.storage_via_inventory_component`</sub>
 
 | Version | Answer | How | Evidence |
 |---|---|---|---|
@@ -401,7 +415,7 @@ Entities are the only container host Bedrock offers, so every design that needs 
 
 *Decides:* The size of the whole design. If a holder survives being unloaded, storage can be a holder PER ITEM -- small, local, no world fixtures. If it is only findable while loaded, it has to be a VAULT: a holder in a permanently ticking area at a fixed world location.
 
-<sub>method: `observed` · probe: `stash` · formerly: P12 · rests on: `entity.stash.preserves_an_opaque_itemstack`</sub>
+<sub>method: `observed` · surface: `script` · probe: `stash` · formerly: P12 · rests on: `entity.stash.preserves_an_opaque_itemstack`</sub>
 
 | Version | Answer | How | Evidence |
 |---|---|---|---|
@@ -424,7 +438,7 @@ Entities are the only container host Bedrock offers, so every design that needs 
 
 *Decides:* The same fork as the chunk-unload row, and the harder half of it. A world reload is the stress most likely to break entity-id persistence, and it is the one that actually picks the design.
 
-<sub>method: `observed` · probe: `stash` · formerly: P12 · rests on: `entity.stash.holder_findable_after_chunk_unload`</sub>
+<sub>method: `observed` · surface: `script` · probe: `stash` · formerly: P12 · rests on: `entity.stash.holder_findable_after_chunk_unload`</sub>
 
 | Version | Answer | How | Evidence |
 |---|---|---|---|
@@ -446,7 +460,7 @@ Entities are the only container host Bedrock offers, so every design that needs 
 
 *Decides:* Whether a mechanic built around a falling vanilla block can be driven by watching the real entity, or needs a custom mover standing in for it.
 
-<sub>method: `automated` · probe: `fallingblock`</sub>
+<sub>method: `automated` · surface: `script` · probe: `fallingblock`</sub>
 
 | Version | Answer | How | Evidence |
 |---|---|---|---|
@@ -489,7 +503,7 @@ What script can put in a player's equipment slots, and whether it stays there. T
 
 *Decides:* Whether the API refuses outright. Separating this from whether the item STAYS is the whole point -- a refusal and an ejection look identical a moment later, and they point at different workarounds.
 
-<sub>method: `automated` · probe: `offhand` · formerly: P9</sub>
+<sub>method: `automated` · surface: `script` · probe: `offhand` · formerly: P9</sub>
 
 | Version | Answer | How | Evidence |
 |---|---|---|---|
@@ -514,7 +528,7 @@ What script can put in a player's equipment slots, and whether it stays there. T
 
 *Decides:* Whether the off-hand is free in-world rendering of an arbitrary item -- modded ones included -- with no attachable work at all. If it is, a whole class of display problem has a shortcut. If it is not, rendering an arbitrary held item has no shortcut around attachables.
 
-<sub>method: `automated` · probe: `offhand` · formerly: P9 · rests on: `equipment.offhand.accepts_a_script_placed_item`</sub>
+<sub>method: `automated` · surface: `engine` · probe: `offhand` · formerly: P9 · rests on: `equipment.offhand.accepts_a_script_placed_item`</sub>
 
 | Version | Answer | How | Evidence |
 |---|---|---|---|
@@ -543,7 +557,7 @@ What script can put in a player's equipment slots, and whether it stays there. T
 
 *Decides:* Whether the ejection is about the SLOT or about the ITEM. If our own items stay, the off-hand is usable for anything we ship and unusable only for items we do not control -- which is a much narrower limit than "the off-hand is out".
 
-<sub>method: `automated` · probe: `offhand` · formerly: P9 · rests on: `equipment.offhand.accepts_a_script_placed_item`</sub>
+<sub>method: `automated` · surface: `content` · probe: `offhand` · formerly: P9 · rests on: `equipment.offhand.accepts_a_script_placed_item`</sub>
 
 | Version | Answer | How | Evidence |
 |---|---|---|---|
@@ -567,7 +581,7 @@ What script can put in a player's equipment slots, and whether it stays there. T
 
 *Decides:* Whether the off-hand can be an INPUT -- somewhere a player deliberately puts something for a pack to notice.
 
-<sub>method: `derived`</sub>
+<sub>method: `derived` · surface: `engine`</sub>
 
 *Established by:* The off-hand only accepts items whose definition permits it. This is vanilla behaviour and is what rules out "put anything in your off-hand, then open the menu" as an input gesture.
 
@@ -577,7 +591,7 @@ What script can put in a player's equipment slots, and whether it stays there. T
 
 *Decides:* Whether an off-hand item can be interactive, or is inert decoration. Inert suits a decoration; it rules out anything that wanted to be a second tool.
 
-<sub>method: `derived`</sub>
+<sub>method: `derived` · surface: `engine`</sub>
 
 *Established by:* Bedrock has no off-hand use input on any platform.
 
@@ -591,7 +605,7 @@ What an item definition is allowed to declare, what the client does with it, and
 
 *Decides:* How many bits a packed-durability design has to work with. Vanilla's own ceiling is 2031 (netherite), so anything above that is undocumented territory, and the difference between ~6 usable bits and ~15 is the difference between a layout that fits and one that does not.
 
-<sub>method: `automated` · probe: `durability` · formerly: P1</sub>
+<sub>method: `automated` · surface: `content` · probe: `durability` · formerly: P1</sub>
 
 | Version | Answer | How | Evidence |
 |---|---|---|---|
@@ -651,7 +665,7 @@ What an item definition is allowed to declare, what the client does with it, and
 
 *Decides:* Whether an over-large computed code has a safe failure mode. A clamp degrades to the maximum and stays sane; a wrap goes negative and nonsensical while the item still loads. If it wraps, whatever builds a packed value has to assert its own range, because nothing else will.
 
-<sub>method: `automated` · probe: `durability` · formerly: P1 · rests on: `item.max_durability.int16_ceiling`</sub>
+<sub>method: `automated` · surface: `content` · probe: `durability` · formerly: P1 · rests on: `item.max_durability.int16_ceiling`</sub>
 
 | Version | Answer | How | Evidence |
 |---|---|---|---|
@@ -687,7 +701,7 @@ What an item definition is allowed to declare, what the client does with it, and
 
 *Decides:* Whether the whole declared range is usable as a data channel, or only the part vanilla tools happen to occupy.
 
-<sub>method: `automated` · probe: `durability` · formerly: P1 · rests on: `item.max_durability.int16_ceiling`</sub>
+<sub>method: `automated` · surface: `content` · probe: `durability` · formerly: P1 · rests on: `item.max_durability.int16_ceiling`</sub>
 
 | Version | Answer | How | Evidence |
 |---|---|---|---|
@@ -731,7 +745,7 @@ What an item definition is allowed to declare, what the client does with it, and
 
 *Decides:* Whether a second bar can be drawn snug above the vanilla one -- to show which chamber fires next, or any other one-dimensional state -- and where the safe rows for baked artwork start.
 
-<sub>method: `observed` · probe: `ruler` · formerly: P2</sub>
+<sub>method: `observed` · surface: `content` · probe: `ruler` · formerly: P2</sub>
 
 **Never measured.** This row is a guess, however confident the prose around it sounds.
 
@@ -756,7 +770,7 @@ What an item definition is allowed to declare, what the client does with it, and
 
 *Decides:* Whether an item carrying packed state in low bits can ever show a clean icon. If the track is present at any damage above zero, the bar's footprint is permanent and artwork has to be designed around it rather than hoping for the undamaged case.
 
-<sub>method: `observed` · probe: `ruler` · formerly: P2</sub>
+<sub>method: `observed` · surface: `content` · probe: `ruler` · formerly: P2</sub>
 
 **Never measured.** This row is a guess, however confident the prose around it sounds.
 
@@ -778,7 +792,7 @@ What an item definition is allowed to declare, what the client does with it, and
 
 *Decides:* Whether one measurement covers both surfaces, or artwork has to satisfy two different occlusion footprints.
 
-<sub>method: `observed` · probe: `ruler` · formerly: P2</sub>
+<sub>method: `observed` · surface: `content` · probe: `ruler` · formerly: P2</sub>
 
 **Never measured.** This row is a guess, however confident the prose around it sounds.
 
@@ -800,7 +814,7 @@ What an item definition is allowed to declare, what the client does with it, and
 
 *Decides:* Everything about how much state an item can show. If no, every distinguishable visual configuration costs one item type, and any item that changes state constantly must NOT encode that state in its type -- because a type swap is a remove-and-give, and that is the mechanism by which stack data gets silently dropped.
 
-<sub>method: `derived`</sub>
+<sub>method: `derived` · surface: `content`</sub>
 
 *Established by:* `minecraft:icon` is static per item type and Bedrock has no damage-based icon selection; that is a Java-only feature. There is nothing resembling `CustomModelData`.
 
@@ -810,7 +824,7 @@ What an item definition is allowed to declare, what the client does with it, and
 
 *Decides:* Whether a colour axis can be applied at render time or has to be baked. Baking is what turns 3 dimensions x 16 colours into 48 sprites instead of 19.
 
-<sub>method: `derived`</sub>
+<sub>method: `derived` · surface: `content`</sub>
 
 *Established by:* No runtime tint or sprite-overlay API exists for item icons on Bedrock. Colour has to be in the texture, which means in the item type.
 
@@ -820,7 +834,7 @@ What an item definition is allowed to declare, what the client does with it, and
 
 *Decides:* Whether an animated panel can live in the inventory icon at all. Flipbooks are proven for blocks; for item atlas tiles it is folklore. Note the asymmetry: in the world an animation costs one texture no matter how many colours exist, because the frame is a separate bone. In the inventory an animated icon bakes with everything else in it.
 
-<sub>method: `observed` · probe: `flipbook` · formerly: P10</sub>
+<sub>method: `observed` · surface: `content` · probe: `flipbook` · formerly: P10</sub>
 
 | Version | Answer | How | Evidence |
 |---|---|---|---|
@@ -843,7 +857,7 @@ What an item definition is allowed to declare, what the client does with it, and
 
 *Decides:* Whether the ONE per-stack visual Bedrock allows in the inventory can carry colour. The 16x16 icon square is static per item type and nothing changes that, but `nameTag` is per-stack. If glyphs carry colour, a coloured mark can sit in an item's name, in form button labels, in the actionbar -- anywhere text goes. That is the difference between 48 item types with baked icons and 3 types with a coloured glyph in the name.
 
-<sub>method: `observed` · probe: `glyphs` · formerly: P5</sub>
+<sub>method: `observed` · surface: `content` · probe: `glyphs` · formerly: P5</sub>
 
 | Version | Answer | How | Evidence |
 |---|---|---|---|
@@ -865,7 +879,7 @@ What an item definition is allowed to declare, what the client does with it, and
 
 *Decides:* Whether a glyph can be a shape with a hole -- a ring, an outline, anything that reads against varying backgrounds. A glyph that fills its cell can only ever be a solid block of colour.
 
-<sub>method: `observed` · probe: `glyphs` · formerly: P5 · rests on: `item.name.glyph_renders_in_colour`</sub>
+<sub>method: `observed` · surface: `content` · probe: `glyphs` · formerly: P5 · rests on: `item.name.glyph_renders_in_colour`</sub>
 
 | Version | Answer | How | Evidence |
 |---|---|---|---|
@@ -887,7 +901,7 @@ What an item definition is allowed to declare, what the client does with it, and
 
 *Decides:* Whether the coloured-glyph route is actually usable for per-stack item state. A glyph that works in chat and not on an item would be a trap: the design reads as proven and fails exactly where it is needed.
 
-<sub>method: `observed` · probe: `glyphs` · formerly: P5 · rests on: `item.name.glyph_renders_in_colour`</sub>
+<sub>method: `observed` · surface: `content` · probe: `glyphs` · formerly: P5 · rests on: `item.name.glyph_renders_in_colour`</sub>
 
 **Never measured.** This row is a guess, however confident the prose around it sounds.
 
@@ -909,7 +923,7 @@ What an item definition is allowed to declare, what the client does with it, and
 
 *Decides:* Whether generated items can be nested under a group name of our choosing at all. A rejected definition is invisible in exactly the same way a successfully hidden one is, so this has to be settled before any visibility reading means anything.
 
-<sub>method: `automated` · probe: `menu` · formerly: P7</sub>
+<sub>method: `automated` · surface: `content` · probe: `menu` · formerly: P7</sub>
 
 | Version | Answer | How | Evidence |
 |---|---|---|---|
@@ -940,7 +954,7 @@ What an item definition is allowed to declare, what the client does with it, and
 
 *Decides:* Whether generated intermediates can be kept out of the picker. The husk-item problem -- a creative menu full of items that crash to empty -- is downstream of this.
 
-<sub>method: `observed` · probe: `menu` · formerly: P7 · rests on: `item.creative.custom_group_is_accepted`</sub>
+<sub>method: `observed` · surface: `content` · probe: `menu` · formerly: P7 · rests on: `item.creative.custom_group_is_accepted`</sub>
 
 **Never measured.** This row is a guess, however confident the prose around it sounds.
 
@@ -962,7 +976,7 @@ What an item definition is allowed to declare, what the client does with it, and
 
 *Decides:* Same as above, and the two spellings may not behave the same way.
 
-<sub>method: `observed` · probe: `menu` · formerly: P7 · rests on: `item.creative.custom_group_is_accepted`</sub>
+<sub>method: `observed` · surface: `content` · probe: `menu` · formerly: P7 · rests on: `item.creative.custom_group_is_accepted`</sub>
 
 **Never measured.** This row is a guess, however confident the prose around it sounds.
 
@@ -984,7 +998,7 @@ What an item definition is allowed to declare, what the client does with it, and
 
 *Decides:* Whether a large generated item table can be made tolerable in the picker, the way wool is. Without it, 48 generated variants are 48 separate cells.
 
-<sub>method: `observed` · probe: `menu` · formerly: P7 · rests on: `item.creative.custom_group_is_accepted`</sub>
+<sub>method: `observed` · surface: `content` · probe: `menu` · formerly: P7 · rests on: `item.creative.custom_group_is_accepted`</sub>
 
 **Never measured.** This row is a guess, however confident the prose around it sounds.
 
@@ -1006,7 +1020,7 @@ What an item definition is allowed to declare, what the client does with it, and
 
 *Decides:* Whether a generator's emission order is a usable sort key. A build system that sorts its output for the picker's benefit and is wrong about the mechanism is doing work that has no effect, which is worse than not sorting.
 
-<sub>method: `observed` · probe: `menu` · formerly: P7 · rests on: `item.creative.custom_group_is_accepted`</sub>
+<sub>method: `observed` · surface: `content` · probe: `menu` · formerly: P7 · rests on: `item.creative.custom_group_is_accepted`</sub>
 
 **Never measured.** This row is a guess, however confident the prose around it sounds.
 
@@ -1028,7 +1042,7 @@ What an item definition is allowed to declare, what the client does with it, and
 
 *Decides:* Whether stack state can be mutated in place. If yes, a state toggle is "read, flip a bit, write back" and never an item-type swap -- which is the mechanism by which the mod this pattern was modelled on loses data on every toggle.
 
-<sub>method: `automated` · probe: `dynprops` · formerly: P8</sub>
+<sub>method: `automated` · surface: `script` · probe: `dynprops` · formerly: P8</sub>
 
 | Version | Answer | How | Evidence |
 |---|---|---|---|
@@ -1040,7 +1054,7 @@ What an item definition is allowed to declare, what the client does with it, and
 
 *Decides:* Whether stack state is safe against ordinary play. A property that survives a script round trip but not the floor is a property that vanishes the first time someone dies.
 
-<sub>method: `observed` · probe: `dynprops` · formerly: P8 · rests on: `item.dynamic_properties.survive_get_set_round_trip`</sub>
+<sub>method: `observed` · surface: `script` · probe: `dynprops` · formerly: P8 · rests on: `item.dynamic_properties.survive_get_set_round_trip`</sub>
 
 | Version | Answer | How | Evidence |
 |---|---|---|---|
@@ -1062,7 +1076,7 @@ What an item definition is allowed to declare, what the client does with it, and
 
 *Decides:* Whether stack state is durable at all, or only within a session. This is the leg that decides whether dynamic properties can be the source of truth for anything, or whether they are a cache that needs rebuilding from something else on every load.
 
-<sub>method: `observed` · probe: `dynprops` · formerly: P8 · rests on: `item.dynamic_properties.survive_get_set_round_trip`</sub>
+<sub>method: `observed` · surface: `script` · probe: `dynprops` · formerly: P8 · rests on: `item.dynamic_properties.survive_get_set_round_trip`</sub>
 
 **Never measured.** This row is a guess, however confident the prose around it sounds.
 
@@ -1084,7 +1098,7 @@ What an item definition is allowed to declare, what the client does with it, and
 
 *Decides:* A real inventory cost, paid deliberately by every item that carries state. Worth knowing before designing something that wanted to be stackable.
 
-<sub>method: `derived`</sub>
+<sub>method: `derived` · surface: `script`</sub>
 
 *Established by:* Per-stack state cannot survive stacks merging, and Bedrock's API reflects that. Already relied on in generated item definitions.
 
@@ -1094,7 +1108,7 @@ What an item definition is allowed to declare, what the client does with it, and
 
 *Decides:* Whether durability can be a source of truth at all. Mending fires continuously during ordinary play, so if it reaches a custom item then packed state in durability is corrupted by the player simply collecting XP -- silently, with nothing anywhere saying why.
 
-<sub>method: `observed` · probe: `repair` · formerly: manual</sub>
+<sub>method: `observed` · surface: `engine` · probe: `repair` · formerly: manual</sub>
 
 **Never measured.** This row is a guess, however confident the prose around it sounds.
 
@@ -1116,7 +1130,7 @@ What an item definition is allowed to declare, what the client does with it, and
 
 *Decides:* The same hazard as Mending but player-initiated rather than ambient, which makes it rarer and more confusing when it happens.
 
-<sub>method: `observed` · probe: `repair` · formerly: manual</sub>
+<sub>method: `observed` · surface: `engine` · probe: `repair` · formerly: manual</sub>
 
 **Never measured.** This row is a guess, however confident the prose around it sounds.
 
@@ -1140,7 +1154,7 @@ What an item definition is allowed to declare, what the client does with it, and
 
 *Decides:* Whether the hazard has a one-line fix in the item definition, or has to be mitigated in script by treating durability as a cache.
 
-<sub>method: `observed` · probe: `repair` · formerly: manual · rests on: `item.durability.mending_can_reach_a_custom_item`</sub>
+<sub>method: `observed` · surface: `engine` · probe: `repair` · formerly: manual · rests on: `item.durability.mending_can_reach_a_custom_item`</sub>
 
 **Never measured.** This row is a guess, however confident the prose around it sounds.
 
@@ -1162,7 +1176,7 @@ What an item definition is allowed to declare, what the client does with it, and
 
 *Decides:* Whether durability drifts on its own during play. A slow drift is worse than an external write, because there is no single event to point at.
 
-<sub>method: `observed` · probe: `repair` · formerly: manual</sub>
+<sub>method: `observed` · surface: `engine` · probe: `repair` · formerly: manual</sub>
 
 **Never measured.** This row is a guess, however confident the prose around it sounds.
 
@@ -1178,6 +1192,64 @@ What an item definition is allowed to declare, what the client does with it, and
 
 </details>
 
+## physics
+
+The measurable constants of Bedrock's own behaviour: how fast things fall, how far they are thrown, how close two moving things can pass. None of these are documented and all of them get designed against. A probe here does not check a condition -- it searches for the boundary, and the boundary is the answer.
+
+### `physics.falling_block.gravity_curve`
+
+**What downward velocity does a vanilla falling block reach after a fixed number of ticks?**
+
+*Decides:* Whether a mechanic can predict where a falling block will be, rather than watching it. It is also the control for every other row in this file: if this number moves, the engine's integration changed and nothing else measured here can be compared across that boundary.
+
+<sub>method: `solved` · surface: `engine` · probe: `fallcurve`</sub>
+
+*Solves for the maximum* in `blocks_per_tick`, tolerating ±0.01 before a move counts as a finding, searching -4…0.
+
+**Never measured.** This row is a guess, however confident the prose around it sounds.
+
+> Recorded once already, informally, as `-0.04, -0.12, -0.19, -0.26, -0.33` at ticks 2..10. Those numbers are what confirm a watched entity is the real falling block rather than a look-alike, so this row doubles as the identity check for `entity.falling_block.is_trackable_by_script`.
+
+### `physics.falling_block.min_clearance_under_a_falling_anvil`
+
+**How close can a moving block pass beneath a falling anvil without interrupting its fall?**
+
+*Decides:* The tightest a pass-under mechanic can be built before it becomes unreliable. This is a technical problem asking to be optimised into a reference implementation, and the number it optimises to is only meaningful if somebody is watching whether it moves.
+
+<sub>method: `solved` · surface: `engine` · probe: `anvilgap`</sub>
+
+*Solves for the minimum* in `blocks`, tolerating ±0.07 before a move counts as a finding, searching 0…4.
+
+**Never measured.** This row is a guess, however confident the prose around it sounds.
+
+> THE FAILURE MODE TO WATCH FOR is a solve that converges on its own search bound. A result sitting exactly at `from` or `to` usually means the trial never actually failed, or never actually passed -- so the probe reports INCONCLUSIVE at a bound rather than recording the bound as an answer. A number that is really the edge of the search is not a measurement of anything.
+
+### `physics.throw.item_travel_distance`
+
+**How far does a thrown item travel before coming to rest on flat ground?**
+
+*Decides:* Whether a mechanic that throws something can predict where it lands. Recorded not because throw distance is interesting in itself, but because anything built on top of it inherits the number -- and a design tuned to the old one fails in a way that looks like a bug in the design rather than a change in the game.
+
+<sub>method: `solved` · surface: `engine` · probe: `throw`</sub>
+
+*Solves for the maximum* in `blocks`, tolerating ±0.25 before a move counts as a finding, searching 0…32.
+
+**Never measured.** This row is a guess, however confident the prose around it sounds.
+
+### `physics.knockback.blocks_per_unit`
+
+**How far does one unit of `applyKnockback` actually move a player?**
+
+*Decides:* Whether any momentum design can be written at all. `applyKnockback` is the only way to impose a velocity on a player and its unit is undocumented, so every use of it is a guess until this is measured.
+
+<sub>method: `solved` · surface: `script` · probe: `knockback`</sub>
+
+*Solves for the maximum* in `blocks_per_unit`, tolerating ±0.1 before a move counts as a finding, searching 0…20.
+
+**Never measured.** This row is a guess, however confident the prose around it sounds.
+
+> Marked `script` rather than `engine` deliberately. The distance travelled is engine behaviour, but what one UNIT means is an API contract, and that is the part that moves when the module version moves. A consumer raising their script pin should see this row as one that might change under them.
+
 ## render
 
 What can be drawn, and what the thing drawing it is allowed to know. The load-bearing question in the whole battery lives here: whether a render controller can be told which item it is drawing. If it can, one item type renders every configuration. If it cannot, every distinguishable configuration needs its own item type, and the asset count multiplies instead of layering.
@@ -1188,7 +1260,7 @@ What can be drawn, and what the thing drawing it is allowed to know. The load-be
 
 *Decides:* How every other probe in this file has to be read. If an unknown query silently yields 0, then a controller indexing a texture array with a dead query still draws -- it draws index 0. So index 0 is the signal for "this query is blind", and no probe expectation may land on index 0 except the one that expects zero anyway. Getting this backwards makes every rendering measurement unreadable.
 
-<sub>method: `derived`</sub>
+<sub>method: `derived` · surface: `content`</sub>
 
 *Established by:* Read off the engine's behaviour across several controller failures. An unresolvable query for an ENTITY property additionally fails the whole render controller silently, which is a different and worse failure -- four sessions were lost to it before the query was found to be `query.property` rather than `query.actor_property`.
 
@@ -1200,7 +1272,7 @@ What can be drawn, and what the thing drawing it is allowed to know. The load-be
 
 *Decides:* Whether `math.floor` and `math.mod` can safely unpack a value carried in durability or any other numeric channel.
 
-<sub>method: `derived`</sub>
+<sub>method: `derived` · surface: `content`</sub>
 
 *Established by:* Molang is float-based; integers stay exact well past 2^24, which is far above any packed layout worth designing. Use power-of-two bases for readability.
 
@@ -1210,7 +1282,7 @@ What can be drawn, and what the thing drawing it is allowed to know. The load-be
 
 *Decides:* Whether in-world rendering of a custom held item is possible in any form. The bisect floor for everything else in this file: a rig that stays dark cannot say whether the queries are blind or whether attachables simply do not work on custom items, and without this row underneath it, no result above is readable.
 
-<sub>method: `observed` · probe: `attachable` · formerly: P3a</sub>
+<sub>method: `observed` · surface: `content` · probe: `attachable` · formerly: P3a</sub>
 
 | Version | Answer | How | Evidence |
 |---|---|---|---|
@@ -1233,7 +1305,7 @@ What can be drawn, and what the thing drawing it is allowed to know. The load-be
 
 *Decides:* Where to place probe geometry before measuring anything with it. Twice now a rig has rendered perfectly and been unreadable because it sat at the anchor and the body occluded it. Offset first, then measure.
 
-<sub>method: `observed` · probe: `attachable` · formerly: P3a · rests on: `render.attachable.draws_on_custom_item`</sub>
+<sub>method: `observed` · surface: `content` · probe: `attachable` · formerly: P3a · rests on: `render.attachable.draws_on_custom_item`</sub>
 
 | Version | Answer | How | Evidence |
 |---|---|---|---|
@@ -1255,7 +1327,7 @@ What can be drawn, and what the thing drawing it is allowed to know. The load-be
 
 *Decides:* The largest single consequence in this battery. If yes, ONE item type renders every configuration in the hand and hundreds of baked sprites go away. If no, the item looks identical in every configuration and its state has to live in its NAME and its DURABILITY BAR, which are the only two per-stack visuals left.
 
-<sub>method: `observed` · probe: `attachable` · formerly: P3b/P4 · rests on: `render.attachable.draws_on_custom_item`</sub>
+<sub>method: `observed` · surface: `content` · probe: `attachable` · formerly: P3b/P4 · rests on: `render.attachable.draws_on_custom_item`</sub>
 
 | Version | Answer | How | Evidence |
 |---|---|---|---|
@@ -1280,7 +1352,7 @@ What can be drawn, and what the thing drawing it is allowed to know. The load-be
 
 *Decides:* Whether visual axes multiply at render time or in the asset folder. With layered bones -- an animated panel on one, a colour frame on another, a state marker on a third -- 3 dimensions x 16 colours is 19 textures. Without it, every axis multiplies with every other one.
 
-<sub>method: `observed` · probe: `attachable` · formerly: P4 · rests on: `render.attachable.draws_on_custom_item`</sub>
+<sub>method: `observed` · surface: `content` · probe: `attachable` · formerly: P4 · rests on: `render.attachable.draws_on_custom_item`</sub>
 
 **Never measured.** This row is a guess, however confident the prose around it sounds.
 
@@ -1303,7 +1375,7 @@ What can be drawn, and what the thing drawing it is allowed to know. The load-be
 
 *Decides:* Whether "it appeared on my back" is a property of attachables or a property of our geometry offsets. The answer changes whether a hand pose needs work or just needs coordinates.
 
-<sub>method: `derived`</sub>
+<sub>method: `derived` · surface: `content`</sub>
 
 *Established by:* Read directly out of the attachable JSON we emit: it declares only `materials`, `textures`, `geometry` and `render_controllers`. With nothing switching poses, the model renders in the player model's coordinate space at its origin and stays there in both first and third person. Confirmed against play reports of the probe appearing behind the player, which is where its authored offset puts it.
 
@@ -1313,7 +1385,7 @@ What can be drawn, and what the thing drawing it is allowed to know. The load-be
 
 *Decides:* Whether a custom held item can look held. Low stakes while the durability queries are dead -- a hand-posed attachable can only ever show one fixed look, so it is worth having for flavour and never for information -- but it is the row that makes an in-world model presentable at all.
 
-<sub>method: `observed` · probe: `attachable_pose` · formerly: P3c · rests on: `render.attachable.draws_on_custom_item`</sub>
+<sub>method: `observed` · surface: `content` · probe: `attachable_pose` · formerly: P3c · rests on: `render.attachable.draws_on_custom_item`</sub>
 
 **Never measured.** This row is a guess, however confident the prose around it sounds.
 
@@ -1340,7 +1412,7 @@ What can be drawn, and what the thing drawing it is allowed to know. The load-be
 
 *Decides:* Whether art for a form can be pure pack art: no item type, no atlas entry, nothing in the creative menu. That is the difference between 48 real items and 48 PNGs, and this is the only surface in the game where an arbitrary picture can be drawn per stack.
 
-<sub>method: `observed` · probe: `formicon` · formerly: P6</sub>
+<sub>method: `observed` · surface: `script` · probe: `formicon` · formerly: P6</sub>
 
 **Never measured.** This row is a guess, however confident the prose around it sounds.
 
@@ -1362,7 +1434,7 @@ What can be drawn, and what the thing drawing it is allowed to know. The load-be
 
 *Decides:* Whether a runtime-computed reference can be an atlas key -- which a generator already knows -- or has to be a full path, which it has to be taught.
 
-<sub>method: `observed` · probe: `formicon` · formerly: P6 · rests on: `ui.form.button_icon_resolves_an_unindexed_path`</sub>
+<sub>method: `observed` · surface: `script` · probe: `formicon` · formerly: P6 · rests on: `ui.form.button_icon_resolves_an_unindexed_path`</sub>
 
 **Never measured.** This row is a guess, however confident the prose around it sounds.
 
@@ -1384,7 +1456,7 @@ What can be drawn, and what the thing drawing it is allowed to know. The load-be
 
 *Decides:* Whether "no icon" and "wrong path" are distinguishable in play. This matters more than it looks: a UI that computes paths at runtime and fails silently is a UI where a typo is invisible forever.
 
-<sub>method: `observed` · probe: `formicon` · formerly: P6 · rests on: `ui.form.button_icon_resolves_an_unindexed_path`</sub>
+<sub>method: `observed` · surface: `script` · probe: `formicon` · formerly: P6 · rests on: `ui.form.button_icon_resolves_an_unindexed_path`</sub>
 
 **Never measured.** This row is a guess, however confident the prose around it sounds.
 
@@ -1406,7 +1478,7 @@ What can be drawn, and what the thing drawing it is allowed to know. The load-be
 
 *Decides:* Whether a container screen can be part of a scripted flow, or is always something the player has to reach for themselves.
 
-<sub>method: `derived`</sub>
+<sub>method: `derived` · surface: `script`</sub>
 
 *Established by:* There is no `player.openContainer` in the script API.
 
@@ -1416,7 +1488,7 @@ What can be drawn, and what the thing drawing it is allowed to know. The load-be
 
 *Decides:* Whether watching a container costs a poll. Cheap for one open container; a real cost if a design wants many.
 
-<sub>method: `derived`</sub>
+<sub>method: `derived` · surface: `script`</sub>
 
 *Established by:* No container-change event exists; contents must be polled.
 
@@ -1426,7 +1498,7 @@ What can be drawn, and what the thing drawing it is allowed to know. The load-be
 
 *Decides:* Whether the enchanting table is a route to a custom "attach"-style interaction. It is a tempting one because the UI already exists and reads as native.
 
-<sub>method: `derived`</sub>
+<sub>method: `derived` · surface: `engine`</sub>
 
 *Established by:* Custom enchantments cannot be defined and the enchanting-table UI cannot be intercepted. The glint still requires a real vanilla enchantment.
 
@@ -1436,7 +1508,7 @@ What can be drawn, and what the thing drawing it is allowed to know. The load-be
 
 *Decides:* Whether a UI can draw an ARBITRARY item -- including one from another pack. Without it, anything that wants to needs a generated id-to-path table plus a placeholder for everything unrecognised.
 
-<sub>method: `derived`</sub>
+<sub>method: `derived` · surface: `script`</sub>
 
 *Established by:* Form button `iconPath` is a texture path rather than an item id, and no runtime API maps one to the other. Our own art is unaffected because we control those paths.
 
@@ -1466,5 +1538,5 @@ other repositories can carry `@requires bedshock:<id>` and `bedshock check` will
 if the cited row is not settled at that pack's `min_engine_version` — so a design can never
 quietly come to rest on a guess.
 
-<sub>60 capabilities · 27 observations · 1 version(s): 1.21.120</sub>
+<sub>64 capabilities · 27 observations · 1 version(s): 1.21.120</sub>
 

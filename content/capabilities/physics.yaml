@@ -1,0 +1,105 @@
+# Physics, timing and the numbers a design gets tuned to.
+#
+# EVERY ROW HERE IS `solved` RATHER THAN YES/NO, and that is the point of the file. The rest of
+# this battery asks whether a thing is possible. These ask HOW MUCH, and record the number.
+#
+# A yes/no capability only reports when something appears or disappears. A solved one reports
+# when the game's numbers shift underneath a design that was tuned to them -- a reference
+# implementation that still runs, still passes, and is now subtly wrong. Nothing else in this
+# battery would notice that, and it is the failure most likely to survive a release.
+#
+# These are also the rows most likely to move for uninteresting reasons. A solve has real jitter:
+# tick granularity, spawn rounding, floating point. So every row declares a `tolerance` taken
+# from its own apparatus's resolution, and a movement inside that is not a finding. A tolerance
+# of zero would report DRIFT on noise, and a drift people learn to ignore is worse than none.
+
+domain: physics
+about: >-
+  The measurable constants of Bedrock's own behaviour: how fast things fall, how far they are
+  thrown, how close two moving things can pass. None of these are documented and all of them get
+  designed against. A probe here does not check a condition -- it searches for the boundary, and
+  the boundary is the answer.
+
+capabilities:
+  - id: physics.falling_block.gravity_curve
+    question: >-
+      What downward velocity does a vanilla falling block reach after a fixed number of ticks?
+    decides: >-
+      Whether a mechanic can predict where a falling block will be, rather than watching it. It
+      is also the control for every other row in this file: if this number moves, the engine's
+      integration changed and nothing else measured here can be compared across that boundary.
+    method: solved
+    surface: engine
+    probe: fallcurve
+    measures:
+      unit: blocks_per_tick
+      direction: maximum
+      # One tick of drag applied or not applied is about this much at the sampled tick. Below
+      # that is arithmetic noise rather than a change in the game.
+      tolerance: 0.01
+      search: { from: -4, to: 0 }
+    notes: >-
+      Recorded once already, informally, as `-0.04, -0.12, -0.19, -0.26, -0.33` at ticks 2..10.
+      Those numbers are what confirm a watched entity is the real falling block rather than a
+      look-alike, so this row doubles as the identity check for
+      `entity.falling_block.is_trackable_by_script`.
+
+  - id: physics.falling_block.min_clearance_under_a_falling_anvil
+    question: >-
+      How close can a moving block pass beneath a falling anvil without interrupting its fall?
+    decides: >-
+      The tightest a pass-under mechanic can be built before it becomes unreliable. This is a
+      technical problem asking to be optimised into a reference implementation, and the number it
+      optimises to is only meaningful if somebody is watching whether it moves.
+    method: solved
+    surface: engine
+    probe: anvilgap
+    measures:
+      unit: blocks
+      direction: minimum
+      # The probe steps in sixteenths of a block; anything under that is below its own
+      # resolution and cannot be attributed to the game.
+      tolerance: 0.07
+      search: { from: 0, to: 4 }
+    notes: >-
+      THE FAILURE MODE TO WATCH FOR is a solve that converges on its own search bound. A result
+      sitting exactly at `from` or `to` usually means the trial never actually failed, or never
+      actually passed -- so the probe reports INCONCLUSIVE at a bound rather than recording the
+      bound as an answer. A number that is really the edge of the search is not a measurement of
+      anything.
+
+  - id: physics.throw.item_travel_distance
+    question: How far does a thrown item travel before coming to rest on flat ground?
+    decides: >-
+      Whether a mechanic that throws something can predict where it lands. Recorded not because
+      throw distance is interesting in itself, but because anything built on top of it inherits
+      the number -- and a design tuned to the old one fails in a way that looks like a bug in the
+      design rather than a change in the game.
+    method: solved
+    surface: engine
+    probe: throw
+    measures:
+      unit: blocks
+      direction: maximum
+      tolerance: 0.25
+      search: { from: 0, to: 32 }
+
+  - id: physics.knockback.blocks_per_unit
+    question: How far does one unit of `applyKnockback` actually move a player?
+    decides: >-
+      Whether any momentum design can be written at all. `applyKnockback` is the only way to
+      impose a velocity on a player and its unit is undocumented, so every use of it is a guess
+      until this is measured.
+    method: solved
+    surface: script
+    probe: knockback
+    measures:
+      unit: blocks_per_unit
+      direction: maximum
+      tolerance: 0.1
+      search: { from: 0, to: 20 }
+    notes: >-
+      Marked `script` rather than `engine` deliberately. The distance travelled is engine
+      behaviour, but what one UNIT means is an API contract, and that is the part that moves when
+      the module version moves. A consumer raising their script pin should see this row as one
+      that might change under them.

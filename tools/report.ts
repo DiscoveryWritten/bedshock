@@ -27,6 +27,7 @@ import type { Capability, Observation, Status } from './types.ts';
 import type { Catalog } from './catalog.ts';
 import { compareVersions, resolveWithDeps, statusAt, versionsInLedger } from './ledger.ts';
 import { buildManifest } from './manifest.ts';
+import { bar, decadeBounds, formatValue, legend } from './scale.ts';
 import { DOCS_DIR } from './paths.ts';
 
 const GENERATED_BY = 'tools/report.ts';
@@ -188,6 +189,69 @@ export function renderMatrix(catalog: Catalog, observations: Observation[]): str
     out.push('');
   }
 
+  // --- measured quantities ---
+  //
+  // A separate section because these rows answer a different KIND of question. Everything else
+  // here reports whether something is possible; these report how much, and the number is what a
+  // design gets tuned to. A yes/no row only moves when a thing appears or disappears; one of
+  // these moves when the game's constants shift under an implementation that still runs.
+  const solved = catalog.capabilities.filter((c) => c.method === 'solved');
+  if (solved.length && versions.length) {
+    const latest = versions[versions.length - 1]!;
+    const readings = solved
+      .map((cap) => ({ cap, s: statusAt(cap, latest, observations) }))
+      .filter((r) => typeof r.s.observations[0]?.value === 'number');
+
+    out.push(
+      '## Measured quantities',
+      '',
+      `Solved rather than answered: each of these is a search for a boundary, and the value is the`,
+      `answer. Shown on ${latest}.`,
+      '',
+    );
+
+    if (readings.length === 0) {
+      out.push('*None measured yet. The questions are written; nobody has run them.*', '');
+    } else {
+      const values = readings.map((r) => r.s.observations[0]!.value!);
+      const bounds = decadeBounds(values);
+      out.push('```');
+      const width = Math.max(...readings.map((r) => r.cap.id.length));
+      for (const { cap, s } of readings) {
+        const value = s.observations[0]!.value!;
+        out.push(`${cap.id.padEnd(width)}  ${bar(value, bounds)}  ${formatValue(value, cap.measures?.unit)}`);
+      }
+      out.push('');
+      out.push(`${' '.repeat(width)}  ${legend(bounds.min, bounds.max)}`);
+      out.push('```');
+      out.push('');
+      out.push(
+        'The bar is **logarithmic** — every decade is the same width, so a tenfold change is always',
+        'the same visible jump and a small value is still a readable length. It is for the eye; the',
+        'number beside it is the record. A `▸` cap means the value is above the top of the scale.',
+        '',
+        '| Capability | Value | Tolerance | Measured |',
+        '|---|---|---|---|',
+      );
+      for (const { cap, s } of readings) {
+        const o = s.observations[0]!;
+        out.push(
+          `| \`${cap.id}\` | ${formatValue(o.value!, cap.measures?.unit)} | ±${cap.measures?.tolerance ?? '—'} | ${o.version} |`,
+        );
+      }
+      out.push('');
+    }
+
+    const unmeasured = solved.filter((c) => !readings.some((r) => r.cap.id === c.id));
+    if (unmeasured.length) {
+      out.push(
+        `${unmeasured.length} solved row(s) have no value yet: ` +
+          unmeasured.map((c) => `\`${c.id}\``).join(', '),
+        '',
+      );
+    }
+  }
+
   // --- per-domain detail ---
   for (const [domain, group] of catalog.byDomain) {
     out.push(`## ${domain}`, '');
@@ -212,11 +276,20 @@ function renderCapability(
   out.push(`**${esc(cap.question)}**`, '');
   out.push(`*Decides:* ${esc(cap.decides)}`, '');
 
-  const meta: string[] = [`method: \`${cap.method}\``];
+  const meta: string[] = [`method: \`${cap.method}\``, `surface: \`${cap.surface}\``];
   if (cap.probe) meta.push(`probe: \`${cap.probe}\``);
   if (cap.legacy) meta.push(`formerly: ${cap.legacy}`);
   if (cap.depends_on?.length) meta.push(`rests on: ${cap.depends_on.map((d) => `\`${d}\``).join(', ')}`);
   out.push(`<sub>${meta.join(' · ')}</sub>`, '');
+
+  if (cap.method === 'solved' && cap.measures) {
+    out.push(
+      `*Solves for the ${cap.measures.direction}* in \`${cap.measures.unit}\`, ` +
+        `tolerating ±${cap.measures.tolerance} before a move counts as a finding` +
+        (cap.measures.search ? `, searching ${cap.measures.search.from}…${cap.measures.search.to}.` : '.'),
+      '',
+    );
+  }
 
   if (cap.method === 'derived') {
     out.push(`*Established by:* ${esc(cap.established_by ?? '')}`, '');
@@ -226,7 +299,11 @@ function renderCapability(
       out.push('**Never measured.** This row is a guess, however confident the prose around it sounds.', '');
       if (cap.look_at) out.push(`*To answer it:* ${esc(cap.look_at)}`, '');
     } else {
-      out.push('| Version | Answer | How | Evidence |', '|---|---|---|---|');
+      const solvedRow = cap.method === 'solved';
+      out.push(
+        solvedRow ? '| Version | Answer | Value | How | Evidence |' : '| Version | Answer | How | Evidence |',
+        solvedRow ? '|---|---|---|---|---|' : '|---|---|---|---|',
+      );
       for (const v of measured) {
         const s = resolveWithDeps(cap, v, observations, catalog);
         const top = s.observations[0]!;
@@ -234,7 +311,11 @@ function renderCapability(
         const evidence = [top.evidence, top.note && `*${top.note}*`, s.conflict && `**${s.conflict}**`]
           .filter(Boolean)
           .join(' — ');
-        out.push(`| ${v} | ${BADGE[s.status]} | ${how} | ${esc(evidence || '—')} |`);
+        out.push(
+          solvedRow
+            ? `| ${v} | ${BADGE[s.status]} | ${typeof top.value === 'number' ? formatValue(top.value, cap.measures?.unit) : '—'} | ${how} | ${esc(evidence || '—')} |`
+            : `| ${v} | ${BADGE[s.status]} | ${how} | ${esc(evidence || '—')} |`,
+        );
       }
       out.push('');
       const withMeasurement = measured

@@ -34,7 +34,12 @@ export interface ManifestRow {
   question: string;
   decides: string;
   method: Capability['method'];
+  /** What would have to change for this answer to change: engine, script or content. */
+  surface: Capability['surface'];
   status: Status;
+  /** For a solved row: the value the search converged on, and what it means. */
+  value?: number;
+  measures?: Capability['measures'];
   /**
    * `true` when this row's answer came from an OLDER version and was not re-checked here.
    * A consumer that cares about the difference between evidence and measurement reads this.
@@ -120,6 +125,7 @@ export function buildManifest(catalog: Catalog, observations: Observation[], ver
         question: cap.question,
         decides: cap.decides,
         method: cap.method,
+        surface: cap.surface,
         // A derived row is established by reading what the engine does rather than by a probe.
         // It is reported as SETTLED so a consumer can build on it, and `method` says why.
         status: 'SETTLED' as Status,
@@ -139,8 +145,11 @@ export function buildManifest(catalog: Catalog, observations: Observation[], ver
       question: cap.question,
       decides: cap.decides,
       method: cap.method,
+      surface: cap.surface,
       status: resolved.status,
       inherited: resolved.inherited,
+      ...(typeof top?.value === 'number' ? { value: top.value } : {}),
+      ...(cap.measures ? { measures: cap.measures } : {}),
       ...(resolved.measuredAt ? { measured_on: resolved.measuredAt } : {}),
       ...(top?.platform ? { platform: top.platform } : {}),
       ...(top?.api ? { api: top.api } : {}),
@@ -186,6 +195,14 @@ export function buildManifest(catalog: Catalog, observations: Observation[], ver
 export interface ManifestDiff {
   from: string;
   to: string;
+  /**
+   * A solved row whose value moved beyond its own tolerance.
+   *
+   * Reported separately from a status change because it IS a different kind of news: nothing
+   * appeared or disappeared, the game's numbers shifted under something that still works. A
+   * reference implementation tuned to the old value is now subtly wrong and still passing.
+   */
+  values_moved: { id: string; from: number; to: number; unit?: string; tolerance?: number }[];
   became_possible: { id: string; question: string }[];
   became_impossible: { id: string; question: string }[];
   newly_answered: { id: string; status: Status }[];
@@ -200,6 +217,7 @@ export function diffManifests(a: Manifest, b: Manifest): ManifestDiff {
   const diff: ManifestDiff = {
     from: `${a.minecraft} (${a.catalog_revision})`,
     to: `${b.minecraft} (${b.catalog_revision})`,
+    values_moved: [],
     became_possible: [],
     became_impossible: [],
     newly_answered: [],
@@ -210,7 +228,24 @@ export function diffManifests(a: Manifest, b: Manifest): ManifestDiff {
 
   for (const [id, now] of after) {
     const was = before.get(id);
-    if (!was || was.status === now.status) continue;
+    if (!was) continue;
+
+    if (
+      now.method === 'solved' &&
+      typeof was.value === 'number' &&
+      typeof now.value === 'number' &&
+      Math.abs(now.value - was.value) > (now.measures?.tolerance ?? 0)
+    ) {
+      diff.values_moved.push({
+        id,
+        from: was.value,
+        to: now.value,
+        ...(now.measures?.unit ? { unit: now.measures.unit } : {}),
+        ...(now.measures?.tolerance !== undefined ? { tolerance: now.measures.tolerance } : {}),
+      });
+    }
+
+    if (was.status === now.status) continue;
     if (was.status === 'CLOSED-NEGATIVE' && now.status === 'SETTLED') {
       diff.became_possible.push({ id, question: now.question });
     } else if (was.status === 'SETTLED' && now.status === 'CLOSED-NEGATIVE') {

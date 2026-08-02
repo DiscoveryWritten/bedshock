@@ -105,8 +105,50 @@ export function validateCapabilities(files: CapabilityFile[]): string[] {
         }
         if (cap.probe) problems.push(`${where}: a derived capability has no probe`);
       }
-      if (!['automated', 'observed', 'derived'].includes(cap.method)) {
-        problems.push(`${where}: method must be automated, observed or derived`);
+      if (!['automated', 'observed', 'derived', 'solved'].includes(cap.method)) {
+        problems.push(`${where}: method must be automated, observed, derived or solved`);
+      }
+
+      // Required rather than defaulted. A row silently marked `content` that is really about the
+      // script API tells a consumer their pin does not matter when it does, and a wrong answer
+      // to "what would have to change for this to change" is worse than no answer.
+      if (!['engine', 'script', 'content'].includes(cap.surface)) {
+        problems.push(
+          `${where}: surface must be engine, script or content — say what would have to change ` +
+            `for this answer to change`,
+        );
+      }
+
+      if (cap.method === 'solved') {
+        if (!cap.probe) problems.push(`${where}: a solved capability must name its \`probe\``);
+        if (!cap.measures) {
+          problems.push(`${where}: a solved capability must declare what it \`measures\``);
+        } else {
+          const m = cap.measures;
+          if (!m.unit) problems.push(`${where}: measures needs a \`unit\``);
+          if (!['minimum', 'maximum'].includes(m.direction)) {
+            problems.push(`${where}: measures.direction must be minimum or maximum`);
+          }
+          // Zero tolerance reports DRIFT on the apparatus's own jitter, and a drift people learn
+          // to ignore is worse than no drift check at all.
+          if (typeof m.tolerance !== 'number' || !(m.tolerance > 0)) {
+            problems.push(
+              `${where}: measures.tolerance must be a positive number — set it from the ` +
+                `apparatus's own resolution, because zero reports drift on noise`,
+            );
+          }
+          if (m.search && !(m.search.from < m.search.to)) {
+            problems.push(`${where}: measures.search must have from < to`);
+          }
+        }
+        if (cap.outcomes) {
+          problems.push(
+            `${where}: a solved capability has no \`outcomes\` — its answer is a value, and the ` +
+              `verdict says only whether the search converged`,
+          );
+        }
+      } else if (cap.measures) {
+        problems.push(`${where}: only a solved capability takes \`measures\``);
       }
     }
   }

@@ -27,9 +27,11 @@ import * as dynprops from './probes/dynprops.ts';
 import * as container from './probes/container.ts';
 import * as offhand from './probes/offhand.ts';
 import * as menu from './probes/menu.ts';
+import * as fallcurve from './probes/fallcurve.ts';
 import * as fallingblock from './probes/fallingblock.ts';
 import * as repair from './probes/repair.ts';
 import * as scenes from './probes/scenes.ts';
+import * as session from './session.ts';
 
 type Probe = (ctx: Ctx) => void;
 
@@ -45,6 +47,7 @@ const PROBES: Record<string, Probe> = {
   container: container.run,
   offhand: offhand.run,
   fallingblock: fallingblock.run,
+  fallcurve: fallcurve.run,
   repair: repair.run,
   ruler: scenes.ruler,
   glyphs: scenes.glyphs,
@@ -57,6 +60,18 @@ const FOLLOW_UPS: Record<string, (ctx: Ctx, player: Player) => void> = {
   'dynprops.stamp': dynprops.stamp,
   'dynprops.token': dynprops.token,
   'container.clear': (ctx) => container.clear(ctx),
+};
+
+/**
+ * The guided run, and its own event rather than a probe.
+ *
+ * A probe SETS A SCENE and leaves; the session drives a person through many scenes and collects
+ * what they saw. Sharing an entry point would blur the one distinction this pack is most careful
+ * about — that a `LOOK` is not a result — because a session's output IS answers.
+ */
+const SESSIONS: Record<string, (ctx: Ctx, player: Player) => void> = {
+  '': (ctx, player) => session.start(ctx, player, false),
+  all: (ctx, player) => session.start(ctx, player, true),
 };
 
 /** Run one probe, surviving whatever it throws. */
@@ -72,6 +87,10 @@ function runOne(ctx: Ctx, name: string, probe: Probe): void {
   }
 }
 
+function playerOf(event: { sourceEntity?: { typeId: string } }): Player | undefined {
+  return event.sourceEntity?.typeId === 'minecraft:player' ? (event.sourceEntity as Player) : undefined;
+}
+
 function runAll(ctx: Ctx): void {
   begin();
   ctx.say(`§l${NAMESPACE} ${PACK_VERSION}§r — capability battery`);
@@ -81,9 +100,31 @@ function runAll(ctx: Ctx): void {
 
 system.afterEvents.scriptEventReceive.subscribe(
   (event) => {
+    if (event.id === `${NAMESPACE}:session`) {
+      const player = playerOf(event);
+      if (!player) {
+        makeCtx().say('a session needs a player — it is a guided run, not a measurement.');
+        return;
+      }
+      const ctx = makeCtx(player);
+      claimTickingArea(`${NAMESPACE}_probe`);
+      const which = SESSIONS[event.message.trim()];
+      if (!which) {
+        ctx.say(`no session called "${event.message.trim()}". Try nothing, or \`all\`.`);
+        return;
+      }
+      whenChunkIsLive(ctx, () => which(ctx, player));
+      return;
+    }
+
+    if (event.id === `${NAMESPACE}:code`) {
+      session.showLastCode(makeCtx(playerOf(event)));
+      return;
+    }
+
     if (event.id !== `${NAMESPACE}:probe`) return;
 
-    const player = event.sourceEntity?.typeId === 'minecraft:player' ? (event.sourceEntity as Player) : undefined;
+    const player = playerOf(event);
     const ctx = makeCtx(player);
     const what = event.message.trim();
 
@@ -128,5 +169,8 @@ system.afterEvents.scriptEventReceive.subscribe(
 );
 
 world.afterEvents.worldLoad.subscribe(() => {
-  console.warn(`BEDSHOCK READY ${NAMESPACE} ${PACK_VERSION} — /scriptevent ${NAMESPACE}:probe`);
+  console.warn(
+    `BEDSHOCK READY ${NAMESPACE} ${PACK_VERSION} — /scriptevent ${NAMESPACE}:probe, ` +
+      `/scriptevent ${NAMESPACE}:session`,
+  );
 });

@@ -31,8 +31,8 @@
     "clean": "rm -rf build dist"
   },
   "devDependencies": {
-    "@minecraft/server": "2.3.0",
-    "@minecraft/server-ui": "2.0.0",
+    "@minecraft/server": "2.8.0",
+    "@minecraft/server-ui": "2.1.0",
     "@types/node": "^22.10.2",
     "@types/pngjs": "^6.0.5",
     "ajv": "^8.17.1",

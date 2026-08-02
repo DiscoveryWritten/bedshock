@@ -88,7 +88,31 @@ A sweep on a new Bedrock normally wants `--open --negative`: everything that is 
 confirmed yes. And `bedshock diff` between two manifests prints `became_possible` first, because
 that is the single most valuable line this project can produce.
 
-## Measured, observed, derived
+## Two axes on every row
+
+**What kind of answer it is** — `automated`, `observed`, `derived`, `solved`.
+
+**What would have to change for the answer to change** — and this one is required, because a
+consumer asking *"will this still hold if I raise my script pin"* gets a different answer for
+each:
+
+| Surface | Moves when | Example |
+|---|---|---|
+| `engine` | Mojang changes the game | how far a thrown item travels; whether an entity blocks a player |
+| `script` | the `@minecraft/server` version moves | whether `setEquipment` sticks; what one knockback unit means |
+| `content` | the pack format or the client's handling of it moves | `max_durability` as an int16; whether a flipbook animates an item tile |
+
+A sweep that finds an `engine` row moved has found a gameplay change. A moved `script` row has
+usually found an API change. Those are different news, and a row guessed into the wrong bucket
+tells someone their pin does not matter when it does.
+
+**This pack always pins the newest script API**, which is the opposite of what a shipping add-on
+does and for the opposite reason. A mod pins low because every version it raises is a player
+whose game is now too old. bedshock ships to nobody — so a low pin buys no compatibility and
+costs the only thing that matters: **a battery cannot ask about an API it did not declare.** An
+old pin does not make a newer capability `OPEN`; it makes it *invisible*.
+
+## Measured, observed, derived — and solved
 
 The distinction is not cosmetic, and the runtime cannot blur it.
 
@@ -103,13 +127,98 @@ exactly and enumerate the outcomes, never to guess the result.
 **`derived`** — established by reading what the engine or our own emitted files do. Recorded so
 nobody re-derives them, and so a future contradiction is visible as one.
 
+**`solved`** — the answer is a **number**, not a yes. *How close can a moving block pass beneath
+a falling anvil without interrupting it?* has an answer, and a probe for one of these does not
+check a condition — it searches for the boundary.
+
+These are the rows most worth having and the easiest to overlook. A yes/no capability only
+reports when something appears or disappears. A solved one reports when **the game's constants
+shift underneath a design that was tuned to them** — a reference implementation that still runs,
+still passes, and is now subtly wrong. Nothing else in this battery would notice that.
+
+So a solved row drifts on its *value*, not its verdict: two runs both converging is not agreement
+if they converged somewhere else. Each declares a `tolerance` taken from its own apparatus's
+resolution, because a tolerance of zero reports drift on noise and a drift people learn to ignore
+is worse than none.
+
+Values are rendered as one aligned row of text rather than a chart — logarithmic, so a tenfold
+change is always the same visible jump and a sixteenth of a block is still a readable length:
+
+```
+physics.falling_block.min_clearance_under_a_falling_anvil  ├────●───────────────  0.063 blocks
+physics.falling_block.gravity_curve                        ├───────●────────────  0.33 b/tick
+physics.knockback.blocks_per_unit                          ├──────────●─────────  1.4 b/unit
+physics.throw.item_travel_distance                         ├────────────────●───  28.5 blocks
+                                                           ├────────────────────  log scale, 0.01 to 100
+```
+
+The bar is for the eye; the number beside it is the record. `bedshock diff` reports a moved value
+separately from a status change, because nothing appeared or disappeared — the ground shifted.
+
 A `LOOK` is not a result. The runtime gives it a different verb, and `bedshock run` refuses to
 record one. The only path from an eyes-only row to the ledger runs through a person.
 
 ## Answering the eyes-only half
 
-`bedshock amend` replays the last run's `LOOK` rows on a machine with a keyboard, while you
-play on whatever device you are on. Nothing has to escape the client.
+Half this battery needs a person. Which pixel rows a bar covers, whether a glyph is coloured,
+whether four flags render — no API decides those. There are two ways in, and the first one is
+the one that matters.
+
+### The guided session, in game
+
+Import the `.mcworld` from a release, join it, and run one command:
+
+```
+/scriptevent bedshock:session
+```
+
+It moves you into place for each question, **locks movement so a rig cannot be walked away
+from**, points the camera at what is being measured, hands you exactly the items that question
+needs, and shows the question with its outcomes as buttons. You look, and you tap.
+
+None of that is a new idea — it is the same `look_at` and `outcomes` every observed capability
+has always had to declare, because a probe that cannot say what to look for and how to tell two
+results apart is not readable. That requirement turned out to be a UI specification.
+
+At the end you get one line:
+
+```
+--- answer code ---
+1C3C-2000-G101-G202-G303-G40S-V
+9 answer(s). Hand this over; nothing else needs to leave the game.
+```
+
+```bash
+bedshock redeem 1C3C-2000-G101-G202-G303-G40S-V --version 1.26.36.1
+```
+
+**That code is the entire channel out of the game, and it has to be.** `@minecraft/server-net`
+says so itself — *"This module can only be used on Bedrock Dedicated Server"* — so a client
+add-on has no HTTP, no socket, no egress whatsoever. On a tablet or a console there is no
+terminal beside it and nothing to write to. So: one short string per **session**, not one
+sentence per question, in Crockford base32 with the confusable glyphs removed, grouped in fours
+to be read off a screenshot.
+
+It is checksummed, and that part is not decoration. A code that will not decode costs one
+re-read. A code that decoded to *different valid answers* would put measurements nobody made
+into an append-only ledger that other repositories build on, and nothing downstream could ever
+tell. A single mistyped character, or two swapped, is refused:
+
+```
+! checksum SV does not match QE. Something was mistyped or misread — re-read the code
+  rather than adjusting it.
+```
+
+The code also carries the catalog revision, because outcome indices are **positional** — a
+question edited since the session moves every index after it, so a code from another revision is
+refused rather than filed against the wrong questions. And the verdict recorded is the one the
+catalog declares for that outcome, never one carried in the code: the code says which button,
+the catalog says what it meant.
+
+### Or from a terminal
+
+`bedshock amend` asks the same questions with the same answer space, for when you do have a
+keyboard next to the game.
 
 ```
 [3/9] item.icon.animates_from_flipbook  (P10)
@@ -130,11 +239,9 @@ play on whatever device you are on. Nothing has to escape the client.
   s) skip   q) stop here
 ```
 
-What makes that more than a notes file is that **the answer space is declared in the
-capability**. Every observed row must say what to look at, must be able to come back both YES
-and NO, and must offer an *I could not read it* answer — `bedshock validate` refuses one that
-cannot. A rig that did not render is not a negative result, and a person forced to pick a real
-verdict for a broken apparatus will pick one.
+Either way, **every observed row must offer an "I could not read it" answer** — `bedshock
+validate` refuses one that cannot. A rig that did not render is not a negative result, and a
+person forced to pick a real verdict for a broken apparatus will pick one.
 
 ## Using it from another pack
 
@@ -277,7 +384,8 @@ and get the same collection rules applied to it.
 | `bedshock build` | Emit the probe pack |
 | `bedshock run [--open] [--negative] [--regress]` | Boot a real server, record the automated answers |
 | `bedshock collect <log> --version v` | Record from a log captured elsewhere |
-| `bedshock amend [--probe p] [--all]` | Answer the eyes-only rows |
+| `bedshock amend [--probe p] [--all] [--negative]` | Answer the eyes-only rows from a terminal |
+| `bedshock redeem <code> --version v` | Record a guided session's answer code |
 | `bedshock report` | Regenerate `docs/` |
 | `bedshock check --requires-from <glob> --version v` | Fail a build resting on an unsettled capability |
 | `bedshock watchlist [--version v]` | Every row measured NO, and what flipping it unblocks |

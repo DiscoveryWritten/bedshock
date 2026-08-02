@@ -74,10 +74,11 @@ export function appendObservations(observations: Observation[], file = LEDGER_FI
 /** Stable key order, so two runs that record the same thing produce identical bytes. */
 function orderKeys(o: Observation): Observation {
   const {
-    capability, version, api, platform, method, verdict, outcome, measurement, evidence, note, run, at,
+    capability, version, api, platform, method, verdict, value, outcome, measurement, evidence, note, run, at,
   } = o;
   const out: Record<string, unknown> = { capability, version, platform, method, verdict };
   if (api !== undefined) out.api = api;
+  if (value !== undefined) out.value = value;
   if (outcome !== undefined) out.outcome = outcome;
   if (measurement !== undefined) out.measurement = measurement;
   if (evidence !== undefined) out.evidence = evidence;
@@ -100,6 +101,13 @@ export function validateLedger(observations: Observation[], catalog: Catalog): s
     if (!['YES', 'NO', 'INCONCLUSIVE'].includes(o.verdict)) problems.push(`${where}: bad verdict "${o.verdict}"`);
     if (!o.run) problems.push(`${where}: no run id`);
     if (!o.at || Number.isNaN(Date.parse(o.at))) problems.push(`${where}: no valid timestamp`);
+    if (cap.method === 'solved') {
+      if (typeof o.value !== 'number' || !Number.isFinite(o.value)) {
+        if (o.verdict === 'YES') {
+          problems.push(`${where}: a solved capability answered YES must carry the \`value\` it solved for`);
+        }
+      }
+    }
     if (cap.method === 'observed') {
       if (!o.outcome) {
         problems.push(`${where}: an observed capability must record which outcome was picked`);
@@ -167,6 +175,24 @@ export function statusAt(cap: Capability, version: string, observations: Observa
         `${newest!.verdict} on ${newest!.at.slice(0, 10)} (run ${newest!.run}), ` +
         `but ${older.map((o) => `${o.verdict} on ${o.at.slice(0, 10)}`).join(', ')} — ` +
         `same version, different answers`;
+    } else if (cap.method === 'solved' && status === 'SETTLED') {
+      // A solved row drifts on its VALUE, not on its verdict. Two runs both converging is not
+      // agreement if they converged somewhere else — that is precisely the change a reference
+      // implementation tuned to the old number would not survive, and nothing else here notices
+      // it. The tolerance comes from the capability, because only the probe's own resolution
+      // knows how much movement is noise.
+      const tolerance = cap.measures?.tolerance ?? 0;
+      const values = decisive.map((o) => o.value).filter((v): v is number => typeof v === 'number');
+      if (values.length > 1) {
+        const spread = Math.max(...values) - Math.min(...values);
+        if (spread > tolerance) {
+          status = 'DRIFT';
+          conflict =
+            `the solve moved: ${values.map((v) => v.toFixed(4)).join(' vs ')} ` +
+            `${cap.measures?.unit ?? ''} — a spread of ${spread.toFixed(4)} against a tolerance ` +
+            `of ${tolerance}`;
+        }
+      }
     } else if (status === 'SETTLED' || status === 'CLOSED-NEGATIVE') {
       // Same verdict, different numbers underneath it. The durability ceilings are why this
       // exists: every declared value reporting itself is a YES either way, and a change from
