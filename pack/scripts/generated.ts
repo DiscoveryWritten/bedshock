@@ -212,7 +212,8 @@ export const PARAMS = {
   "falling_block": {
     "block": "minecraft:anvil",
     "drop_height": 12,
-    "watch_ticks": 40
+    "watch_ticks": 40,
+    "lane": 0
   },
   "anvilgap": {
     "block": "minecraft:anvil",
@@ -222,7 +223,8 @@ export const PARAMS = {
     "vacate_ticks": 6,
     "watch_ticks": 80,
     "repeats": 2,
-    "max_trials": 40
+    "max_trials": 40,
+    "lane": 6
   },
   "throw": {
     "item": "minecraft:stick",
@@ -236,10 +238,11 @@ export const PARAMS = {
     "moved_at_least": 0.05,
     "watch_ticks": 200,
     "samples": 5,
-    "spread": 0.5
+    "spread": 0.5,
+    "lane": 12
   },
   "knockback": {
-    "subject": "minecraft:item",
+    "subject": "bedshock:probe_box_chest5",
     "subject_stack": "minecraft:stick",
     "units": 1,
     "run_length": 16,
@@ -249,7 +252,8 @@ export const PARAMS = {
     "moved_by_ticks": 20,
     "watch_ticks": 120,
     "samples": 5,
-    "spread": 0.2
+    "spread": 0.2,
+    "lane": 20
   }
 } as const;
 export const GLYPHS = ["","","",""];

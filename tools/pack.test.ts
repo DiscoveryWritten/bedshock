@@ -306,6 +306,53 @@ test('every solved row uses the tool that matches its shape', () => {
 });
 
 /**
+ * EVERY MOVING PROBE NEEDS ITS OWN GROUND, and nothing about reading the code shows when it does
+ * not.
+ *
+ * Probes run concurrently — each one starts a tick loop and returns — so two measuring in
+ * overlapping space clear each other's blocks and delete each other's entities. The result does
+ * not look like interference. It looks like physics: the throw probe lost three readings in five
+ * to exactly this, reporting `the item stopped existing after 7 tick(s), 3.425 blocks along`,
+ * which reads like a despawn and was a neighbour's broom.
+ */
+test('the moving probes are on lanes far enough apart not to sweep each other', () => {
+  const lanes = {
+    fallcurve: config.probes.falling_block.lane,
+    anvilgap: config.probes.anvilgap.lane,
+    throw: config.probes.throw.lane,
+    knockback: config.probes.knockback.lane,
+  };
+  assert.equal(new Set(Object.values(lanes)).size, 4, `two probes share a lane: ${JSON.stringify(lanes)}`);
+
+  const sorted = Object.values(lanes).sort((a, b) => a - b);
+  for (let i = 1; i < sorted.length; i++) {
+    assert.ok(sorted[i]! - sorted[i - 1]! >= 4, `lanes ${sorted[i - 1]} and ${sorted[i]} are too close`);
+  }
+
+  const clashing: PackConfig = {
+    ...config,
+    probes: { ...config.probes, throw: { ...config.probes.throw, lane: config.probes.anvilgap.lane + 1 } },
+  };
+  assert.match(validatePackConfig(clashing).join('\n'), /sweep each other/);
+});
+
+/**
+ * And every probe that moves something has to read its lane, or declaring one changes nothing.
+ */
+test('each moving probe actually offsets itself by its lane', () => {
+  const dir = join(ROOT, 'pack', 'scripts', 'probes');
+  for (const [file, param] of [
+    ['fallcurve.ts', 'falling_block'],
+    ['anvilgap.ts', 'anvilgap'],
+    ['throw.ts', 'throw'],
+    ['knockback.ts', 'knockback'],
+  ]) {
+    const source = readFileSync(join(dir, file!), 'utf8');
+    assert.match(source, new RegExp(`PARAMS\\.${param}\\.lane`), `${file} declares a lane it never uses`);
+  }
+});
+
+/**
  * A measurement taken in a place nobody checked is a measurement of the terrain.
  *
  * An item that stops after two blocks stopped because it hit a wall; an entity that does not move

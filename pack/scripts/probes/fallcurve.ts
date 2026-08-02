@@ -29,7 +29,9 @@ import { firstLine, result, willReportLater, HEADLESS_AT, type Ctx } from '../em
 const CAPABILITY = 'physics.falling_block.gravity_curve';
 
 export function run(ctx: Ctx): void {
-  const at = ctx.player?.location ?? HEADLESS_AT;
+  const here = ctx.player?.location ?? HEADLESS_AT;
+  // Its own ground. See the lanes note in `content/pack.yaml`.
+  const at = { ...here, z: here.z + PARAMS.falling_block.lane };
   const dimension = ctx.player?.dimension ?? world.getDimension('overworld');
   const origin = {
     x: Math.floor(at.x) + 0.5,

@@ -183,6 +183,8 @@ probes:
     # How far above the sample point to spawn it, and how long to watch.
     drop_height: 12
     watch_ticks: 40
+    # See the note on lanes below.
+    lane: 0
 
   # --- anvil clearance ------------------------------------------------------
   #
@@ -237,6 +239,22 @@ probes:
     # is itself the finding -- and it comes back INCONCLUSIVE rather than as a half-narrowed
     # bracket dressed up as a number.
     max_trials: 40
+    lane: 6
+
+  # --- LANES ----------------------------------------------------------------
+  #
+  # Every probe that moves something needs ground nobody else is using, and `lane` is how far
+  # sideways from the sample point it takes.
+  #
+  # THIS IS NOT TIDINESS. Probes run concurrently -- each one starts a tick loop and returns --
+  # so two of them measuring in overlapping space will clear each other's blocks and delete each
+  # other's entities. The result does not look like interference. It looks like physics. The
+  # throw probe lost three readings in five to exactly this the moment a second probe started
+  # spawning items, reporting `the item stopped existing after 7 tick(s), 3.425 blocks along`,
+  # which reads like a despawn and was a neighbour's broom.
+  #
+  # Lanes must be far enough apart to clear each arena's own width, and `bedshock test` checks
+  # they are all different.
 
   # --- throw ----------------------------------------------------------------
   #
@@ -281,6 +299,7 @@ probes:
     # smaller than the tolerance rather than leaving it to hope.
     samples: 5
     spread: 0.5
+    lane: 12
 
   # --- knockback ------------------------------------------------------------
   #
@@ -298,12 +317,21 @@ probes:
     # a fact about the game worth knowing, and it is why this line is not what it looks like it
     # ought to be.
     #
-    # A DROPPED ITEM has no AI either, no knockback resistance, and is a thing any mechanic that
-    # moves the world actually has to move. It is also the same body the throw probe measures,
-    # which makes the two rows readable side by side: same subject, different force.
-    subject: 'minecraft:item'
-    # Item entities are spawned through `spawnItem` rather than `spawnEntity`, so the stack has to
-    # be named as well as the entity type.
+    # A DROPPED ITEM WAS THE SECOND CHOICE AND REFUSES THE CALL. 1.26.36.1:
+    # `UnsupportedFunctionalityError: applyKnockback is not supported for this entity`. So the
+    # restriction is not knockback resistance, it is the API -- `applyKnockback` is a MOB
+    # operation, and an item entity is not a mob. Two negatives, two different mechanisms, and
+    # both are facts about the API worth having written down.
+    #
+    # THE PACK'S OWN PROBE ENTITY IS THE THIRD, and it is the first one whose properties this
+    # repository controls rather than inherits. It is a real custom entity -- so the call should
+    # be supported -- carrying `minecraft:physics` and no navigation of any kind, so it can be
+    # pushed and cannot walk. An inert body is exactly what this measurement wants, and if it
+    # still will not move, the reason will be in our own entity definition rather than in an
+    # undocumented vanilla one.
+    subject: 'bedshock:probe_box_chest5'
+    # Only consulted when the subject is `minecraft:item`, which needs `spawnItem` rather than
+    # `spawnEntity`. Kept so that path stays available without another edit.
     subject_stack: 'minecraft:stick'
     # How much knockback to apply. One unit is the natural thing to measure, and the probe divides
     # by it, so raising this only buys resolution -- it must not change the answer, and a run
@@ -323,3 +351,4 @@ probes:
     watch_ticks: 120
     samples: 5
     spread: 0.2
+    lane: 20

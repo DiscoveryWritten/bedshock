@@ -20,6 +20,13 @@
  * IT IS DELIBERATELY CRUDE. Axis-aligned, `+x` is forward, one dimension, no rotation, no
  * decoration. A box you can reason about beats a room you have to model, and every feature added
  * here is another thing a measurement could be blaming instead of the game.
+ *
+ * AN ARENA IS EXCLUSIVE GROUND, and this is the rule that is easiest to break by accident. Two
+ * probes measuring in overlapping boxes will clear each other's blocks and sweep each other's
+ * entities, and the result does not look like interference -- it looks like physics. It happened
+ * here the moment a second probe started spawning items: the throw probe's item "stopped existing
+ * after 7 ticks, 3.425 blocks along", three readings out of five, because the knockback probe
+ * swept the lane it was flying down. Give every probe its own lane.
  */
 
 import { world, type Dimension, type Vector3 } from '@minecraft/server';
@@ -114,10 +121,28 @@ export function arena(at: Vector3, spec: ArenaSpec, dimension?: Dimension): Aren
     },
 
     sweep(...types: string[]): void {
-      const centre = point(Math.floor(spec.length / 2), 1);
+      const centre = point(Math.floor((spec.length - behind) / 2), 1);
+      // A radius wide enough to cover the box necessarily overshoots it, because a box is not a
+      // sphere. So the query is the coarse pass and the bounds check is the real one -- without
+      // it this reaches several blocks past the arena in every direction and deletes whatever a
+      // neighbouring probe is in the middle of measuring.
       const reach = spec.length + behind + width + spec.height + 4;
       for (const type of types) {
         for (const entity of dim.getEntities({ type, location: centre, maxDistance: reach })) {
+          let here;
+          try {
+            here = entity.location;
+          } catch {
+            continue;
+          }
+          const f = here.x - (baseX + 0.5);
+          const s2 = here.z - (baseZ + 0.5);
+          const u = here.y - baseY;
+          const inside =
+            f >= -behind - 1 && f <= spec.length + 1 &&
+            s2 >= -width - 1 && s2 <= width + 1 &&
+            u >= -2 && u <= spec.height + 1;
+          if (!inside) continue;
           try {
             entity.remove();
           } catch {

@@ -40,7 +40,7 @@ export interface ProbeConfig {
   flipbook: { frames: number; ticks_per_frame: number };
   containers: ContainerVariant[];
   offhand: { arbitrary_item: string; settle_ticks: number };
-  falling_block: { block: string; drop_height: number; watch_ticks: number };
+  falling_block: { block: string; drop_height: number; watch_ticks: number; lane: number };
   anvilgap: {
     block: string;
     obstruction: string;
@@ -50,6 +50,7 @@ export interface ProbeConfig {
     watch_ticks: number;
     repeats: number;
     max_trials: number;
+    lane: number;
   };
   throw: {
     item: string;
@@ -64,6 +65,7 @@ export interface ProbeConfig {
     watch_ticks: number;
     samples: number;
     spread: number;
+    lane: number;
   };
   knockback: {
     subject: string;
@@ -77,6 +79,7 @@ export interface ProbeConfig {
     watch_ticks: number;
     samples: number;
     spread: number;
+    lane: number;
   };
 }
 
@@ -232,6 +235,24 @@ export function validatePackConfig(c: PackConfig): string[] {
   // and a negative is a knockback pointing the other way with a sign nobody reads.
   if (p.knockback && p.knockback.units <= 0) {
     problems.push('probes.knockback.units must be above zero — the reading is divided by it');
+  }
+
+  // EVERY MOVING PROBE NEEDS ITS OWN GROUND. Probes run concurrently -- each starts a tick loop
+  // and returns -- so two measuring in the same space clear each other's blocks and delete each
+  // other's entities, and the result reads as physics rather than as interference.
+  const lanes = [p.falling_block?.lane, p.anvilgap?.lane, p.throw?.lane, p.knockback?.lane];
+  if (lanes.every((l) => typeof l === 'number')) {
+    const sorted = [...lanes as number[]].sort((a, b) => a - b);
+    for (let i = 1; i < sorted.length; i++) {
+      // Four blocks is wider than any arena declared here, plus a block of margin each side.
+      if (sorted[i]! - sorted[i - 1]! < 4) {
+        problems.push(
+          `two probe lanes are only ${sorted[i]! - sorted[i - 1]!} blocks apart (${sorted[i - 1]} and ` +
+            `${sorted[i]}); they will sweep each other's entities mid-measurement`,
+        );
+        break;
+      }
+    }
   }
 
   const ids = (p.menu_variants ?? []).map((v) => v.id);

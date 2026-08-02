@@ -34,7 +34,9 @@ const ENTITY = 'physics.knockback.blocks_per_unit_on_an_entity';
 
 export function run(ctx: Ctx): void {
   const p = PARAMS.knockback;
-  const at = ctx.player?.location ?? HEADLESS_AT;
+  const here = ctx.player?.location ?? HEADLESS_AT;
+  // Its own ground. See the lanes note in `content/pack.yaml`.
+  const at = { ...here, z: here.z + PARAMS.knockback.lane };
   const dimension = ctx.player?.dimension ?? world.getDimension('overworld');
   const box = arena(at, { length: p.run_length, height: p.headroom, width: 2, behind: 2 }, dimension);
 
@@ -46,7 +48,9 @@ export function run(ctx: Ctx): void {
   // started with turned out to resist knockback entirely. See `content/pack.yaml`.
   ask(ctx, ENTITY, box, () => {
     box.sweep(p.subject);
-    return p.subject === 'minecraft:item'
+    // Widened deliberately: `PARAMS` is `as const`, so this reads as a comparison between two
+    // literal types and TypeScript calls it unreachable. It is a config value that can change.
+    return (p.subject as string) === 'minecraft:item'
       ? dimension.spawnItem(new ItemStack(p.subject_stack, 1), box.at(0, 1))
       : dimension.spawnEntity(p.subject, box.at(0, 1));
   });
