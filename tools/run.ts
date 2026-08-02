@@ -116,6 +116,10 @@ export interface RunOptions {
   fromLog?: string;
   /** Work out what would be recorded, and record nothing. */
   dryRun?: boolean;
+  /** Also package the world Minecraft generated as an importable `.mcworld` here. */
+  worldOut?: string;
+  /** What the world is called in a player's world list. Carries the version, so it is tellable. */
+  levelName?: string;
 }
 
 export interface RunResult extends Collected {
@@ -174,7 +178,12 @@ export async function run(opts: RunOptions = {}): Promise<RunResult> {
       [script, BUILD_DIR, logPath, ...(opts.serverUrl ? [opts.serverUrl] : [])],
       {
         stdio: ['ignore', 'inherit', 'inherit'],
-        env: { ...process.env, ...(probes.length ? { BEDSHOCK_PROBES: probes.join(',') } : {}) },
+        env: {
+          ...process.env,
+          ...(probes.length ? { BEDSHOCK_PROBES: probes.join(',') } : {}),
+          ...(opts.worldOut ? { BEDSHOCK_WORLD_OUT: opts.worldOut } : {}),
+          ...(opts.levelName ? { BEDSHOCK_LEVEL_NAME: opts.levelName } : {}),
+        },
       },
     );
 

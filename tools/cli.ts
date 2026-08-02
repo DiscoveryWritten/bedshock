@@ -28,6 +28,7 @@ import {
 } from './ledger.ts';
 import { writeReports } from './report.ts';
 import { buildManifest, catalogRevision, diffManifests, type Manifest } from './manifest.ts';
+import { formatRedeem, redeem } from './redeem.ts';
 import { ALL_ASKS, formatRunResult, run, watchlist, type Ask } from './run.ts';
 import type { Platform } from './types.ts';
 
@@ -109,6 +110,8 @@ async function main(): Promise<void> {
         ...(str(args['from-log']) ? { fromLog: str(args['from-log'])! } : {}),
         ...(args['no-build'] ? { noBuild: true } : {}),
         ...(args['dry-run'] ? { dryRun: true } : {}),
+        ...(str(args['world-out']) ? { worldOut: str(args['world-out'])! } : {}),
+        ...(str(args['level-name']) ? { levelName: str(args['level-name'])! } : {}),
       });
       process.stdout.write(`\n${formatRunResult(result, Boolean(args['dry-run']))}\n`);
       if (!args['dry-run'] && result.recorded > 0) writeReports(loadCatalog(), readLedger());
@@ -267,6 +270,33 @@ async function main(): Promise<void> {
     }
 
     // -----------------------------------------------------------------------
+    // The other end of the only channel a Minecraft client has.
+    case 'redeem': {
+      const code = args._.slice(1).join(' ') || str(args.code);
+      if (!code) fail('usage: bedshock redeem <code> --version <v>');
+      const catalog = loadCatalog();
+      const version =
+        str(args.version) ??
+        fail(
+          '--version is required. The code says WHAT you saw; only you know which Bedrock you ' +
+            'saw it on, and a result in the wrong column is worse than no result.',
+        );
+      const result = redeem(code!, catalog, {
+        version,
+        platform: (str(args.platform) as Platform) ?? 'client',
+        ...(str(args.api) ? { api: str(args.api)! } : {}),
+        ...(str(args.note) ? { notes: { [str(args.capability) ?? '']: str(args.note)! } } : {}),
+      });
+      process.stdout.write(`${formatRedeem(result, version, Boolean(args['dry-run']))}\n`);
+      if (result.problems.length && result.observations.length === 0) process.exit(1);
+      if (!args['dry-run'] && result.observations.length) {
+        appendObservations(result.observations);
+        writeReports(catalog, readLedger());
+      }
+      break;
+    }
+
+    // -----------------------------------------------------------------------
     case 'watchlist': {
       const catalog = loadCatalog();
       const observations = readLedger();
@@ -307,12 +337,14 @@ async function main(): Promise<void> {
           '  validate                          the questions and the ledger, checked against each other',
           '  build                             emit the probe pack -> dist/*.mcaddon',
           '  run [--version v] [--server-url u] [--from-log f] [--dry-run]',
+          '      [--world-out f.mcworld] [--level-name n]  also package an importable world',
           '                                    build, boot a real server, record the automated answers',
           '                                    --open     only what this version has no answer for',
           '                                    --negative only what is measured NO — the watchlist',
           '                                    --regress  only what is settled — a drift check',
           '  collect <log> --version v         record from a log captured elsewhere',
           '  amend [--version v] [--probe p]   answer the eyes-only rows from what you saw in play',
+          '  redeem <code> --version v         record a guided session\'s answer code',
           '  report                            regenerate docs/ from the ledger',
           '  check --requires-from <glob> --version v',
           '                                    fail a build that rests on an unsettled capability',

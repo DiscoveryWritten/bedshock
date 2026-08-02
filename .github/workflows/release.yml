@@ -63,11 +63,18 @@ jobs:
       - name: Validate
         run: npm run validate
 
+      # Measuring also produces the world, because the world Minecraft generates during the run
+      # IS the artifact -- hand-writing level.dat means hand-writing NBT, and a world that fails
+      # to import is worse than none. The level name carries the version so somebody with three
+      # of these on a tablet can tell them apart without opening them.
       - name: Measure, if a server was named
         if: inputs.server-url != ''
         run: |
+          mkdir -p dist
           npx tsx tools/cli.ts run \
             --server-url '${{ inputs.server-url }}' \
+            --world-out "$PWD/dist/bedshock-world.mcworld" \
+            --level-name "bedshock ${{ inputs.version }}" \
             ${{ inputs.record && ' ' || '--dry-run' }}
 
       - name: Work out what we are publishing
@@ -93,6 +100,11 @@ jobs:
           version='${{ steps.what.outputs.version }}'
           cp "docs/versions/$version.md" "dist/bedrock-capabilities-$version.md"
           npx tsx tools/cli.ts watchlist --version "$version" > "dist/watchlist-$version.md"
+          # One tap on a tablet: the world imports with the pack already enabled, so a session is
+          # `/scriptevent bedshock:session` and nothing else. Only present when this run measured.
+          if [ -f dist/bedshock-world.mcworld ]; then
+            mv dist/bedshock-world.mcworld "dist/bedshock-$version.mcworld"
+          fi
 
       # Refuse to publish a manifest nobody could act on. A release whose every row is OPEN is a
       # release that says "we did not measure anything", and shipping it under a version tag
@@ -144,7 +156,19 @@ jobs:
             bedrock-capabilities-${{ steps.what.outputs.version }}.json   what a machine reads
             bedrock-capabilities-${{ steps.what.outputs.version }}.md     what a person reads
             watchlist-${{ steps.what.outputs.version }}.md                measured NO — aim the next sweep here
+            bedshock-${{ steps.what.outputs.version }}.mcworld            tap to import, pack already on
+            bedshock-*.mcaddon                                            the pack on its own
             ```
+
+            **To answer the eyes-only rows**, import the `.mcworld`, join it, and run
+            `/scriptevent bedshock:session`. It moves you into place for each question, hands you
+            the items it needs, and shows the answers as buttons. At the end you get one short
+            code — that code is the result. `bedshock redeem <code> --version ${{ steps.what.outputs.version }}`
+            turns it back into observations.
+
+            A client has no network of any kind (`@minecraft/server-net` is dedicated-server
+            only), so the code is the entire channel out of the game. It is checksummed: a
+            misread refuses to decode rather than recording answers nobody gave.
 
             **`OPEN` is not `no`.** A row nobody measured on this version is a question, not a
             finding, and a design resting on one needs a fallback. See `status` on each row.

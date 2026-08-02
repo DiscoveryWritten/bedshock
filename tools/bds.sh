@@ -26,7 +26,14 @@ LOG_OUT="${2:?usage: bds.sh <build-dir> <log-path> [bds-url]}"
 BDS_URL_IN="${3:-}"
 
 WORK="${BEDSHOCK_WORK:-${RUNNER_TEMP:-/tmp}}/bedshock-bds"
-LEVEL="battery"
+
+# The level NAME, which is also what a player sees in their world list after importing.
+#
+# Set through server.properties rather than by editing level.dat, because LevelName lives in
+# binary NBT and Minecraft itself will write it correctly if simply asked. Carrying the version
+# in it is the point: somebody with three of these on a tablet needs to know which is which
+# without opening them.
+LEVEL="${BEDSHOCK_LEVEL_NAME:-battery}"
 BOOT_TIMEOUT="${BOOT_TIMEOUT:-120}"
 BATTERY_TIMEOUT="${BATTERY_TIMEOUT:-120}"
 

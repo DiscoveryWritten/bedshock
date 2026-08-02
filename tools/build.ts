@@ -17,7 +17,8 @@ import { build as esbuild } from 'esbuild';
 
 import { loadPackConfig, type PackConfig } from './config.ts';
 import { loadCatalog } from './catalog.ts';
-import { generatedModule, packFiles, type OutFile } from './gen/pack.ts';
+import { generatedModule, packFiles, sessionModule, type OutFile } from './gen/pack.ts';
+import { readLedger, latestVersion } from './ledger.ts';
 import { zip } from './zip.ts';
 import { BUILD_DIR, DIST_DIR, PACK_DIR } from './paths.ts';
 
@@ -78,6 +79,16 @@ export async function build(config: PackConfig = loadPackConfig()): Promise<Buil
   // The generated ids module, written next to the sources so esbuild resolves it normally.
   // Regenerated on every build: the runtime must never know an id the generator did not emit.
   writeFileSync(join(PACK_DIR, 'scripts', 'generated.ts'), generatedModule(config));
+
+  // The questions the guided session asks, embedded because a client cannot fetch anything. The
+  // snapshot is taken at the newest version the ledger knows, which is what "published per
+  // version" means in practice: this pack and the manifest beside it are one artifact.
+  const observations = readLedger();
+  const snapshotVersion = latestVersion(observations) ?? config.min_engine_version.join('.');
+  writeFileSync(
+    join(PACK_DIR, 'scripts', 'catalog.generated.ts'),
+    sessionModule(loadCatalog(), observations, snapshotVersion),
+  );
 
   const files: OutFile[] = packFiles(config);
 
