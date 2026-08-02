@@ -100,10 +100,31 @@ jobs:
           version='${{ steps.what.outputs.version }}'
           cp "docs/versions/$version.md" "dist/bedrock-capabilities-$version.md"
           npx tsx tools/cli.ts watchlist --version "$version" > "dist/watchlist-$version.md"
-          # One tap on a tablet: the world imports with the pack already enabled, so a session is
-          # `/scriptevent bedshock:session` and nothing else. Only present when this run measured.
-          if [ -f dist/bedshock-world.mcworld ]; then
-            mv dist/bedshock-world.mcworld "dist/bedshock-$version.mcworld"
+          # THE WORLD IS THE HEADLINE ASSET, so its absence is a failure rather than a shrug.
+          #
+          # This guard used to be a bare `if [ -f ... ]`, and the file was never produced -- the
+          # `--world-out` flag was accepted and ignored for months. A tolerant check downstream is
+          # exactly how a silent nothing survives: the release looked complete every time.
+          #
+          # It carries its own packs, so importing it never touches the global pack list. That is
+          # what makes it two taps instead of three minutes: on Bedrock an .mcaddon whose UUID is
+          # already installed is REFUSED as a duplicate, the client caches hard enough to need an
+          # app restart, and only marketplace content updates in place.
+          if [ -n "${{ inputs.server-url }}" ]; then
+            if [ ! -f dist/bedshock-world.mcworld ]; then
+              echo "A server was measured but no .mcworld was produced." >&2
+              echo "That flag spent months being accepted and ignored; it must not start again." >&2
+              exit 1
+            fi
+            world="dist/bedshock-$version.mcworld"
+            mv dist/bedshock-world.mcworld "$world"
+            carried="$(unzip -Z1 "$world" | grep -c '^\(behavior\|resource\)_packs/')" || carried=0
+            if [ "$carried" -lt 2 ]; then
+              echo "$world names its packs but does not carry them." >&2
+              echo "Importing it would demand the pack manager, which is the whole point of not doing." >&2
+              exit 1
+            fi
+            echo "$world carries $carried pack file(s) — world-local, no global install"
           fi
 
       # Refuse to publish a manifest nobody could act on. A release whose every row is OPEN is a
