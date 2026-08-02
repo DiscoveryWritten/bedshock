@@ -95,9 +95,9 @@ export const IDS: {
       "size": 5
     },
     {
-      "id": "bedshock:probe_box_horse5",
-      "container_type": "horse",
-      "size": 5
+      "id": "bedshock:probe_box_chest16",
+      "container_type": "chest",
+      "size": 16
     },
     {
       "id": "bedshock:probe_box_horse1",
@@ -105,9 +105,29 @@ export const IDS: {
       "size": 1
     },
     {
-      "id": "bedshock:probe_box_horse15",
+      "id": "bedshock:probe_box_horse3",
       "container_type": "horse",
-      "size": 15
+      "size": 3
+    },
+    {
+      "id": "bedshock:probe_box_horse4",
+      "container_type": "horse",
+      "size": 4
+    },
+    {
+      "id": "bedshock:probe_box_horse5",
+      "container_type": "horse",
+      "size": 5
+    },
+    {
+      "id": "bedshock:probe_box_horse6",
+      "container_type": "horse",
+      "size": 6
+    },
+    {
+      "id": "bedshock:probe_box_horse16",
+      "container_type": "horse",
+      "size": 16
     }
   ]
 };
@@ -190,9 +210,9 @@ export const PARAMS = {
       "size": 5
     },
     {
-      "id": "horse5",
-      "container_type": "horse",
-      "size": 5
+      "id": "chest16",
+      "container_type": "chest",
+      "size": 16
     },
     {
       "id": "horse1",
@@ -200,11 +220,32 @@ export const PARAMS = {
       "size": 1
     },
     {
-      "id": "horse15",
+      "id": "horse3",
       "container_type": "horse",
-      "size": 15
+      "size": 3
+    },
+    {
+      "id": "horse4",
+      "container_type": "horse",
+      "size": 4
+    },
+    {
+      "id": "horse5",
+      "container_type": "horse",
+      "size": 5
+    },
+    {
+      "id": "horse6",
+      "container_type": "horse",
+      "size": 6
+    },
+    {
+      "id": "horse16",
+      "container_type": "horse",
+      "size": 16
     }
   ],
+  "container_marker": "minecraft:diamond",
   "offhand": {
     "permitted_item": "minecraft:shield",
     "arbitrary_items": [

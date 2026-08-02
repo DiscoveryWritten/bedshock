@@ -39,6 +39,7 @@ export interface ProbeConfig {
   menu_variants: MenuVariant[];
   flipbook: { frames: number; ticks_per_frame: number };
   containers: ContainerVariant[];
+  container_marker: string;
   offhand: { permitted_item: string; arbitrary_items: string[]; settle_ticks: number };
   falling_block: { block: string; drop_height: number; watch_ticks: number; lane: number };
   anvilgap: {
@@ -141,6 +142,17 @@ export function validatePackConfig(c: PackConfig): string[] {
         'them could be the size rather than the container type',
     );
   }
+  // Sizes that cannot tell two rules apart make the discovery pass busywork. `declared - 2` and
+  // `declared floored to a multiple of 3` agree at 1 and 5 and disagree at 3, 4 and 6, so a list
+  // that omits all three cannot distinguish them however many containers a person empties.
+  const horseSizes = (p.containers ?? []).filter((v) => v.container_type === 'horse').map((v) => v.size);
+  if (horseSizes.length && ![3, 4, 6].some((n) => horseSizes.includes(n))) {
+    problems.push(
+      'probes.containers has no horse variant at size 3, 4 or 6 — those are where the candidate ' +
+        'slot-count rules disagree, and without one the discovery pass cannot separate them',
+    );
+  }
+
   if (p.offhand) {
     // One item is one data point. "Arbitrary items are ejected" and "that particular item is
     // ejected" are different claims, and only the first is worth putting in a manifest.

@@ -155,19 +155,45 @@ probes:
   #
   # horse1 and horse15 bracket the screen question: whether the declared size controls the
   # drawn slot count, up to a ceiling, or never touches it at all.
+  #
+  # THE SIZES ARE CHOSEN TO TELL RULES APART, not to sample evenly. One informal session reported
+  # `horse1` drawing nothing and `horse5` drawing about three, and at least two rules fit both of
+  # those: `declared - 2` and `declared floored to a multiple of 3`. Sizes 3, 4 and 6 separate
+  # them sharply -- at 6 the first predicts 4 and the second predicts 6 -- and 15/16 bracket the
+  # vanilla horse chest, which is 15.
+  #
+  # Every variant is one more container a person has to empty by hand in a session, so the list
+  # is kept to what actually discriminates. Adding sizes is cheap in the generator and expensive
+  # on an iPad.
   containers:
     - id: chest5
       container_type: chest
       size: 5
-    - id: horse5
-      container_type: horse
-      size: 5
+    - id: chest16
+      container_type: chest
+      size: 16
     - id: horse1
       container_type: horse
       size: 1
-    - id: horse15
+    - id: horse3
       container_type: horse
-      size: 15
+      size: 3
+    - id: horse4
+      container_type: horse
+      size: 4
+    - id: horse5
+      container_type: horse
+      size: 5
+    - id: horse6
+      container_type: horse
+      size: 6
+    - id: horse16
+      container_type: horse
+      size: 16
+  # What every slot gets filled with before the discovery pass. A player empties the container by
+  # hand and the script reads back WHICH slots went empty -- so the person is the hands and never
+  # the instrument, and nobody has to count cells or remember a number.
+  container_marker: 'minecraft:diamond'
 
   # --- off-hand ------------------------------------------------------------
   #

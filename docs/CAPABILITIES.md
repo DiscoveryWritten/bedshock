@@ -36,6 +36,7 @@ is how you find out the day it starts working.
 | `entity.container.api_honours_declared_inventory_size` | **yes** |
 | `entity.container.opens_with_container_type_horse` | **yes** |
 | `entity.container.opens_with_container_type_chest` | **no** |
+| `entity.container.reachable_slots_match_declared_size` | · |
 | `entity.container.screen_draws_declared_slot_count` | **no** |
 | `entity.container.slots_are_untyped` | **yes** |
 | `entity.container.script_writes_appear_in_screen` | **yes** |
@@ -276,6 +277,18 @@ Entities are the only container host Bedrock offers, so every design that needs 
 | `no_entity` | The entity is not there | INCONCLUSIVE |
 
 </details>
+
+### `entity.container.reachable_slots_match_declared_size`
+
+**Can a player reach every slot the container declares, or only some of them?**
+
+*Decides:* How much of a declared inventory is actually usable, which is the number a design has to be built on rather than `inventory_size`. Storage the player cannot reach is storage a pack can write into and nobody can ever get back out -- a silent one-way hole, and the worst version of this failure because both the API and the screen look fine.
+
+<sub>method: `automated` · surface: `engine` · probe: `container` · rests on: `entity.container.api_honours_declared_inventory_size`</sub>
+
+**Never measured.** This row is a guess, however confident the prose around it sounds.
+
+> THE PLAYER IS THE HANDS, NOT THE INSTRUMENT, and that is why this is `automated` rather than `observed` despite needing somebody present. Script fills every declared slot with a marker, a person opens each container and empties it, and script reads back WHICH slots went empty. Nobody counts cells; nobody types a number; the verdict is computed from container state. That distinction is worth more than this row. An eyes-only question costs a person their judgement and returns one number they may have miscounted -- an informal session reported `horse1` drawing nothing and `horse5` drawing "about three (?)", and the question mark is the problem. A hands-only question costs a person a gesture and returns an exact set. Anything answerable this way should be. NOT THE SAME QUESTION AS `screen_draws_declared_slot_count`, which stays. That one asks how many cells are DRAWN; this asks how many can be REACHED. A slot that is drawn but inert would make them differ, and that difference is a finding rather than a contradiction. THE MEASUREMENT CARRIES A RULE FIT. Candidate rules -- reachable equals declared, declared floored to a multiple of three, declared minus two, a fixed vanilla ceiling -- are checked against every variant and the ones still standing are named. They are rules CONSISTENT WITH the readings, never rules proven: with few sizes several survive, and the evidence says how many did rather than picking one. The sizes in `content/pack.yaml` are chosen to be where those candidates disagree.
 
 ### `entity.container.screen_draws_declared_slot_count`
 
@@ -1581,5 +1594,5 @@ other repositories can carry `@requires bedshock:<id>` and `bedshock check` will
 if the cited row is not settled at that pack's `min_engine_version` — so a design can never
 quietly come to rest on a guess.
 
-<sub>67 capabilities · 27 observations · 1 version(s): 1.21.120</sub>
+<sub>68 capabilities · 27 observations · 1 version(s): 1.21.120</sub>
 
