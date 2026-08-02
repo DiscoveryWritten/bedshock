@@ -1,0 +1,200 @@
+name: bedshock
+description: Measure what a Minecraft Bedrock build can actually do, and publish it as a manifest.
+author: tiliv
+
+# HOW THIS IS MEANT TO BE USED, and the second way is the interesting one.
+#
+#   uses: tiliv/bedshock@v1          the published action, our catalog, our ledger
+#   uses: ./vendor/bedshock          a submodule, YOUR catalog, YOUR ledger
+#
+# The second exists because a project that measures its own answers has a better proof than one
+# citing ours. Point `catalog` and `ledger` at files in your own repository and this becomes an
+# apparatus you own the results of -- same probes, same discipline, your questions. Nothing here
+# assumes it is running at a repository root; `github.action_path` is where the code is and the
+# workspace is where the data is.
+#
+# THE SERVER IS A SEAM. `server-url` takes any Bedrock Dedicated Server zip, so a sweep across
+# several Minecraft versions is several invocations with different URLs -- which is the only way
+# to fill in a column for a game that is no longer current, since Microsoft's links API only
+# ever offers the newest. And `log` skips the server entirely: if you have some other way to get
+# a battery log out of some other server, feed it in and the same collection rules apply,
+# including the refusal to record anything from a run that did not finish.
+
+inputs:
+  mode:
+    description: >-
+      `run` boots a server and measures. `check` verifies this repository's `@requires` citations
+      against the ledger and records nothing. `export` writes a manifest from what is already
+      recorded.
+    required: false
+    default: run
+
+  server-url:
+    description: >-
+      A Bedrock Dedicated Server zip to measure against. Empty resolves the current one. Set this
+      to measure a version that is not current -- it is the whole version axis.
+    required: false
+    default: ''
+
+  log:
+    description: >-
+      A battery log captured elsewhere, to collect from instead of booting anything. The escape
+      hatch for a server this action does not know how to start.
+    required: false
+    default: ''
+
+  version:
+    description: >-
+      Declare the Minecraft version rather than reading it out of the server log. Required for a
+      client log, and required whenever `ask` narrows the run.
+    required: false
+    default: ''
+
+  ask:
+    description: >-
+      Comma list narrowing what gets asked: `open`, `negative`, `regress`. Empty asks everything.
+      `open,negative` is the usual sweep on a new Bedrock -- everything that is not already a
+      confirmed yes.
+    required: false
+    default: ''
+
+  record:
+    description: >-
+      Append to the ledger. Off by default, deliberately: an observation is history, and history
+      should not arrive by merge without somebody looking at it.
+    required: false
+    default: 'false'
+
+  catalog:
+    description: A capability catalog of your own (a directory of YAML), relative to the workspace.
+    required: false
+    default: ''
+
+  ledger:
+    description: A ledger of your own (a .jsonl file), relative to the workspace.
+    required: false
+    default: ''
+
+  requires-from:
+    description: 'Globs to scan for `@requires` citations. `mode: check` only.'
+    required: false
+    default: ''
+
+  check-version:
+    description: >-
+      The version to check citations against -- normally the consuming pack's own
+      `min_engine_version`. `mode: check` only.
+    required: false
+    default: ''
+
+  manifest-out:
+    description: Where to write the JSON manifest. Empty writes none.
+    required: false
+    default: ''
+
+  node-version:
+    description: Node to run on.
+    required: false
+    default: '22'
+
+outputs:
+  version:
+    description: The Minecraft version that was measured.
+    value: ${{ steps.measure.outputs.version }}
+  release:
+    description: '`mc-<version>-<catalog-revision>` — the immutable tag this manifest belongs under.'
+    value: ${{ steps.measure.outputs.release }}
+  observations:
+    description: How many automated observations the run produced.
+    value: ${{ steps.measure.outputs.observations }}
+  manifest:
+    description: Path to the written manifest, if `manifest-out` was set.
+    value: ${{ steps.measure.outputs.manifest }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    # `npm ci` in the action's own directory, not the workspace's. A vendoring repository has
+    # its own dependencies and must not have ours merged into them.
+    - name: Install bedshock's own dependencies
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: npm ci --no-audit --no-fund
+
+    - name: Measure
+      id: measure
+      shell: bash
+      env:
+        BEDSHOCK_CATALOG: ${{ inputs.catalog }}
+        BEDSHOCK_LEDGER: ${{ inputs.ledger }}
+      run: |
+        set -euo pipefail
+        action="${{ github.action_path }}"
+        cli="npx --prefix \"$action\" tsx $action/tools/cli.ts"
+
+        # Overrides are resolved against the WORKSPACE, because that is where a vendoring
+        # repository's own catalog and ledger live. Unset rather than empty, so `paths.ts` falls
+        # back to bedshock's own rather than to the workspace root.
+        [ -n "${BEDSHOCK_CATALOG:-}" ] && export BEDSHOCK_CATALOG="$GITHUB_WORKSPACE/$BEDSHOCK_CATALOG" || unset BEDSHOCK_CATALOG
+        [ -n "${BEDSHOCK_LEDGER:-}" ]  && export BEDSHOCK_LEDGER="$GITHUB_WORKSPACE/$BEDSHOCK_LEDGER"   || unset BEDSHOCK_LEDGER
+
+        case "${{ inputs.mode }}" in
+          check)
+            [ -n "${{ inputs.requires-from }}" ] || {
+              echo "::error::mode: check needs requires-from. A check that matches no files reports success forever."
+              exit 1
+            }
+            [ -n "${{ inputs.check-version }}" ] || {
+              echo "::error::mode: check needs check-version — normally the pack's own min_engine_version."
+              exit 1
+            }
+            eval "$cli" check \
+              --requires-from "'${{ inputs.requires-from }}'" \
+              --version "${{ inputs.check-version }}" \
+              --cwd "$GITHUB_WORKSPACE"
+            ;;
+
+          export)
+            [ -n "${{ inputs.version }}" ] || { echo "::error::mode: export needs version."; exit 1; }
+            ;;
+
+          run)
+            args=()
+            [ -n "${{ inputs.server-url }}" ] && args+=(--server-url "${{ inputs.server-url }}")
+            [ -n "${{ inputs.log }}" ]        && args+=(--from-log   "${{ inputs.log }}")
+            [ -n "${{ inputs.version }}" ]    && args+=(--version    "${{ inputs.version }}")
+            [ -n "${{ inputs.ask }}" ]        && args+=(--ask        "${{ inputs.ask }}")
+            [ "${{ inputs.record }}" = "true" ] || args+=(--dry-run)
+            eval "$cli" run "${args[@]:-}"
+            ;;
+
+          *)
+            echo "::error::unknown mode '${{ inputs.mode }}' — expected run, check or export."
+            exit 1
+            ;;
+        esac
+
+        # The version and release id, for whatever comes next in the caller's workflow.
+        if [ -n "${{ inputs.version }}" ]; then
+          version="${{ inputs.version }}"
+        else
+          version="$(eval "$cli" latest-version 2>/dev/null || true)"
+        fi
+        if [ -n "$version" ]; then
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [ -n "${{ inputs.manifest-out }}" ]; then
+            out="$GITHUB_WORKSPACE/${{ inputs.manifest-out }}"
+            eval "$cli" export --version "$version" --out "$out"
+            echo "manifest=${{ inputs.manifest-out }}" >> "$GITHUB_OUTPUT"
+            release="$(python3 -c "import json,sys;print(json.load(open('$out'))['release'])")"
+            echo "release=$release" >> "$GITHUB_OUTPUT"
+          fi
+        fi
+
+branding:
+  icon: activity
+  color: purple

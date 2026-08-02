@@ -1,0 +1,236 @@
+# Rendering: attachables, render controllers, and Molang.
+#
+# The domain where a wrong answer is most expensive, because a render failure on Bedrock is
+# silent. An unresolvable Molang query does not error and does not stop the controller -- it
+# resolves to 0 and draws something. So a flag can render perfectly and mean nothing, and
+# telling those apart is what every probe in this file is really for.
+
+domain: render
+about: >-
+  What can be drawn, and what the thing drawing it is allowed to know. The load-bearing
+  question in the whole battery lives here: whether a render controller can be told which item
+  it is drawing. If it can, one item type renders every configuration. If it cannot, every
+  distinguishable configuration needs its own item type, and the asset count multiplies
+  instead of layering.
+
+capabilities:
+  - id: render.molang.unknown_query_resolves_to_zero
+    question: Does an unrecognised Molang query resolve to 0 rather than erroring?
+    decides: >-
+      How every other probe in this file has to be read. If an unknown query silently yields
+      0, then a controller indexing a texture array with a dead query still draws -- it draws
+      index 0. So index 0 is the signal for "this query is blind", and no probe expectation may
+      land on index 0 except the one that expects zero anyway. Getting this backwards makes
+      every rendering measurement unreadable.
+    method: derived
+    established_by: >-
+      Read off the engine's behaviour across several controller failures. An unresolvable query
+      for an ENTITY property additionally fails the whole render controller silently, which is
+      a different and worse failure -- four sessions were lost to it before the query was found
+      to be `query.property` rather than `query.actor_property`.
+    notes: >-
+      This row exists to be cited by other probes' designs, not to be built on directly. It is
+      why every probe here carries a control wired to a literal.
+
+  - id: render.molang.integer_precision
+    question: Does Molang's float arithmetic stay exact across a bit-packed integer layout?
+    decides: >-
+      Whether `math.floor` and `math.mod` can safely unpack a value carried in durability or
+      any other numeric channel.
+    method: derived
+    established_by: >-
+      Molang is float-based; integers stay exact well past 2^24, which is far above any packed
+      layout worth designing. Use power-of-two bases for readability.
+
+  - id: render.attachable.draws_on_custom_item
+    question: Does a custom item render an attachable at all?
+    decides: >-
+      Whether in-world rendering of a custom held item is possible in any form. The bisect
+      floor for everything else in this file: a rig that stays dark cannot say whether the
+      queries are blind or whether attachables simply do not work on custom items, and without
+      this row underneath it, no result above is readable.
+    method: observed
+    probe: attachable
+    look_at: >-
+      Hold the minimal attachable probe item. One geometry, one texture, one material, one
+      controller -- no arrays, no Molang, no `part_visibility`, no durability. Expect a plain
+      magenta cube. Nothing else in the pack is #ff00ff, and Bedrock's own missing-texture is a
+      black/magenta CHECKER rather than a solid field, so the two are distinguishable.
+      Check third person as well as first.
+    outcomes:
+      - id: renders
+        label: A magenta cube appears, and third person shows it plainly as a cube
+        verdict: YES
+      - id: renders_but_engulfs
+        label: The whole screen goes magenta in first person
+        verdict: YES
+        means: >-
+          Still an unambiguous pass. The hand pivot is essentially at the camera in first
+          person, so geometry near the anchor swallows the view. Confirm in third person and
+          record it -- this is what happened the first time, and the failure that would have
+          killed the route was INVISIBLE, not oversized.
+      - id: nothing
+        label: Nothing renders, in either person
+        verdict: 'NO'
+      - id: checker
+        label: A black-and-magenta checkerboard
+        verdict: INCONCLUSIVE
+        means: >-
+          That is Bedrock's missing-texture, so the attachable resolved but its texture did
+          not. An apparatus fault, not an answer.
+    legacy: P3a
+
+  - id: render.attachable.anchor_is_on_the_body
+    question: Is an attachable's anchor on the player's body rather than in the hand?
+    decides: >-
+      Where to place probe geometry before measuring anything with it. Twice now a rig has
+      rendered perfectly and been unreadable because it sat at the anchor and the body occluded
+      it. Offset first, then measure.
+    method: observed
+    probe: attachable
+    look_at: >-
+      The probe geometry in third person, from an over-the-shoulder camera. The probe's cubes
+      are authored deliberately offset -- up and back -- so where they land tells you where the
+      anchor is.
+    outcomes:
+      - id: on_body
+        label: The geometry is positioned relative to the body, not the hand
+        verdict: YES
+      - id: in_hand
+        label: It follows the hand
+        verdict: 'NO'
+      - id: unreadable
+        label: Nothing rendered, or could not get a third-person view
+        verdict: INCONCLUSIVE
+    depends_on: [render.attachable.draws_on_custom_item]
+    legacy: P3a
+
+  - id: render.attachable.reads_held_item_durability
+    question: Can a render controller on an attachable read the durability of the item it draws?
+    decides: >-
+      The largest single consequence in this battery. If yes, ONE item type renders every
+      configuration in the hand and hundreds of baked sprites go away. If no, the item looks
+      identical in every configuration and its state has to live in its NAME and its DURABILITY
+      BAR, which are the only two per-stack visuals left.
+    method: observed
+    probe: attachable
+    look_at: >-
+      Two items, identical but for damage -- A at 5, B at 6. Hold each in turn and read the
+      four flags. THE READING IS DIFFERENTIAL, and it has to be: with `max_durability` at 2048
+      and 2048 mod 4 = 0, an UNDAMAGED item shows the same colours as a blind query, so an
+      absolute reading of one item cannot answer this. A live query MUST change colour between
+      A and B; a blind one cannot. Bone 3 is a control wired to the literal `2` -- if it is not
+      BLUE on both, the apparatus is broken and no other bone means anything.
+    outcomes:
+      - id: flags_move
+        label: Bones 0 and 1 change colour between item A and item B
+        verdict: YES
+        means: The queries are live. Note which colours, for each item.
+      - id: flags_identical
+        label: All four bones look identical on A and B, with the control BLUE on both
+        verdict: 'NO'
+        means: >-
+          The queries resolve to 0 -- they resolve, they just never see an item. The one thing
+          that would overturn this is the damage never reaching the items, which is why the
+          probe writes the damage, reads it back, and stamps the value it read into each item's
+          name. If those two names come back identical, this reading is void.
+      - id: control_wrong
+        label: The control bone is not BLUE
+        verdict: INCONCLUSIVE
+        means: The apparatus is broken. Fix it before recording anything.
+      - id: cannot_see_all_four
+        label: Fewer than four flags are visible
+        verdict: INCONCLUSIVE
+        means: >-
+          Two flags out of four is not half an answer. Without knowing WHICH bones drew, a blue
+          could be the control working or bone 0 landing on blue by arithmetic, and those point
+          opposite ways. Move the geometry and re-run.
+    depends_on: [render.attachable.draws_on_custom_item]
+    legacy: P3b/P4
+    notes: >-
+      To reopen this, the differential rig is already the right shape: add candidate queries
+      and re-run. Any query that can see the held item at all shows up as a flag that moves
+      between A and B.
+
+  - id: render.attachable.several_controllers_at_once
+    question: Can several render controllers run on one attachable simultaneously?
+    decides: >-
+      Whether visual axes multiply at render time or in the asset folder. With layered bones --
+      an animated panel on one, a colour frame on another, a state marker on a third -- 3
+      dimensions x 16 colours is 19 textures. Without it, every axis multiplies with every
+      other one.
+    method: observed
+    probe: attachable
+    look_at: >-
+      How many of the four flags draw at once, and whether there is any z-fighting or ordering
+      artefact between them.
+    outcomes:
+      - id: all_four
+        label: All four flags draw cleanly
+        verdict: YES
+      - id: some_with_artefacts
+        label: All four draw but there is z-fighting or ordering trouble
+        verdict: YES
+        means: Layering works but needs care. Describe the artefact in the note.
+      - id: only_one
+        label: Only one controller's geometry ever draws
+        verdict: 'NO'
+      - id: unreadable
+        label: Nothing drew, or the view could not show all four
+        verdict: INCONCLUSIVE
+    depends_on: [render.attachable.draws_on_custom_item]
+    legacy: P4
+
+  - id: render.attachable.sits_at_model_origin_without_animation
+    question: >-
+      Does an attachable with no `animations` and no `scripts.animate` render at the player
+      model's own origin?
+    decides: >-
+      Whether "it appeared on my back" is a property of attachables or a property of our
+      geometry offsets. The answer changes whether a hand pose needs work or just needs
+      coordinates.
+    method: derived
+    established_by: >-
+      Read directly out of the attachable JSON we emit: it declares only `materials`,
+      `textures`, `geometry` and `render_controllers`. With nothing switching poses, the model
+      renders in the player model's coordinate space at its origin and stays there in both
+      first and third person. Confirmed against play reports of the probe appearing behind the
+      player, which is where its authored offset puts it.
+
+  - id: render.attachable.accepts_vanilla_hold_animations
+    question: >-
+      Will a custom item's attachable accept the vanilla hold animations and be posed into the
+      hand?
+    decides: >-
+      Whether a custom held item can look held. Low stakes while the durability queries are
+      dead -- a hand-posed attachable can only ever show one fixed look, so it is worth having
+      for flavour and never for information -- but it is the row that makes an in-world model
+      presentable at all.
+    method: observed
+    probe: attachable_pose
+    look_at: >-
+      A separate rig carrying `animations` plus a `scripts.animate` list selecting on
+      `c.is_first_person`, copied from the vanilla resource pack's own attachables. Hold it and
+      check both persons. Do NOT fold this into the flag rig -- posing those flags into the
+      hand would make them small and half-occluded, which is the exact failure that rig has
+      already been repaired for twice.
+    outcomes:
+      - id: posed_both
+        label: It sits in the hand, and first and third person differ as vanilla's do
+        verdict: YES
+      - id: posed_one
+        label: It is posed in one person but not the other
+        verdict: YES
+        means: Partial. Note which person worked.
+      - id: unposed
+        label: It still sits at the model origin, unaffected
+        verdict: 'NO'
+      - id: nothing
+        label: Nothing renders now, where the unanimated rig did
+        verdict: INCONCLUSIVE
+        means: >-
+          The animation reference is probably wrong rather than unsupported. Read the vanilla
+          identifiers out of the vanilla resource pack rather than trusting one written from
+          memory.
+    depends_on: [render.attachable.draws_on_custom_item]
+    legacy: P3c

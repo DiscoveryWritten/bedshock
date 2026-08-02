@@ -1,0 +1,118 @@
+# The scripting UI: forms, buttons, and what a container screen will and will not do.
+
+domain: ui
+about: >-
+  `@minecraft/server-ui` is the only surface where a pack can draw an arbitrary picture per
+  stack, which makes what a button's icon path actually resolves the most valuable unmeasured
+  thing in this file. Everything else here is about the boundaries of the form API -- what it
+  cannot be made to do, recorded so nobody spends a session finding out.
+
+capabilities:
+  - id: ui.form.button_icon_resolves_an_unindexed_path
+    question: >-
+      Does `ActionFormData.button(text, iconPath)` draw a texture that has NO
+      `item_texture.json` entry?
+    decides: >-
+      Whether art for a form can be pure pack art: no item type, no atlas entry, nothing in the
+      creative menu. That is the difference between 48 real items and 48 PNGs, and this is the
+      only surface in the game where an arbitrary picture can be drawn per stack.
+    method: observed
+    probe: formicon
+    look_at: >-
+      Button 1 in the form the probe opens. Its texture is written to `textures/probe/` and
+      deliberately LEFT OUT of `item_texture.json` -- its absence there is the exact thing being
+      ruled out. Button 2 is a vanilla path and is the control: if IT does not draw, the
+      mechanism is broken and button 1 means nothing.
+    outcomes:
+      - id: draws
+        label: Button 1 draws its icon, and so does the vanilla control
+        verdict: YES
+      - id: blank
+        label: The vanilla control draws but button 1 is blank
+        verdict: 'NO'
+      - id: control_blank
+        label: The vanilla control does not draw either
+        verdict: INCONCLUSIVE
+        means: The apparatus is broken. Nothing else in this probe is readable.
+    legacy: P6
+
+  - id: ui.form.button_icon_resolves_a_bare_atlas_key
+    question: Does a bare atlas short-name work where a path is expected?
+    decides: >-
+      Whether a runtime-computed reference can be an atlas key -- which a generator already
+      knows -- or has to be a full path, which it has to be taught.
+    method: observed
+    probe: formicon
+    look_at: Button 3, which passes a bare atlas key rather than a path. Expected to fail.
+    outcomes:
+      - id: draws
+        label: It draws
+        verdict: YES
+      - id: blank
+        label: It does not draw
+        verdict: 'NO'
+      - id: control_blank
+        label: The vanilla control did not draw either
+        verdict: INCONCLUSIVE
+    depends_on: [ui.form.button_icon_resolves_an_unindexed_path]
+    legacy: P6
+
+  - id: ui.form.missing_icon_is_visually_distinct
+    question: Does a deliberately wrong icon path render as a broken-texture mark, or as nothing?
+    decides: >-
+      Whether "no icon" and "wrong path" are distinguishable in play. This matters more than it
+      looks: a UI that computes paths at runtime and fails silently is a UI where a typo is
+      invisible forever.
+    method: observed
+    probe: formicon
+    look_at: Button 4, which points at a path that deliberately does not exist.
+    outcomes:
+      - id: broken_mark
+        label: It shows a missing-texture mark
+        verdict: YES
+      - id: blank
+        label: It renders as nothing, the same as a button with no icon at all
+        verdict: 'NO'
+      - id: control_blank
+        label: The vanilla control did not draw either
+        verdict: INCONCLUSIVE
+    depends_on: [ui.form.button_icon_resolves_an_unindexed_path]
+    legacy: P6
+
+  - id: ui.container.can_be_opened_on_demand_by_script
+    question: Can script open a container UI for a player without the player interacting?
+    decides: >-
+      Whether a container screen can be part of a scripted flow, or is always something the
+      player has to reach for themselves.
+    method: derived
+    established_by: There is no `player.openContainer` in the script API.
+
+  - id: ui.container.emits_a_change_event
+    question: Is there an event for a container's contents changing?
+    decides: >-
+      Whether watching a container costs a poll. Cheap for one open container; a real cost if a
+      design wants many.
+    method: derived
+    established_by: >-
+      No container-change event exists; contents must be polled.
+
+  - id: ui.enchanting.custom_enchantments_or_interception
+    question: Can custom enchantments be defined, or the enchanting-table UI intercepted?
+    decides: >-
+      Whether the enchanting table is a route to a custom "attach"-style interaction. It is a
+      tempting one because the UI already exists and reads as native.
+    method: derived
+    established_by: >-
+      Custom enchantments cannot be defined and the enchanting-table UI cannot be intercepted.
+      The glint still requires a real vanilla enchantment.
+
+  - id: ui.item_texture.resolvable_from_an_item_id_at_runtime
+    question: Is there an API to resolve an item id to the texture path that draws it?
+    decides: >-
+      Whether a UI can draw an ARBITRARY item -- including one from another pack. Without it,
+      anything that wants to needs a generated id-to-path table plus a placeholder for
+      everything unrecognised.
+    method: derived
+    established_by: >-
+      Form button `iconPath` is a texture path rather than an item id, and no runtime API maps
+      one to the other. Our own art is unaffected because we control those paths.

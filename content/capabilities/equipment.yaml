@@ -1,0 +1,68 @@
+# The equipment slots, and the off-hand in particular.
+#
+# The off-hand is the only slot that renders an arbitrary held item in the world without any
+# attachable work, which makes it perpetually attractive and worth measuring properly.
+
+domain: equipment
+about: >-
+  What script can put in a player's equipment slots, and whether it stays there. The gap
+  between those two is the whole content of this file: acceptance by the API is not
+  persistence, and the client has opinions the API does not report.
+
+capabilities:
+  - id: equipment.offhand.accepts_a_script_placed_item
+    question: Does `setEquipment(Offhand, ...)` succeed for an item the slot would not normally take?
+    decides: >-
+      Whether the API refuses outright. Separating this from whether the item STAYS is the
+      whole point -- a refusal and an ejection look identical a moment later, and they point at
+      different workarounds.
+    method: automated
+    probe: offhand
+    legacy: P9
+
+  - id: equipment.offhand.script_placed_item_persists
+    question: Is a script-placed arbitrary item still in the off-hand a few seconds later?
+    decides: >-
+      Whether the off-hand is free in-world rendering of an arbitrary item -- modded ones
+      included -- with no attachable work at all. If it is, a whole class of display problem
+      has a shortcut. If it is not, rendering an arbitrary held item has no shortcut around
+      attachables.
+    method: automated
+    probe: offhand
+    depends_on: [equipment.offhand.accepts_a_script_placed_item]
+    legacy: P9
+    notes: >-
+      The probe reads the slot back immediately -- confirming the write landed -- and again
+      after a delay. Both readings are in the measurement, because "never arrived" and "arrived
+      and was ejected" are different findings.
+
+  - id: equipment.offhand.custom_item_declaring_allow_off_hand_persists
+    question: >-
+      Does a custom item whose own definition declares `allow_off_hand` stay in the off-hand?
+    decides: >-
+      Whether the ejection is about the SLOT or about the ITEM. If our own items stay, the
+      off-hand is usable for anything we ship and unusable only for items we do not control --
+      which is a much narrower limit than "the off-hand is out".
+    method: automated
+    probe: offhand
+    depends_on: [equipment.offhand.accepts_a_script_placed_item]
+    legacy: P9
+
+  - id: equipment.offhand.player_can_place_an_arbitrary_item
+    question: Can a player put an arbitrary item in the off-hand by hand?
+    decides: >-
+      Whether the off-hand can be an INPUT -- somewhere a player deliberately puts something
+      for a pack to notice.
+    method: derived
+    established_by: >-
+      The off-hand only accepts items whose definition permits it. This is vanilla behaviour
+      and is what rules out "put anything in your off-hand, then open the menu" as an input
+      gesture.
+
+  - id: equipment.offhand.has_a_use_input
+    question: Is there an off-hand use input on any Bedrock platform?
+    decides: >-
+      Whether an off-hand item can be interactive, or is inert decoration. Inert suits a
+      decoration; it rules out anything that wanted to be a second tool.
+    method: derived
+    established_by: Bedrock has no off-hand use input on any platform.
