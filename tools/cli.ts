@@ -13,7 +13,8 @@
  *   tidy                        sort the ledger file (never alters a line)
  */
 
-import { readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 import process from 'node:process';
 
 import { amend } from './amend.ts';
@@ -26,7 +27,8 @@ import {
   appendObservations, latestVersion, readLedger, resolveWithDeps, tidyLedger, validateLedger, versionsInLedger,
 } from './ledger.ts';
 import { writeReports } from './report.ts';
-import { formatRunResult, run } from './run.ts';
+import { buildManifest, catalogRevision, diffManifests, type Manifest } from './manifest.ts';
+import { ALL_ASKS, formatRunResult, run, watchlist, type Ask } from './run.ts';
 import type { Platform } from './types.ts';
 
 interface Args {
@@ -94,11 +96,17 @@ async function main(): Promise<void> {
 
     // -----------------------------------------------------------------------
     case 'run': {
-      const scope = args.open ? 'open' : args.regress ? 'regress' : 'all';
+      const asks: Ask[] = [
+        ...(args.open ? ['open' as const] : []),
+        ...(args.negative ? ['negative' as const] : []),
+        ...(args.regress ? ['regress' as const] : []),
+        ...(list(args.ask).filter((a): a is Ask => ALL_ASKS.includes(a as Ask))),
+      ];
       const result = await run({
-        scope,
+        asks: [...new Set(asks)],
         ...(str(args.version) ? { version: str(args.version)! } : {}),
         ...(str(args['server-url']) ? { serverUrl: str(args['server-url'])! } : {}),
+        ...(str(args['from-log']) ? { fromLog: str(args['from-log'])! } : {}),
         ...(args['no-build'] ? { noBuild: true } : {}),
         ...(args['dry-run'] ? { dryRun: true } : {}),
       });
@@ -141,6 +149,7 @@ async function main(): Promise<void> {
         ...(list(args.probe).length ? { probes: list(args.probe) } : {}),
         ...(str(args.capability) ? { capability: str(args.capability)! } : {}),
         ...(args.all ? { all: true } : {}),
+        ...(args.negative ? { negative: true } : {}),
       });
       if (recorded.length) writeReports(catalog, readLedger());
       break;
@@ -195,6 +204,94 @@ async function main(): Promise<void> {
     }
 
     // -----------------------------------------------------------------------
+    // Bare, newline-free, for `$(...)` in a shell. Everything else this CLI prints is for a
+    // person, and a script parsing prose is a script that breaks on a wording change.
+    case 'latest-version': {
+      const version = latestVersion(readLedger());
+      if (!version) fail('the ledger is empty');
+      process.stdout.write(version!);
+      break;
+    }
+
+    // -----------------------------------------------------------------------
+    case 'export': {
+      const catalog = loadCatalog();
+      const observations = readLedger();
+      const version = str(args.version) ?? latestVersion(observations) ?? fail('the ledger is empty');
+      const manifest = buildManifest(catalog, observations, version);
+      const out = str(args.out);
+      const json = JSON.stringify(manifest, null, 2) + '\n';
+      if (out) {
+        mkdirSync(dirname(out), { recursive: true });
+        writeFileSync(out, json);
+        process.stderr.write(`${manifest.release} -> ${out}\n`);
+      } else {
+        process.stdout.write(json);
+      }
+      break;
+    }
+
+    // -----------------------------------------------------------------------
+    case 'diff': {
+      const a = args._[1] ?? fail('usage: bedshock diff <a.json> <b.json>');
+      const b = args._[2] ?? fail('usage: bedshock diff <a.json> <b.json>');
+      const load = (path: string): Manifest => JSON.parse(readFileSync(path, 'utf8')) as Manifest;
+      const d = diffManifests(load(a), load(b));
+      process.stdout.write(`\n${d.from}  ->  ${d.to}\n\n`);
+      if (d.became_possible.length) {
+        process.stdout.write(`BECAME POSSIBLE (${d.became_possible.length}) — the line this project exists to print:\n`);
+        for (const r of d.became_possible) process.stdout.write(`  + ${r.id}\n      ${r.question.replace(/\s+/g, ' ')}\n`);
+        process.stdout.write('\n');
+      }
+      if (d.became_impossible.length) {
+        process.stdout.write(`BECAME IMPOSSIBLE (${d.became_impossible.length}) — something that worked no longer does:\n`);
+        for (const r of d.became_impossible) process.stdout.write(`  - ${r.id}\n      ${r.question.replace(/\s+/g, ' ')}\n`);
+        process.stdout.write('\n');
+      }
+      for (const [label, rows] of [
+        ['newly answered', d.newly_answered.map((r) => `${r.id} -> ${r.status}`)],
+        ['no longer answered', d.no_longer_answered.map((r) => `${r.id} (was ${r.was})`)],
+        ['added to the catalog', d.added],
+        ['removed from the catalog', d.removed],
+      ] as [string, string[]][]) {
+        if (!rows.length) continue;
+        process.stdout.write(`${label} (${rows.length}):\n`);
+        for (const r of rows) process.stdout.write(`  ${r}\n`);
+        process.stdout.write('\n');
+      }
+      const moved =
+        d.became_possible.length + d.became_impossible.length + d.newly_answered.length +
+        d.no_longer_answered.length + d.added.length + d.removed.length;
+      if (moved === 0) process.stdout.write('Nothing moved.\n\n');
+      break;
+    }
+
+    // -----------------------------------------------------------------------
+    case 'watchlist': {
+      const catalog = loadCatalog();
+      const observations = readLedger();
+      const version = str(args.version) ?? latestVersion(observations) ?? fail('the ledger is empty');
+      const rows = watchlist(version, catalog, observations);
+      if (rows.length === 0) {
+        process.stdout.write(`\nNothing is measured NO on ${version}.\n\n`);
+        break;
+      }
+      process.stdout.write(
+        `\n${rows.length} capability(s) measured NO on Bedrock ${version}.\n` +
+          `These are questions with a pending answer, not closed files — re-ask them on any ` +
+          `Bedrock\nyou have not looked at yet:\n\n` +
+          `  bedshock run --open --negative --version <new>\n` +
+          `  bedshock amend --version <new> --negative\n\n`,
+      );
+      for (const row of rows) {
+        process.stdout.write(`  ${row.id}${row.measuredAt !== version ? `  (measured ${row.measuredAt})` : ''}\n`);
+        process.stdout.write(`    ${row.question.replace(/\s+/g, ' ').trim()}\n`);
+        process.stdout.write(`    would unblock: ${row.decides.replace(/\s+/g, ' ').trim().slice(0, 150)}\n\n`);
+      }
+      break;
+    }
+
+    // -----------------------------------------------------------------------
     case 'tidy': {
       const n = tidyLedger();
       process.stdout.write(`${n} observations, sorted. No line altered.\n`);
@@ -209,16 +306,21 @@ async function main(): Promise<void> {
           '',
           '  validate                          the questions and the ledger, checked against each other',
           '  build                             emit the probe pack -> dist/*.mcaddon',
-          '  run [--version v] [--server-url u] [--open|--regress] [--dry-run]',
+          '  run [--version v] [--server-url u] [--from-log f] [--dry-run]',
           '                                    build, boot a real server, record the automated answers',
-          '                                    --open    only what this version has no answer for',
-          '                                    --regress only what is settled — a pure drift check',
+          '                                    --open     only what this version has no answer for',
+          '                                    --negative only what is measured NO — the watchlist',
+          '                                    --regress  only what is settled — a drift check',
           '  collect <log> --version v         record from a log captured elsewhere',
           '  amend [--version v] [--probe p]   answer the eyes-only rows from what you saw in play',
           '  report                            regenerate docs/ from the ledger',
           '  check --requires-from <glob> --version v',
           '                                    fail a build that rests on an unsettled capability',
           '  status [prefix] [--version v]     what the ledger says right now',
+          '  watchlist [--version v]           every row measured NO, and what flipping it unblocks',
+          '  export [--version v] [--out f]    the machine-readable manifest a consumer reads',
+          '  diff <a.json> <b.json>            what moved between two manifests',
+          '  latest-version                    the newest version in the ledger, bare, for scripts',
           '  tidy                              sort the ledger file (never alters a line)',
           '',
         ].join('\n'),

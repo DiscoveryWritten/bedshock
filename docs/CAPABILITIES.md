@@ -44,7 +44,7 @@ is how you find out the day it starts working.
 | `entity.collision.is_a_standing_surface` | — |
 | `entity.stash.preserves_an_opaque_itemstack` | **yes** |
 | `entity.stash.holder_findable_after_chunk_unload` | **yes** |
-| `entity.stash.holder_findable_after_world_reload` | · |
+| `entity.stash.holder_findable_after_world_reload` | **yes** |
 | `entity.falling_block.is_trackable_by_script` | **yes** |
 | **equipment** |  |
 | `equipment.offhand.accepts_a_script_placed_item` | **yes** |
@@ -102,6 +102,27 @@ so they are recorded once and cited, not re-measured.
 
 An empty cell in a version column means nothing was measured **at that exact version**. It is
 not the same as `·`, which is a capability nothing has ever answered anywhere.
+
+## The watchlist — measured **no**, and still being asked
+
+These are the rows a run on a new Minecraft version is most worth spending time on. Each one
+was measured and came back negative, and each one stays in the battery precisely because a
+negative is the answer most worth watching for a change: **the day one of these turns yes,
+the test that proves it was written months ago.**
+
+Nothing here should be re-derived from prose or argued about. Re-run it:
+
+```bash
+bedshock run   --open --negative --version <new>
+bedshock amend --negative        --version <new>
+```
+
+| Capability | What flipping it would unblock |
+|---|---|
+| `entity.container.opens_with_container_type_chest` | Which `container_type` to use. The two probe entities are otherwise identical -- same components, same `private: false`, same `is_chested`, same size, generated from one template with only `container_type` substituted -- |
+| `entity.container.screen_draws_declared_slot_count` | Whether `container.size` and what the player sees are one number or two. If two, slots above the drawn count are script-writable and player-unreachable -- which is a HAZARD if you assumed the screen shows what you stored |
+| `equipment.offhand.script_placed_item_persists` | Whether the off-hand is free in-world rendering of an arbitrary item -- modded ones included -- with no attachable work at all. If it is, a whole class of display problem has a shortcut. If it is not, rendering an arbitr |
+| `render.attachable.reads_held_item_durability` | The largest single consequence in this battery. If yes, ONE item type renders every configuration in the hand and hundreds of baked sprites go away. If no, the item looks identical in every configuration and its state ha |
 
 ## entity
 
@@ -405,9 +426,9 @@ Entities are the only container host Bedrock offers, so every design that needs 
 
 <sub>method: `observed` · probe: `stash` · formerly: P12 · rests on: `entity.stash.holder_findable_after_chunk_unload`</sub>
 
-**Never measured.** This row is a guess, however confident the prose around it sounds.
-
-*To answer it:* Stash, then QUIT TO TITLE and reload, then fetch. The probe stamps a per-load session token into the stash record -- script modules are re-evaluated on every world load, so a value computed at module scope is new each session by construction. Fetch compares them and says outright whether a reload happened, so a run made in one sitting cannot be mistaken for the one that answers the question. A same-session fetch also does NOT spend the stash, because handing the item back would consume the one setup that can answer this.
+| Version | Answer | How | Evidence |
+|---|---|---|---|
+| 1.21.120 | `SETTLED` | observed, imported | survived a logout in another dimension: chunk unload, dimension change and world reload at once — *Imported from composable-portals docs/CAPABILITIES.md (P12), reported from play: "I logged out in the nether and then came back so it was the harshest chunk test too." That the reload really happened is not a matter of memory -- the probe stamps a per-load session token into the stash record and compares it on fetch, and a same-session fetch would have said so and refused to hand the item back. THE DESIGN THIS PICKS: a holder per gun. Small, local, no world fixtures, no permanently ticking area. The vault alternative is not needed and should not be built.* |
 
 <details><summary>The answer space this probe can distinguish</summary>
 
@@ -1445,5 +1466,5 @@ other repositories can carry `@requires bedshock:<id>` and `bedshock check` will
 if the cited row is not settled at that pack's `min_engine_version` — so a design can never
 quietly come to rest on a guess.
 
-<sub>60 capabilities · 26 observations · 1 version(s): 1.21.120</sub>
+<sub>60 capabilities · 27 observations · 1 version(s): 1.21.120</sub>
 

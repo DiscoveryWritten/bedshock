@@ -26,6 +26,7 @@ import { join } from 'node:path';
 import type { Capability, Observation, Status } from './types.ts';
 import type { Catalog } from './catalog.ts';
 import { compareVersions, resolveWithDeps, statusAt, versionsInLedger } from './ledger.ts';
+import { buildManifest } from './manifest.ts';
 import { DOCS_DIR } from './paths.ts';
 
 const GENERATED_BY = 'tools/report.ts';
@@ -153,6 +154,38 @@ export function renderMatrix(catalog: Catalog, observations: Observation[]): str
       ...alarms,
       '',
     );
+  }
+
+  // --- the watchlist ---
+  //
+  // Placed above the per-domain detail because it is the list a reader most wants when a new
+  // Bedrock ships. A negative here is a question with a pending answer, not a closed file.
+  const negatives = catalog.capabilities.filter(
+    (c) => c.method !== 'derived' && versions.some((v) => statusAt(c, v, observations).status === 'CLOSED-NEGATIVE'),
+  );
+  if (negatives.length) {
+    out.push(
+      '## The watchlist — measured **no**, and still being asked',
+      '',
+      'These are the rows a run on a new Minecraft version is most worth spending time on. Each one',
+      'was measured and came back negative, and each one stays in the battery precisely because a',
+      'negative is the answer most worth watching for a change: **the day one of these turns yes,',
+      'the test that proves it was written months ago.**',
+      '',
+      'Nothing here should be re-derived from prose or argued about. Re-run it:',
+      '',
+      '```bash',
+      'bedshock run   --open --negative --version <new>',
+      'bedshock amend --negative        --version <new>',
+      '```',
+      '',
+      '| Capability | What flipping it would unblock |',
+      '|---|---|',
+    );
+    for (const cap of negatives) {
+      out.push(`| \`${cap.id}\` | ${esc(cap.decides).slice(0, 220)} |`);
+    }
+    out.push('');
   }
 
   // --- per-domain detail ---
@@ -378,6 +411,12 @@ export function writeReports(catalog: Catalog, observations: Observation[]): str
     const path = join(versionDir, `${v}.md`);
     writeFileSync(path, renderVersionReport(catalog, observations, v) + '\n');
     written.push(path);
+
+    // The machine-readable twin, beside the human one. This is what another repository
+    // actually consumes, and what a release publishes as an asset.
+    const manifestPath = join(versionDir, `${v}.json`);
+    writeFileSync(manifestPath, JSON.stringify(buildManifest(catalog, observations, v), null, 2) + '\n');
+    written.push(manifestPath);
   }
 
   const index = versionsInLedger(observations)

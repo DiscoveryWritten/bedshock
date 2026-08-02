@@ -1,0 +1,1640 @@
+{
+  "schema": 1,
+  "minecraft": "1.21.120",
+  "catalog_revision": "rc3c24c08",
+  "release": "mc-1.21.120-rc3c24c08",
+  "generated_at": "2026-08-02T06:31:38.276Z",
+  "counts": {
+    "SETTLED": 22,
+    "CLOSED-NEGATIVE": 4,
+    "OPEN": 18,
+    "INCONCLUSIVE": 1,
+    "DRIFT": 0,
+    "UNDERMINED": 0,
+    "derived": 15
+  },
+  "watchlist": [
+    "entity.container.opens_with_container_type_chest",
+    "entity.container.screen_draws_declared_slot_count",
+    "equipment.offhand.script_placed_item_persists",
+    "render.attachable.reads_held_item_durability"
+  ],
+  "capabilities": [
+    {
+      "id": "entity.container.is_the_only_container_host",
+      "question": "Can a custom BLOCK carry a container, or must it be an entity?",
+      "decides": "Whether custom storage costs an entity -- with everything that implies about collision, persistence and chunk loading -- or can be a block like a chest.",
+      "method": "derived",
+      "status": "SETTLED",
+      "inherited": false,
+      "established_by": "Blocks cannot be containers on Bedrock; only entities carry `minecraft:inventory`."
+    },
+    {
+      "id": "entity.container.storage_via_inventory_component",
+      "question": "Does a fully custom entity's `minecraft:inventory` actually store items that script can read and write?",
+      "decides": "Whether the storage half of a custom container works at all, before asking the harder question of whether a player can reach it.",
+      "method": "automated",
+      "status": "SETTLED",
+      "inherited": false,
+      "measured_on": "1.21.120",
+      "platform": "imported",
+      "api": "@minecraft/server 2.3.0",
+      "at": "2026-07-30T00:00:00Z",
+      "evidence": "both variants spawn, carry a container, and script can read and write their slots",
+      "note": "Imported from composable-portals docs/CAPABILITIES.md (P11), from a headless smoke job. The first run of this probe reported LocationInUnloadedChunkError for both variants — that was a defect in the probe, not a finding, and the fix was claiming a ticking area first.",
+      "measurement": {
+        "samples": [
+          {
+            "id": "chest5",
+            "container_type": "chest",
+            "declared": 5,
+            "spawned": true,
+            "reported": 5,
+            "writable": true
+          },
+          {
+            "id": "horse5",
+            "container_type": "horse",
+            "declared": 5,
+            "spawned": true,
+            "reported": 5,
+            "writable": true
+          }
+        ]
+      },
+      "legacy": "P11"
+    },
+    {
+      "id": "entity.container.api_honours_declared_inventory_size",
+      "question": "Does `container.size` report the `inventory_size` the entity declared?",
+      "decides": "Whether declared storage capacity is real as far as script is concerned. Note that this is a different question from what the SCREEN draws, and conflating them would overstate the finding.",
+      "method": "automated",
+      "status": "SETTLED",
+      "inherited": false,
+      "measured_on": "1.21.120",
+      "platform": "imported",
+      "api": "@minecraft/server 2.3.0",
+      "at": "2026-07-30T00:00:00Z",
+      "evidence": "both variants report the size they declared, as the API sees it",
+      "note": "Imported from composable-portals docs/CAPABILITIES.md (P11). The exact client build was not recorded at the time; attributed to the pack's declared floor. Re-run to replace with a real measurement.",
+      "measurement": {
+        "samples": [
+          {
+            "id": "chest5",
+            "declared": 5,
+            "reported": 5,
+            "writable": true
+          },
+          {
+            "id": "horse5",
+            "declared": 5,
+            "reported": 5,
+            "writable": true
+          }
+        ]
+      },
+      "depends_on": [
+        "entity.container.storage_via_inventory_component"
+      ],
+      "legacy": "P11"
+    },
+    {
+      "id": "entity.container.opens_with_container_type_horse",
+      "question": "Does a custom entity declaring `container_type: horse` open for a player?",
+      "decides": "Whether player-facing custom storage is possible at all. Storage existing does not mean a player can get at it, and this is the half that decides whether the route is usable.",
+      "method": "observed",
+      "status": "SETTLED",
+      "inherited": false,
+      "measured_on": "1.21.120",
+      "platform": "imported",
+      "api": "@minecraft/server 2.3.0",
+      "at": "2026-07-30T00:00:00Z",
+      "evidence": "A real container screen opens",
+      "note": "Imported from composable-portals docs/CAPABILITIES.md (P11). A real container screen, titled from the entity's nameTag.",
+      "outcome": "opens",
+      "outcomes": [
+        {
+          "id": "opens",
+          "label": "A real container screen opens",
+          "verdict": "YES"
+        },
+        {
+          "id": "no_screen",
+          "label": "Interacting does nothing",
+          "verdict": "NO"
+        },
+        {
+          "id": "no_entity",
+          "label": "The entity is not there to interact with",
+          "verdict": "INCONCLUSIVE"
+        }
+      ],
+      "depends_on": [
+        "entity.container.storage_via_inventory_component"
+      ],
+      "legacy": "P11"
+    },
+    {
+      "id": "entity.container.opens_with_container_type_chest",
+      "question": "Does the same entity declaring `container_type: chest` open for a player?",
+      "decides": "Which `container_type` to use. The two probe entities are otherwise identical -- same components, same `private: false`, same `is_chested`, same size, generated from one template with only `container_type` substituted -- so this is a single-variable comparison rather than a guess about which of a dozen ingredients mattered.",
+      "method": "observed",
+      "status": "CLOSED-NEGATIVE",
+      "inherited": false,
+      "measured_on": "1.21.120",
+      "platform": "imported",
+      "api": "@minecraft/server 2.3.0",
+      "at": "2026-07-30T00:00:00Z",
+      "evidence": "Interacting does nothing",
+      "note": "Imported from composable-portals docs/CAPABILITIES.md (P11). chest5 does not open; horse5 does, with every other component identical — same private:false, same is_chested, same size, generated from one template with only container_type substituted. So container_type is the whole difference, and is_chested alone is not sufficient.",
+      "outcome": "no_screen",
+      "outcomes": [
+        {
+          "id": "opens",
+          "label": "A container screen opens",
+          "verdict": "YES"
+        },
+        {
+          "id": "no_screen",
+          "label": "Interacting does nothing",
+          "verdict": "NO"
+        },
+        {
+          "id": "no_entity",
+          "label": "The entity is not there",
+          "verdict": "INCONCLUSIVE"
+        }
+      ],
+      "depends_on": [
+        "entity.container.storage_via_inventory_component"
+      ],
+      "legacy": "P11"
+    },
+    {
+      "id": "entity.container.screen_draws_declared_slot_count",
+      "question": "Does the container screen draw as many slots as `inventory_size` declares?",
+      "decides": "Whether `container.size` and what the player sees are one number or two. If two, slots above the drawn count are script-writable and player-unreachable -- which is a HAZARD if you assumed the screen shows what you stored, and a genuinely useful PRIMITIVE if you wanted storage a player cannot touch.",
+      "method": "observed",
+      "status": "CLOSED-NEGATIVE",
+      "inherited": false,
+      "measured_on": "1.21.120",
+      "platform": "imported",
+      "api": "@minecraft/server 2.3.0",
+      "at": "2026-07-30T00:00:00Z",
+      "evidence": "At least one draws a different count than it declared, but you could not open enough variants to say which rule applies",
+      "note": "Imported from composable-portals docs/CAPABILITIES.md (P11). horse5 declares 5 and draws 3. horse1 and horse15 were added to bracket it and have not been read — so whether 3 is a CEILING or the layout is FIXED is still open, and those are different designs. Two slots the player can never reach and script can write to freely: a hazard if you assumed the screen shows what you stored, a primitive if you wanted storage a player cannot touch.",
+      "outcome": "mismatched",
+      "outcomes": [
+        {
+          "id": "one_for_one",
+          "label": "Each draws exactly what it declared",
+          "verdict": "YES"
+        },
+        {
+          "id": "ceiling",
+          "label": "Small sizes draw themselves, large ones cap out -- note the ceiling",
+          "verdict": "NO"
+        },
+        {
+          "id": "fixed",
+          "label": "All three draw the same number regardless of what they declared",
+          "verdict": "NO"
+        },
+        {
+          "id": "mismatched",
+          "label": "At least one draws a different count than it declared, but you could not open enough variants to say which rule applies",
+          "verdict": "NO"
+        },
+        {
+          "id": "could_not_open",
+          "label": "Could not open enough of them to compare",
+          "verdict": "INCONCLUSIVE"
+        }
+      ],
+      "depends_on": [
+        "entity.container.opens_with_container_type_horse"
+      ],
+      "legacy": "P11"
+    },
+    {
+      "id": "entity.container.slots_are_untyped",
+      "question": "Are the slots freely usable, or typed the way a real saddle slot is?",
+      "decides": "Whether the container is usable for arbitrary items. This was the thing most likely to sink the whole route: a horse screen's slots are normally typed, and a container inheriting that would be useless.",
+      "method": "observed",
+      "status": "SETTLED",
+      "inherited": false,
+      "measured_on": "1.21.120",
+      "platform": "imported",
+      "api": "@minecraft/server 2.3.0",
+      "at": "2026-07-30T00:00:00Z",
+      "evidence": "Any item goes in any slot and stays",
+      "note": "Imported from composable-portals docs/CAPABILITIES.md (P11). This was the thing most likely to sink the route — a horse screen's slots are normally typed, and a container inheriting that would be useless for arbitrary items.",
+      "outcome": "free",
+      "outcomes": [
+        {
+          "id": "free",
+          "label": "Any item goes in any slot and stays",
+          "verdict": "YES"
+        },
+        {
+          "id": "typed",
+          "label": "Slots reject items, or bounce them back",
+          "verdict": "NO"
+        },
+        {
+          "id": "could_not_open",
+          "label": "Could not open it",
+          "verdict": "INCONCLUSIVE"
+        }
+      ],
+      "depends_on": [
+        "entity.container.opens_with_container_type_horse"
+      ],
+      "legacy": "P11"
+    },
+    {
+      "id": "entity.container.script_writes_appear_in_screen",
+      "question": "Do contents written by script appear in the screen the player opens?",
+      "decides": "Whether script and the player are looking at the same container, or at two views that can disagree.",
+      "method": "observed",
+      "status": "SETTLED",
+      "inherited": false,
+      "measured_on": "1.21.120",
+      "platform": "imported",
+      "api": "@minecraft/server 2.3.0",
+      "at": "2026-07-30T00:00:00Z",
+      "evidence": "The diamond is there",
+      "note": "Imported from composable-portals docs/CAPABILITIES.md (P11).",
+      "outcome": "present",
+      "outcomes": [
+        {
+          "id": "present",
+          "label": "The diamond is there",
+          "verdict": "YES"
+        },
+        {
+          "id": "absent",
+          "label": "The screen is empty",
+          "verdict": "NO"
+        },
+        {
+          "id": "could_not_open",
+          "label": "Could not open it",
+          "verdict": "INCONCLUSIVE"
+        }
+      ],
+      "depends_on": [
+        "entity.container.opens_with_container_type_horse"
+      ],
+      "legacy": "P11"
+    },
+    {
+      "id": "entity.container.preview_panel_renders_the_entity",
+      "question": "Does the container screen's preview panel draw the entity's own model?",
+      "decides": "Whether a container screen carries free identity, or needs a title to say what it is.",
+      "method": "observed",
+      "status": "SETTLED",
+      "inherited": false,
+      "measured_on": "1.21.120",
+      "platform": "imported",
+      "api": "@minecraft/server 2.3.0",
+      "at": "2026-07-30T00:00:00Z",
+      "evidence": "It draws the entity, and it turns to follow the cursor",
+      "note": "Imported from composable-portals docs/CAPABILITIES.md (P11). The vanilla mob-preview behaviour, inherited for nothing — a free piece of identity on a screen that would otherwise need a title to carry it.",
+      "outcome": "renders_and_tracks",
+      "outcomes": [
+        {
+          "id": "renders_and_tracks",
+          "label": "It draws the entity, and it turns to follow the cursor",
+          "verdict": "YES"
+        },
+        {
+          "id": "renders_static",
+          "label": "It draws the entity but does not track",
+          "verdict": "YES"
+        },
+        {
+          "id": "empty",
+          "label": "No preview panel, or an empty one",
+          "verdict": "NO"
+        },
+        {
+          "id": "could_not_open",
+          "label": "Could not open it",
+          "verdict": "INCONCLUSIVE"
+        }
+      ],
+      "depends_on": [
+        "entity.container.opens_with_container_type_horse"
+      ],
+      "legacy": "P11"
+    },
+    {
+      "id": "entity.collision.blocks_a_player",
+      "question": "Is a custom entity solid to a player, given `minecraft:collision_box` and `minecraft:physics` with `has_collision: true`?",
+      "decides": "Whether anything that must be walked AROUND can be an entity, or needs a real block.",
+      "method": "derived",
+      "status": "SETTLED",
+      "inherited": false,
+      "established_by": "Measured in play on two separate custom entities: you walk through them. `collision_box` governs hit detection and entity-entity pushing, not player blocking."
+    },
+    {
+      "id": "entity.collision.is_a_standing_surface",
+      "question": "Can another entity stand on a custom entity?",
+      "decides": "Whether an entity can serve as a platform or a landing target.",
+      "method": "derived",
+      "status": "SETTLED",
+      "inherited": false,
+      "established_by": "Measured: a dropped anvil passes through a custom entity and lands in its cell. The other half of the same fact as the player row above."
+    },
+    {
+      "id": "entity.stash.preserves_an_opaque_itemstack",
+      "question": "Does a real ItemStack survive being moved into a holder entity's inventory and taken back out, without ever being read?",
+      "decides": "Whether an item can be stored WITHOUT taking it apart. Any codec that reads an item into JSON and rebuilds it must refuse shulker boxes, written books, potions, fireworks, maps and banners -- handing one back would hand back an empty one. Moving the real stack removes the whole problem, because nothing is ever read or rebuilt.",
+      "method": "observed",
+      "status": "SETTLED",
+      "inherited": false,
+      "measured_on": "1.21.120",
+      "platform": "imported",
+      "api": "@minecraft/server 2.3.0",
+      "at": "2026-07-30T00:00:00Z",
+      "evidence": "It comes back as itself, but state the script API cannot read was not checked",
+      "note": "Imported from composable-portals docs/CAPABILITIES.md (P12), reported from play: \"The fetch works, I used it on a gun that definitely has metadata in it, so it seems to be fine.\" A gun carrying dynamic properties is a weaker witness than a filled shulker box — a codec could have carried the first and provably cannot carry the second.",
+      "outcome": "returned_but_contents_unverified",
+      "outcomes": [
+        {
+          "id": "intact",
+          "label": "It comes back, and its contents are intact",
+          "verdict": "YES"
+        },
+        {
+          "id": "returned_but_contents_unverified",
+          "label": "It comes back as itself, but you did not check state the script API cannot read",
+          "verdict": "YES"
+        },
+        {
+          "id": "emptied",
+          "label": "It comes back empty, or as a different item",
+          "verdict": "NO"
+        },
+        {
+          "id": "lost",
+          "label": "Nothing comes back",
+          "verdict": "NO"
+        },
+        {
+          "id": "no_holder",
+          "label": "The readout says it could not find the holder entity",
+          "verdict": "INCONCLUSIVE"
+        }
+      ],
+      "depends_on": [
+        "entity.container.storage_via_inventory_component"
+      ],
+      "legacy": "P12"
+    },
+    {
+      "id": "entity.stash.holder_findable_after_chunk_unload",
+      "question": "Is a holder entity still findable by `world.getEntity(id)` after its chunk has unloaded and reloaded?",
+      "decides": "The size of the whole design. If a holder survives being unloaded, storage can be a holder PER ITEM -- small, local, no world fixtures. If it is only findable while loaded, it has to be a VAULT: a holder in a permanently ticking area at a fixed world location.",
+      "method": "observed",
+      "status": "SETTLED",
+      "inherited": false,
+      "measured_on": "1.21.120",
+      "platform": "imported",
+      "api": "@minecraft/server 2.3.0",
+      "at": "2026-07-30T00:00:00Z",
+      "evidence": "The fetch works from wherever you are standing",
+      "note": "Imported from composable-portals docs/CAPABILITIES.md (P12), reported from play: \"The chunk unload seemed to work for the stash of the gun\". This is the leg most likely to have killed the holder-per-item design outright.",
+      "outcome": "findable",
+      "outcomes": [
+        {
+          "id": "findable",
+          "label": "The fetch works from wherever you are standing",
+          "verdict": "YES"
+        },
+        {
+          "id": "only_when_loaded",
+          "label": "The fetch fails until you walk back to the printed coordinates",
+          "verdict": "NO"
+        },
+        {
+          "id": "gone",
+          "label": "The fetch fails even at the printed coordinates",
+          "verdict": "NO"
+        },
+        {
+          "id": "no_unload",
+          "label": "The readout says the chunk never actually unloaded",
+          "verdict": "INCONCLUSIVE"
+        }
+      ],
+      "depends_on": [
+        "entity.stash.preserves_an_opaque_itemstack"
+      ],
+      "legacy": "P12"
+    },
+    {
+      "id": "entity.stash.holder_findable_after_world_reload",
+      "question": "Is a holder entity still findable by id after a full quit to title and reload?",
+      "decides": "The same fork as the chunk-unload row, and the harder half of it. A world reload is the stress most likely to break entity-id persistence, and it is the one that actually picks the design.",
+      "method": "observed",
+      "status": "SETTLED",
+      "inherited": false,
+      "measured_on": "1.21.120",
+      "platform": "imported",
+      "api": "@minecraft/server 2.3.0",
+      "at": "2026-08-02T05:01:00Z",
+      "evidence": "survived a logout in another dimension: chunk unload, dimension change and world reload at once",
+      "note": "Imported from composable-portals docs/CAPABILITIES.md (P12), reported from play: \"I logged out in the nether and then came back so it was the harshest chunk test too.\" That the reload really happened is not a matter of memory -- the probe stamps a per-load session token into the stash record and compares it on fetch, and a same-session fetch would have said so and refused to hand the item back. THE DESIGN THIS PICKS: a holder per gun. Small, local, no world fixtures, no permanently ticking area. The vault alternative is not needed and should not be built.",
+      "outcome": "findable",
+      "outcomes": [
+        {
+          "id": "findable",
+          "label": "The fetch works, and the readout confirms a reload happened",
+          "verdict": "YES"
+        },
+        {
+          "id": "gone",
+          "label": "The holder cannot be found after the reload",
+          "verdict": "NO"
+        },
+        {
+          "id": "no_reload",
+          "label": "The readout says no reload happened between stash and fetch",
+          "verdict": "INCONCLUSIVE"
+        }
+      ],
+      "depends_on": [
+        "entity.stash.holder_findable_after_chunk_unload"
+      ],
+      "legacy": "P12"
+    },
+    {
+      "id": "entity.falling_block.is_trackable_by_script",
+      "question": "Can script see a vanilla `minecraft:falling_block` and read its position and velocity every tick while it falls?",
+      "decides": "Whether a mechanic built around a falling vanilla block can be driven by watching the real entity, or needs a custom mover standing in for it.",
+      "method": "automated",
+      "status": "SETTLED",
+      "inherited": false,
+      "measured_on": "1.21.120",
+      "platform": "imported",
+      "api": "@minecraft/server 2.3.0",
+      "at": "2026-07-30T00:00:00Z",
+      "evidence": "6 sightings across one 12-tick fall, with position AND velocity readable every tick",
+      "note": "Imported from composable-portals (cportals:ritual drop). The velocities are vanilla falling-block gravity, which confirms the entity being watched is the real one rather than a look-alike, and that getVelocity() on it is not zeroed the way a collided entity's is.",
+      "measurement": {
+        "sightings": 6,
+        "velocity_samples_y": [
+          -0.04,
+          -0.12,
+          -0.19,
+          -0.26,
+          -0.33
+        ],
+        "at_ticks": [
+          2,
+          4,
+          6,
+          8,
+          10
+        ]
+      }
+    },
+    {
+      "id": "equipment.offhand.accepts_a_script_placed_item",
+      "question": "Does `setEquipment(Offhand, ...)` succeed for an item the slot would not normally take?",
+      "decides": "Whether the API refuses outright. Separating this from whether the item STAYS is the whole point -- a refusal and an ejection look identical a moment later, and they point at different workarounds.",
+      "method": "automated",
+      "status": "SETTLED",
+      "inherited": false,
+      "measured_on": "1.21.120",
+      "platform": "imported",
+      "api": "@minecraft/server 2.3.0",
+      "at": "2026-07-30T00:00:00Z",
+      "evidence": "setEquipment succeeded and the slot read back correctly",
+      "note": "Imported from composable-portals docs/CAPABILITIES.md (P9).",
+      "measurement": {
+        "item": "minecraft:diamond",
+        "accepted": true,
+        "immediate": "minecraft:diamond"
+      },
+      "legacy": "P9"
+    },
+    {
+      "id": "equipment.offhand.script_placed_item_persists",
+      "question": "Is a script-placed arbitrary item still in the off-hand a few seconds later?",
+      "decides": "Whether the off-hand is free in-world rendering of an arbitrary item -- modded ones included -- with no attachable work at all. If it is, a whole class of display problem has a shortcut. If it is not, rendering an arbitrary held item has no shortcut around attachables.",
+      "method": "automated",
+      "status": "CLOSED-NEGATIVE",
+      "inherited": false,
+      "measured_on": "1.21.120",
+      "platform": "imported",
+      "api": "@minecraft/server 2.3.0",
+      "at": "2026-07-30T00:00:00Z",
+      "evidence": "read back correctly, and three seconds later the diamond was gone — the client ejects items the slot would not accept",
+      "note": "Imported from composable-portals docs/CAPABILITIES.md (P9). Closes an attractive idea: had script-placed items stuck, the off-hand would have given free in-world rendering of an arbitrary item with no attachable work at all.",
+      "measurement": {
+        "item": "minecraft:diamond",
+        "accepted": true,
+        "immediate": "minecraft:diamond",
+        "after": null,
+        "settle_seconds": 3
+      },
+      "depends_on": [
+        "equipment.offhand.accepts_a_script_placed_item"
+      ],
+      "legacy": "P9"
+    },
+    {
+      "id": "equipment.offhand.custom_item_declaring_allow_off_hand_persists",
+      "question": "Does a custom item whose own definition declares `allow_off_hand` stay in the off-hand?",
+      "decides": "Whether the ejection is about the SLOT or about the ITEM. If our own items stay, the off-hand is usable for anything we ship and unusable only for items we do not control -- which is a much narrower limit than \"the off-hand is out\".",
+      "method": "automated",
+      "status": "SETTLED",
+      "inherited": false,
+      "measured_on": "1.21.120",
+      "platform": "imported",
+      "api": "@minecraft/server 2.3.0",
+      "at": "2026-07-30T00:00:00Z",
+      "evidence": "a custom item declaring allow_off_hand was still in the slot on a later run",
+      "note": "Imported from composable-portals docs/CAPABILITIES.md (P9), and observed incidentally rather than measured deliberately: the probe skipped itself because the off-hand already held one of our own items. That is weaker evidence than a designed trial, which is why bedshock's own offhand probe runs both arms explicitly.",
+      "measurement": {
+        "item": "cportals:cube_stained_glass",
+        "after": "cportals:cube_stained_glass"
+      },
+      "depends_on": [
+        "equipment.offhand.accepts_a_script_placed_item"
+      ],
+      "legacy": "P9"
+    },
+    {
+      "id": "equipment.offhand.player_can_place_an_arbitrary_item",
+      "question": "Can a player put an arbitrary item in the off-hand by hand?",
+      "decides": "Whether the off-hand can be an INPUT -- somewhere a player deliberately puts something for a pack to notice.",
+      "method": "derived",
+      "status": "SETTLED",
+      "inherited": false,
+      "established_by": "The off-hand only accepts items whose definition permits it. This is vanilla behaviour and is what rules out \"put anything in your off-hand, then open the menu\" as an input gesture."
+    },
+    {
+      "id": "equipment.offhand.has_a_use_input",
+      "question": "Is there an off-hand use input on any Bedrock platform?",
+      "decides": "Whether an off-hand item can be interactive, or is inert decoration. Inert suits a decoration; it rules out anything that wanted to be a second tool.",
+      "method": "derived",
+      "status": "SETTLED",
+      "inherited": false,
+      "established_by": "Bedrock has no off-hand use input on any platform."
+    },
+    {
+      "id": "item.max_durability.int16_ceiling",
+      "question": "Does `max_durability` report back exactly what was declared, all the way up to 32767?",
+      "decides": "How many bits a packed-durability design has to work with. Vanilla's own ceiling is 2031 (netherite), so anything above that is undocumented territory, and the difference between ~6 usable bits and ~15 is the difference between a layout that fits and one that does not.",
+      "method": "automated",
+      "status": "SETTLED",
+      "inherited": false,
+      "measured_on": "1.21.120",
+      "platform": "imported",
+      "api": "@minecraft/server 2.3.0",
+      "at": "2026-07-30T00:00:00Z",
+      "evidence": "everything up to and including 32767 reports back exactly what was declared",
+      "note": "Imported from composable-portals docs/CAPABILITIES.md (P1), headless smoke job, PR #36 run 30516360479. Vanilla's own ceiling is 2031 (netherite), so everything above that was undocumented territory. 15 usable bits.",
+      "measurement": {
+        "samples": [
+          {
+            "declared": 2031,
+            "exists": true,
+            "reports": 2031,
+            "writable": true
+          },
+          {
+            "declared": 4096,
+            "exists": true,
+            "reports": 4096,
+            "writable": true
+          },
+          {
+            "declared": 16384,
+            "exists": true,
+            "reports": 16384,
+            "writable": true
+          },
+          {
+            "declared": 32767,
+            "exists": true,
+            "reports": 32767,
+            "writable": true
+          },
+          {
+            "declared": 32768,
+            "exists": true,
+            "reports": -32768
+          },
+          {
+            "declared": 65535,
+            "exists": true,
+            "reports": -1
+          }
+        ]
+      },
+      "legacy": "P1"
+    },
+    {
+      "id": "item.max_durability.overflow_wraps_rather_than_clamps",
+      "question": "Above the ceiling, does `max_durability` wrap negative rather than clamping?",
+      "decides": "Whether an over-large computed code has a safe failure mode. A clamp degrades to the maximum and stays sane; a wrap goes negative and nonsensical while the item still loads. If it wraps, whatever builds a packed value has to assert its own range, because nothing else will.",
+      "method": "automated",
+      "status": "SETTLED",
+      "inherited": false,
+      "measured_on": "1.21.120",
+      "platform": "imported",
+      "api": "@minecraft/server 2.3.0",
+      "at": "2026-07-30T00:00:00Z",
+      "evidence": "two's-complement int16 wraparound, and the item still loads",
+      "note": "Imported from composable-portals docs/CAPABILITIES.md (P1). A clamp has a safe failure mode and a wrap does not: an over-large value does not degrade to the maximum, it becomes negative and nonsensical, and the item still loads. Whatever computes a packed code must assert its own range.",
+      "measurement": {
+        "samples": [
+          {
+            "declared": 32768,
+            "exists": true,
+            "reports": -32768
+          },
+          {
+            "declared": 65535,
+            "exists": true,
+            "reports": -1
+          }
+        ]
+      },
+      "depends_on": [
+        "item.max_durability.int16_ceiling"
+      ],
+      "legacy": "P1"
+    },
+    {
+      "id": "item.max_durability.damage_writable_across_range",
+      "question": "Can `damage` be written all the way to `max_durability - 1`?",
+      "decides": "Whether the whole declared range is usable as a data channel, or only the part vanilla tools happen to occupy.",
+      "method": "automated",
+      "status": "SETTLED",
+      "inherited": false,
+      "measured_on": "1.21.120",
+      "platform": "imported",
+      "api": "@minecraft/server 2.3.0",
+      "at": "2026-07-30T00:00:00Z",
+      "evidence": "damage reached max-1 on every in-range ceiling",
+      "note": "Imported from composable-portals docs/CAPABILITIES.md (P1), headless smoke job. damage == max_durability still means broken, so the usable top is max-1.",
+      "measurement": {
+        "samples": [
+          {
+            "declared": 2031,
+            "writable": true,
+            "reached": 2030
+          },
+          {
+            "declared": 4096,
+            "writable": true,
+            "reached": 4095
+          },
+          {
+            "declared": 16384,
+            "writable": true,
+            "reached": 16383
+          },
+          {
+            "declared": 32767,
+            "writable": true,
+            "reached": 32766
+          }
+        ]
+      },
+      "depends_on": [
+        "item.max_durability.int16_ceiling"
+      ],
+      "legacy": "P1"
+    },
+    {
+      "id": "item.durability_bar.rows_covered",
+      "question": "Which pixel rows of the 16x16 icon does the durability bar's dark track cover?",
+      "decides": "Whether a second bar can be drawn snug above the vanilla one -- to show which chamber fires next, or any other one-dimensional state -- and where the safe rows for baked artwork start.",
+      "method": "observed",
+      "status": "OPEN",
+      "inherited": false,
+      "outcomes": [
+        {
+          "id": "rows_13_15",
+          "label": "The track covers rows 13, 14 and 15 (the bottom three)",
+          "verdict": "YES"
+        },
+        {
+          "id": "rows_14_15",
+          "label": "The track covers rows 14 and 15 (the bottom two)",
+          "verdict": "YES"
+        },
+        {
+          "id": "rows_12_15",
+          "label": "The track covers rows 12 through 15 (the bottom four)",
+          "verdict": "YES"
+        },
+        {
+          "id": "other_rows",
+          "label": "Some other set of rows -- write it in the note",
+          "verdict": "YES"
+        },
+        {
+          "id": "no_track",
+          "label": "No dark track appears at all",
+          "verdict": "NO"
+        },
+        {
+          "id": "unreadable",
+          "label": "Cannot count the rows -- too small, or the colours blur together",
+          "verdict": "INCONCLUSIVE"
+        }
+      ],
+      "legacy": "P2"
+    },
+    {
+      "id": "item.durability_bar.track_appears_at_damage_one",
+      "question": "Does the dark track appear at `damage == 1`, not just when the item is visibly worn?",
+      "decides": "Whether an item carrying packed state in low bits can ever show a clean icon. If the track is present at any damage above zero, the bar's footprint is permanent and artwork has to be designed around it rather than hoping for the undamaged case.",
+      "method": "observed",
+      "status": "OPEN",
+      "inherited": false,
+      "outcomes": [
+        {
+          "id": "present",
+          "label": "The track is there at damage 1",
+          "verdict": "YES"
+        },
+        {
+          "id": "absent",
+          "label": "No track at damage 1 -- it only appears once the item is visibly worn",
+          "verdict": "NO"
+        },
+        {
+          "id": "unreadable",
+          "label": "Cannot tell whether that is a track or the icon's own dark row",
+          "verdict": "INCONCLUSIVE"
+        }
+      ],
+      "legacy": "P2"
+    },
+    {
+      "id": "item.durability_bar.hotbar_matches_inventory_grid",
+      "question": "Do the hotbar and the inventory grid draw the bar over the same rows?",
+      "decides": "Whether one measurement covers both surfaces, or artwork has to satisfy two different occlusion footprints.",
+      "method": "observed",
+      "status": "OPEN",
+      "inherited": false,
+      "outcomes": [
+        {
+          "id": "agree",
+          "label": "Same rows in both",
+          "verdict": "YES"
+        },
+        {
+          "id": "differ",
+          "label": "Different rows -- note which, for each",
+          "verdict": "NO"
+        },
+        {
+          "id": "unreadable",
+          "label": "Cannot compare them reliably",
+          "verdict": "INCONCLUSIVE"
+        }
+      ],
+      "legacy": "P2"
+    },
+    {
+      "id": "item.icon.varies_per_stack",
+      "question": "Can two stacks of the same item type draw different inventory icons?",
+      "decides": "Everything about how much state an item can show. If no, every distinguishable visual configuration costs one item type, and any item that changes state constantly must NOT encode that state in its type -- because a type swap is a remove-and-give, and that is the mechanism by which stack data gets silently dropped.",
+      "method": "derived",
+      "status": "SETTLED",
+      "inherited": false,
+      "established_by": "`minecraft:icon` is static per item type and Bedrock has no damage-based icon selection; that is a Java-only feature. There is nothing resembling `CustomModelData`."
+    },
+    {
+      "id": "item.icon.runtime_tint_or_overlay",
+      "question": "Can an icon be tinted or composited at runtime, at any layer?",
+      "decides": "Whether a colour axis can be applied at render time or has to be baked. Baking is what turns 3 dimensions x 16 colours into 48 sprites instead of 19.",
+      "method": "derived",
+      "status": "SETTLED",
+      "inherited": false,
+      "established_by": "No runtime tint or sprite-overlay API exists for item icons on Bedrock. Colour has to be in the texture, which means in the item type."
+    },
+    {
+      "id": "item.icon.animates_from_flipbook",
+      "question": "Does an item atlas tile animate from a `flipbook_textures.json` entry?",
+      "decides": "Whether an animated panel can live in the inventory icon at all. Flipbooks are proven for blocks; for item atlas tiles it is folklore. Note the asymmetry: in the world an animation costs one texture no matter how many colours exist, because the frame is a separate bone. In the inventory an animated icon bakes with everything else in it.",
+      "method": "observed",
+      "status": "INCONCLUSIVE",
+      "inherited": false,
+      "measured_on": "1.21.120",
+      "platform": "imported",
+      "api": "@minecraft/server 2.3.0",
+      "at": "2026-07-30T00:00:00Z",
+      "evidence": "only one of the two spellings was ever looked at, and it was frozen",
+      "note": "Imported from composable-portals docs/CAPABILITIES.md (P10). The first spelling (explicit frames, blend_frames false) came back frozen on frame 0. A single frozen icon cannot distinguish \"item atlas tiles do not flipbook\" from \"this entry is wrong\", which is why a second deliberately different spelling was added and has not been read. Recorded as inconclusive rather than as a leaning-no, because the ledger has no verdict for a hunch.",
+      "outcome": "unreadable",
+      "outcomes": [
+        {
+          "id": "both_cycle",
+          "label": "Both icons cycle",
+          "verdict": "YES"
+        },
+        {
+          "id": "one_cycles",
+          "label": "One cycles, one is frozen",
+          "verdict": "YES"
+        },
+        {
+          "id": "both_frozen",
+          "label": "Both frozen on frame 0",
+          "verdict": "NO"
+        },
+        {
+          "id": "unreadable",
+          "label": "Cannot tell -- the frames may be too similar, or nothing rendered",
+          "verdict": "INCONCLUSIVE"
+        }
+      ],
+      "legacy": "P10"
+    },
+    {
+      "id": "item.name.glyph_renders_in_colour",
+      "question": "Do custom font glyph pages render in full colour rather than being flattened?",
+      "decides": "Whether the ONE per-stack visual Bedrock allows in the inventory can carry colour. The 16x16 icon square is static per item type and nothing changes that, but `nameTag` is per-stack. If glyphs carry colour, a coloured mark can sit in an item's name, in form button labels, in the actionbar -- anywhere text goes. That is the difference between 48 item types with baked icons and 3 types with a coloured glyph in the name.",
+      "method": "observed",
+      "status": "SETTLED",
+      "inherited": false,
+      "measured_on": "1.21.120",
+      "platform": "imported",
+      "api": "@minecraft/server 2.3.0",
+      "at": "2026-07-30T00:00:00Z",
+      "evidence": "all four rings rendered in chat as red, green, blue and white",
+      "note": "Imported from composable-portals docs/CAPABILITIES.md (P5). Vanilla's own pages being near-monochrome turns out to be a choice, not a limit. Read in CHAT only — whether the same glyph renders in an item name or the actionbar is a separate row and still open, and a glyph that works in chat and not on an item would be a trap.",
+      "outcome": "full_colour",
+      "outcomes": [
+        {
+          "id": "full_colour",
+          "label": "All four render in their own colours",
+          "verdict": "YES"
+        },
+        {
+          "id": "flattened",
+          "label": "They render, but flattened to white or grey",
+          "verdict": "NO"
+        },
+        {
+          "id": "absent",
+          "label": "Nothing renders where the glyphs should be",
+          "verdict": "INCONCLUSIVE"
+        }
+      ],
+      "legacy": "P5"
+    },
+    {
+      "id": "item.name.glyph_alpha_is_honoured",
+      "question": "Is a glyph's transparency preserved, or does it fill with a background?",
+      "decides": "Whether a glyph can be a shape with a hole -- a ring, an outline, anything that reads against varying backgrounds. A glyph that fills its cell can only ever be a solid block of colour.",
+      "method": "observed",
+      "status": "SETTLED",
+      "inherited": false,
+      "measured_on": "1.21.120",
+      "platform": "imported",
+      "api": "@minecraft/server 2.3.0",
+      "at": "2026-07-30T00:00:00Z",
+      "evidence": "The centres read as background — the holes are holes",
+      "note": "Imported from composable-portals docs/CAPABILITIES.md (P5).",
+      "outcome": "transparent",
+      "outcomes": [
+        {
+          "id": "transparent",
+          "label": "The centres read as background -- the holes are holes",
+          "verdict": "YES"
+        },
+        {
+          "id": "filled",
+          "label": "The centres are filled, black or white",
+          "verdict": "NO"
+        },
+        {
+          "id": "absent",
+          "label": "Nothing rendered",
+          "verdict": "INCONCLUSIVE"
+        }
+      ],
+      "depends_on": [
+        "item.name.glyph_renders_in_colour"
+      ],
+      "legacy": "P5"
+    },
+    {
+      "id": "item.name.glyph_renders_in_item_name",
+      "question": "Does a glyph render in an ITEM's name and in the actionbar, not only in chat?",
+      "decides": "Whether the coloured-glyph route is actually usable for per-stack item state. A glyph that works in chat and not on an item would be a trap: the design reads as proven and fails exactly where it is needed.",
+      "method": "observed",
+      "status": "OPEN",
+      "inherited": false,
+      "outcomes": [
+        {
+          "id": "all_three",
+          "label": "Chat, item name and actionbar all show the coloured rings",
+          "verdict": "YES"
+        },
+        {
+          "id": "chat_only",
+          "label": "Chat shows them; the item name or the actionbar does not",
+          "verdict": "NO"
+        },
+        {
+          "id": "unreadable",
+          "label": "Could not compare all three",
+          "verdict": "INCONCLUSIVE"
+        }
+      ],
+      "depends_on": [
+        "item.name.glyph_renders_in_colour"
+      ],
+      "legacy": "P5"
+    },
+    {
+      "id": "item.creative.custom_group_is_accepted",
+      "question": "Does a custom `menu_category.group` string get the item definition rejected?",
+      "decides": "Whether generated items can be nested under a group name of our choosing at all. A rejected definition is invisible in exactly the same way a successfully hidden one is, so this has to be settled before any visibility reading means anything.",
+      "method": "automated",
+      "status": "SETTLED",
+      "inherited": false,
+      "measured_on": "1.21.120",
+      "platform": "imported",
+      "api": "@minecraft/server 2.3.0",
+      "at": "2026-07-30T00:00:00Z",
+      "evidence": "all six variants exist as real items, so whatever the menu does with them is hiding or showing, never rejecting",
+      "note": "Imported from composable-portals docs/CAPABILITIES.md (P7), from a headless smoke job. Retires half of a standing warning: a custom group string does not cause rejection.",
+      "measurement": {
+        "variants_accepted": 6,
+        "including": [
+          "menu_category omitted",
+          "category: none",
+          "category: items",
+          "category: items + custom group (x3)"
+        ]
+      },
+      "legacy": "P7"
+    },
+    {
+      "id": "item.creative.hidden_by_omitting_category",
+      "question": "Does omitting `menu_category` entirely hide an item from the creative menu?",
+      "decides": "Whether generated intermediates can be kept out of the picker. The husk-item problem -- a creative menu full of items that crash to empty -- is downstream of this.",
+      "method": "observed",
+      "status": "OPEN",
+      "inherited": false,
+      "outcomes": [
+        {
+          "id": "hidden",
+          "label": "The omitted-category item does not appear",
+          "verdict": "YES"
+        },
+        {
+          "id": "visible",
+          "label": "It appears anyway, in some default category",
+          "verdict": "NO"
+        },
+        {
+          "id": "unreadable",
+          "label": "Could not find the labelled items at all",
+          "verdict": "INCONCLUSIVE"
+        }
+      ],
+      "depends_on": [
+        "item.creative.custom_group_is_accepted"
+      ],
+      "legacy": "P7"
+    },
+    {
+      "id": "item.creative.hidden_by_category_none",
+      "question": "Does an explicit `category: none` hide an item from the creative menu?",
+      "decides": "Same as above, and the two spellings may not behave the same way.",
+      "method": "observed",
+      "status": "OPEN",
+      "inherited": false,
+      "outcomes": [
+        {
+          "id": "hidden",
+          "label": "It does not appear",
+          "verdict": "YES"
+        },
+        {
+          "id": "visible",
+          "label": "It appears",
+          "verdict": "NO"
+        },
+        {
+          "id": "unreadable",
+          "label": "Could not find the labelled items",
+          "verdict": "INCONCLUSIVE"
+        }
+      ],
+      "depends_on": [
+        "item.creative.custom_group_is_accepted"
+      ],
+      "legacy": "P7"
+    },
+    {
+      "id": "item.creative.custom_group_nests_items",
+      "question": "Does a shared custom `group` collapse several items into one expandable pile?",
+      "decides": "Whether a large generated item table can be made tolerable in the picker, the way wool is. Without it, 48 generated variants are 48 separate cells.",
+      "method": "observed",
+      "status": "OPEN",
+      "inherited": false,
+      "outcomes": [
+        {
+          "id": "nested",
+          "label": "They collapse into one cell that expands",
+          "verdict": "YES"
+        },
+        {
+          "id": "flat",
+          "label": "They sit as three separate cells",
+          "verdict": "NO"
+        },
+        {
+          "id": "unreadable",
+          "label": "Could not find them",
+          "verdict": "INCONCLUSIVE"
+        }
+      ],
+      "depends_on": [
+        "item.creative.custom_group_is_accepted"
+      ],
+      "legacy": "P7"
+    },
+    {
+      "id": "item.creative.order_follows_emission",
+      "question": "Does the creative menu order items by the order their files are emitted?",
+      "decides": "Whether a generator's emission order is a usable sort key. A build system that sorts its output for the picker's benefit and is wrong about the mechanism is doing work that has no effect, which is worse than not sorting.",
+      "method": "observed",
+      "status": "OPEN",
+      "inherited": false,
+      "outcomes": [
+        {
+          "id": "emission_order",
+          "label": "They appear in emission order",
+          "verdict": "YES"
+        },
+        {
+          "id": "some_other_order",
+          "label": "Some other order -- alphabetical, or by id. Note what you see",
+          "verdict": "NO"
+        },
+        {
+          "id": "unreadable",
+          "label": "Could not see enough of them to tell",
+          "verdict": "INCONCLUSIVE"
+        }
+      ],
+      "depends_on": [
+        "item.creative.custom_group_is_accepted"
+      ],
+      "legacy": "P7"
+    },
+    {
+      "id": "item.dynamic_properties.survive_get_set_round_trip",
+      "question": "Do an ItemStack's dynamic properties survive being read out of a container and written back?",
+      "decides": "Whether stack state can be mutated in place. If yes, a state toggle is \"read, flip a bit, write back\" and never an item-type swap -- which is the mechanism by which the mod this pattern was modelled on loses data on every toggle.",
+      "method": "automated",
+      "status": "SETTLED",
+      "inherited": false,
+      "measured_on": "1.21.120",
+      "platform": "imported",
+      "api": "@minecraft/server 2.3.0",
+      "at": "2026-07-30T00:00:00Z",
+      "evidence": "survives setItem then getItem — mutate-in-place is safe",
+      "note": "Imported from composable-portals docs/CAPABILITIES.md (P8). Confirmed both on the smoke job and in-game through slot 9. The consequence is large: a state toggle need never swap item types, so the class of fault where a toggle silently drops stack data does not arise.",
+      "legacy": "P8"
+    },
+    {
+      "id": "item.dynamic_properties.survive_drop_and_pickup",
+      "question": "Do dynamic properties survive the stack being dropped and picked up again?",
+      "decides": "Whether stack state is safe against ordinary play. A property that survives a script round trip but not the floor is a property that vanishes the first time someone dies.",
+      "method": "observed",
+      "status": "SETTLED",
+      "inherited": false,
+      "measured_on": "1.21.120",
+      "platform": "imported",
+      "api": "@minecraft/server 2.3.0",
+      "at": "2026-07-30T00:00:00Z",
+      "evidence": "the token came back off the picked-up copy",
+      "note": "Imported from composable-portals docs/CAPABILITIES.md (P8).",
+      "outcome": "survived",
+      "outcomes": [
+        {
+          "id": "survived",
+          "label": "The readout says the token came back",
+          "verdict": "YES"
+        },
+        {
+          "id": "lost",
+          "label": "The readout says the token is gone",
+          "verdict": "NO"
+        },
+        {
+          "id": "no_item",
+          "label": "The follow-up says it could not find the item",
+          "verdict": "INCONCLUSIVE"
+        }
+      ],
+      "depends_on": [
+        "item.dynamic_properties.survive_get_set_round_trip"
+      ],
+      "legacy": "P8"
+    },
+    {
+      "id": "item.dynamic_properties.survive_world_reload",
+      "question": "Do dynamic properties on an ItemStack survive a full quit to title and reload?",
+      "decides": "Whether stack state is durable at all, or only within a session. This is the leg that decides whether dynamic properties can be the source of truth for anything, or whether they are a cache that needs rebuilding from something else on every load.",
+      "method": "observed",
+      "status": "OPEN",
+      "inherited": false,
+      "outcomes": [
+        {
+          "id": "survived",
+          "label": "The property came back, and the readout confirms a reload happened",
+          "verdict": "YES"
+        },
+        {
+          "id": "lost",
+          "label": "The property is gone after the reload",
+          "verdict": "NO"
+        },
+        {
+          "id": "no_reload",
+          "label": "The readout says no reload happened between the two halves",
+          "verdict": "INCONCLUSIVE"
+        }
+      ],
+      "depends_on": [
+        "item.dynamic_properties.survive_get_set_round_trip"
+      ],
+      "legacy": "P8"
+    },
+    {
+      "id": "item.dynamic_properties.require_unstackable_items",
+      "question": "Do dynamic properties require an item with `max_stack_size: 1`?",
+      "decides": "A real inventory cost, paid deliberately by every item that carries state. Worth knowing before designing something that wanted to be stackable.",
+      "method": "derived",
+      "status": "SETTLED",
+      "inherited": false,
+      "established_by": "Per-stack state cannot survive stacks merging, and Bedrock's API reflects that. Already relied on in generated item definitions."
+    },
+    {
+      "id": "item.durability.mending_can_reach_a_custom_item",
+      "question": "Does a Mending enchantment repair a custom item's `damage`?",
+      "decides": "Whether durability can be a source of truth at all. Mending fires continuously during ordinary play, so if it reaches a custom item then packed state in durability is corrupted by the player simply collecting XP -- silently, with nothing anywhere saying why.",
+      "method": "observed",
+      "status": "OPEN",
+      "inherited": false,
+      "outcomes": [
+        {
+          "id": "repairs",
+          "label": "The damage went down",
+          "verdict": "YES"
+        },
+        {
+          "id": "untouched",
+          "label": "The damage is unchanged",
+          "verdict": "NO"
+        },
+        {
+          "id": "no_enchant",
+          "label": "Mending could not be applied to the item at all",
+          "verdict": "INCONCLUSIVE"
+        }
+      ],
+      "legacy": "manual"
+    },
+    {
+      "id": "item.durability.anvil_or_grindstone_can_reach_a_custom_item",
+      "question": "Can an anvil or a grindstone alter a custom item's `damage`?",
+      "decides": "The same hazard as Mending but player-initiated rather than ambient, which makes it rarer and more confusing when it happens.",
+      "method": "observed",
+      "status": "OPEN",
+      "inherited": false,
+      "outcomes": [
+        {
+          "id": "neither",
+          "label": "Neither block will touch it",
+          "verdict": "NO"
+        },
+        {
+          "id": "anvil_only",
+          "label": "The anvil repairs it; the grindstone does not",
+          "verdict": "YES"
+        },
+        {
+          "id": "grindstone_only",
+          "label": "The grindstone touches it; the anvil does not",
+          "verdict": "YES"
+        },
+        {
+          "id": "both",
+          "label": "Both will alter it",
+          "verdict": "YES"
+        },
+        {
+          "id": "unreadable",
+          "label": "Could not get either block to accept the item to find out",
+          "verdict": "INCONCLUSIVE"
+        }
+      ],
+      "legacy": "manual"
+    },
+    {
+      "id": "item.durability.omitting_repairable_blocks_external_writes",
+      "question": "Is omitting `minecraft:repairable` enough to keep anvils, grindstones and Mending away from an item's damage?",
+      "decides": "Whether the hazard has a one-line fix in the item definition, or has to be mitigated in script by treating durability as a cache.",
+      "method": "observed",
+      "status": "OPEN",
+      "inherited": false,
+      "outcomes": [
+        {
+          "id": "sufficient",
+          "label": "Nothing external could reach the damage",
+          "verdict": "YES"
+        },
+        {
+          "id": "insufficient",
+          "label": "At least one route got through anyway",
+          "verdict": "NO"
+        },
+        {
+          "id": "unreadable",
+          "label": "The rows above are not answered yet",
+          "verdict": "INCONCLUSIVE"
+        }
+      ],
+      "depends_on": [
+        "item.durability.mending_can_reach_a_custom_item"
+      ],
+      "legacy": "manual"
+    },
+    {
+      "id": "item.durability.ordinary_use_consumes_it",
+      "question": "Does using a custom item consume durability the way a tool's does?",
+      "decides": "Whether durability drifts on its own during play. A slow drift is worse than an external write, because there is no single event to point at.",
+      "method": "observed",
+      "status": "OPEN",
+      "inherited": false,
+      "outcomes": [
+        {
+          "id": "unchanged",
+          "label": "The damage is unchanged",
+          "verdict": "NO"
+        },
+        {
+          "id": "consumed",
+          "label": "The damage went up",
+          "verdict": "YES"
+        },
+        {
+          "id": "unreadable",
+          "label": "Could not get the item to register a use",
+          "verdict": "INCONCLUSIVE"
+        }
+      ],
+      "legacy": "manual"
+    },
+    {
+      "id": "render.molang.unknown_query_resolves_to_zero",
+      "question": "Does an unrecognised Molang query resolve to 0 rather than erroring?",
+      "decides": "How every other probe in this file has to be read. If an unknown query silently yields 0, then a controller indexing a texture array with a dead query still draws -- it draws index 0. So index 0 is the signal for \"this query is blind\", and no probe expectation may land on index 0 except the one that expects zero anyway. Getting this backwards makes every rendering measurement unreadable.",
+      "method": "derived",
+      "status": "SETTLED",
+      "inherited": false,
+      "established_by": "Read off the engine's behaviour across several controller failures. An unresolvable query for an ENTITY property additionally fails the whole render controller silently, which is a different and worse failure -- four sessions were lost to it before the query was found to be `query.property` rather than `query.actor_property`."
+    },
+    {
+      "id": "render.molang.integer_precision",
+      "question": "Does Molang's float arithmetic stay exact across a bit-packed integer layout?",
+      "decides": "Whether `math.floor` and `math.mod` can safely unpack a value carried in durability or any other numeric channel.",
+      "method": "derived",
+      "status": "SETTLED",
+      "inherited": false,
+      "established_by": "Molang is float-based; integers stay exact well past 2^24, which is far above any packed layout worth designing. Use power-of-two bases for readability."
+    },
+    {
+      "id": "render.attachable.draws_on_custom_item",
+      "question": "Does a custom item render an attachable at all?",
+      "decides": "Whether in-world rendering of a custom held item is possible in any form. The bisect floor for everything else in this file: a rig that stays dark cannot say whether the queries are blind or whether attachables simply do not work on custom items, and without this row underneath it, no result above is readable.",
+      "method": "observed",
+      "status": "SETTLED",
+      "inherited": false,
+      "measured_on": "1.21.120",
+      "platform": "imported",
+      "api": "@minecraft/server 2.3.0",
+      "at": "2026-07-30T00:00:00Z",
+      "evidence": "third person showed it plainly as a cube; first person was filled with magenta because the hand pivot is essentially at the camera",
+      "note": "Imported from composable-portals docs/CAPABILITIES.md (P3a). The most consequential row in the battery was the negative, and it did not happen. The failure that would have killed the route was INVISIBLE — magenta everywhere is not invisible, and Bedrock's own missing-texture is a checker rather than a solid field, so the two were distinguishable.",
+      "outcome": "renders",
+      "outcomes": [
+        {
+          "id": "renders",
+          "label": "A magenta cube appears, and third person shows it plainly as a cube",
+          "verdict": "YES"
+        },
+        {
+          "id": "renders_but_engulfs",
+          "label": "The whole screen goes magenta in first person",
+          "verdict": "YES"
+        },
+        {
+          "id": "nothing",
+          "label": "Nothing renders, in either person",
+          "verdict": "NO"
+        },
+        {
+          "id": "checker",
+          "label": "A black-and-magenta checkerboard",
+          "verdict": "INCONCLUSIVE"
+        }
+      ],
+      "legacy": "P3a"
+    },
+    {
+      "id": "render.attachable.anchor_is_on_the_body",
+      "question": "Is an attachable's anchor on the player's body rather than in the hand?",
+      "decides": "Where to place probe geometry before measuring anything with it. Twice now a rig has rendered perfectly and been unreadable because it sat at the anchor and the body occluded it. Offset first, then measure.",
+      "method": "observed",
+      "status": "SETTLED",
+      "inherited": false,
+      "measured_on": "1.21.120",
+      "platform": "imported",
+      "api": "@minecraft/server 2.3.0",
+      "at": "2026-07-30T00:00:00Z",
+      "evidence": "geometry placed at the anchor is occluded by the player, in both first and third person",
+      "note": "Imported from composable-portals docs/CAPABILITIES.md (P3a, then again on the P3b rig). Twice a rig rendered perfectly and could not be read for this reason. Offset a probe before measuring with it.",
+      "outcome": "on_body",
+      "outcomes": [
+        {
+          "id": "on_body",
+          "label": "The geometry is positioned relative to the body, not the hand",
+          "verdict": "YES"
+        },
+        {
+          "id": "in_hand",
+          "label": "It follows the hand",
+          "verdict": "NO"
+        },
+        {
+          "id": "unreadable",
+          "label": "Nothing rendered, or could not get a third-person view",
+          "verdict": "INCONCLUSIVE"
+        }
+      ],
+      "depends_on": [
+        "render.attachable.draws_on_custom_item"
+      ],
+      "legacy": "P3a"
+    },
+    {
+      "id": "render.attachable.reads_held_item_durability",
+      "question": "Can a render controller on an attachable read the durability of the item it draws?",
+      "decides": "The largest single consequence in this battery. If yes, ONE item type renders every configuration in the hand and hundreds of baked sprites go away. If no, the item looks identical in every configuration and its state has to live in its NAME and its DURABILITY BAR, which are the only two per-stack visuals left.",
+      "method": "observed",
+      "status": "CLOSED-NEGATIVE",
+      "inherited": false,
+      "measured_on": "1.21.120",
+      "platform": "imported",
+      "api": "@minecraft/server 2.3.0",
+      "at": "2026-07-30T00:00:00Z",
+      "evidence": "two items differing only in damage (5 and 6) drew identically, with the control bone BLUE on both",
+      "note": "Imported from composable-portals docs/CAPABILITIES.md (P3b/P4). Read differentially after two earlier attempts could not be graded: an absolute reading was structurally ambiguous, because with max_durability 2048 an undamaged item shows the same colours as a blind query. All three durability queries resolve to 0 — the expression resolves, it just never sees an item. Consequence: a render controller cannot be told which item it is drawing, so every distinguishable configuration needs its own item type, and per-stack state has to live in the NAME and the DURABILITY BAR.",
+      "outcome": "flags_identical",
+      "outcomes": [
+        {
+          "id": "flags_move",
+          "label": "Bones 0 and 1 change colour between item A and item B",
+          "verdict": "YES"
+        },
+        {
+          "id": "flags_identical",
+          "label": "All four bones look identical on A and B, with the control BLUE on both",
+          "verdict": "NO"
+        },
+        {
+          "id": "control_wrong",
+          "label": "The control bone is not BLUE",
+          "verdict": "INCONCLUSIVE"
+        },
+        {
+          "id": "cannot_see_all_four",
+          "label": "Fewer than four flags are visible",
+          "verdict": "INCONCLUSIVE"
+        }
+      ],
+      "depends_on": [
+        "render.attachable.draws_on_custom_item"
+      ],
+      "legacy": "P3b/P4"
+    },
+    {
+      "id": "render.attachable.several_controllers_at_once",
+      "question": "Can several render controllers run on one attachable simultaneously?",
+      "decides": "Whether visual axes multiply at render time or in the asset folder. With layered bones -- an animated panel on one, a colour frame on another, a state marker on a third -- 3 dimensions x 16 colours is 19 textures. Without it, every axis multiplies with every other one.",
+      "method": "observed",
+      "status": "OPEN",
+      "inherited": false,
+      "outcomes": [
+        {
+          "id": "all_four",
+          "label": "All four flags draw cleanly",
+          "verdict": "YES"
+        },
+        {
+          "id": "some_with_artefacts",
+          "label": "All four draw but there is z-fighting or ordering trouble",
+          "verdict": "YES"
+        },
+        {
+          "id": "only_one",
+          "label": "Only one controller's geometry ever draws",
+          "verdict": "NO"
+        },
+        {
+          "id": "unreadable",
+          "label": "Nothing drew, or the view could not show all four",
+          "verdict": "INCONCLUSIVE"
+        }
+      ],
+      "depends_on": [
+        "render.attachable.draws_on_custom_item"
+      ],
+      "legacy": "P4"
+    },
+    {
+      "id": "render.attachable.sits_at_model_origin_without_animation",
+      "question": "Does an attachable with no `animations` and no `scripts.animate` render at the player model's own origin?",
+      "decides": "Whether \"it appeared on my back\" is a property of attachables or a property of our geometry offsets. The answer changes whether a hand pose needs work or just needs coordinates.",
+      "method": "derived",
+      "status": "SETTLED",
+      "inherited": false,
+      "established_by": "Read directly out of the attachable JSON we emit: it declares only `materials`, `textures`, `geometry` and `render_controllers`. With nothing switching poses, the model renders in the player model's coordinate space at its origin and stays there in both first and third person. Confirmed against play reports of the probe appearing behind the player, which is where its authored offset puts it."
+    },
+    {
+      "id": "render.attachable.accepts_vanilla_hold_animations",
+      "question": "Will a custom item's attachable accept the vanilla hold animations and be posed into the hand?",
+      "decides": "Whether a custom held item can look held. Low stakes while the durability queries are dead -- a hand-posed attachable can only ever show one fixed look, so it is worth having for flavour and never for information -- but it is the row that makes an in-world model presentable at all.",
+      "method": "observed",
+      "status": "OPEN",
+      "inherited": false,
+      "outcomes": [
+        {
+          "id": "posed_both",
+          "label": "It sits in the hand, and first and third person differ as vanilla's do",
+          "verdict": "YES"
+        },
+        {
+          "id": "posed_one",
+          "label": "It is posed in one person but not the other",
+          "verdict": "YES"
+        },
+        {
+          "id": "unposed",
+          "label": "It still sits at the model origin, unaffected",
+          "verdict": "NO"
+        },
+        {
+          "id": "nothing",
+          "label": "Nothing renders now, where the unanimated rig did",
+          "verdict": "INCONCLUSIVE"
+        }
+      ],
+      "depends_on": [
+        "render.attachable.draws_on_custom_item"
+      ],
+      "legacy": "P3c"
+    },
+    {
+      "id": "ui.form.button_icon_resolves_an_unindexed_path",
+      "question": "Does `ActionFormData.button(text, iconPath)` draw a texture that has NO `item_texture.json` entry?",
+      "decides": "Whether art for a form can be pure pack art: no item type, no atlas entry, nothing in the creative menu. That is the difference between 48 real items and 48 PNGs, and this is the only surface in the game where an arbitrary picture can be drawn per stack.",
+      "method": "observed",
+      "status": "OPEN",
+      "inherited": false,
+      "outcomes": [
+        {
+          "id": "draws",
+          "label": "Button 1 draws its icon, and so does the vanilla control",
+          "verdict": "YES"
+        },
+        {
+          "id": "blank",
+          "label": "The vanilla control draws but button 1 is blank",
+          "verdict": "NO"
+        },
+        {
+          "id": "control_blank",
+          "label": "The vanilla control does not draw either",
+          "verdict": "INCONCLUSIVE"
+        }
+      ],
+      "legacy": "P6"
+    },
+    {
+      "id": "ui.form.button_icon_resolves_a_bare_atlas_key",
+      "question": "Does a bare atlas short-name work where a path is expected?",
+      "decides": "Whether a runtime-computed reference can be an atlas key -- which a generator already knows -- or has to be a full path, which it has to be taught.",
+      "method": "observed",
+      "status": "OPEN",
+      "inherited": false,
+      "outcomes": [
+        {
+          "id": "draws",
+          "label": "It draws",
+          "verdict": "YES"
+        },
+        {
+          "id": "blank",
+          "label": "It does not draw",
+          "verdict": "NO"
+        },
+        {
+          "id": "control_blank",
+          "label": "The vanilla control did not draw either",
+          "verdict": "INCONCLUSIVE"
+        }
+      ],
+      "depends_on": [
+        "ui.form.button_icon_resolves_an_unindexed_path"
+      ],
+      "legacy": "P6"
+    },
+    {
+      "id": "ui.form.missing_icon_is_visually_distinct",
+      "question": "Does a deliberately wrong icon path render as a broken-texture mark, or as nothing?",
+      "decides": "Whether \"no icon\" and \"wrong path\" are distinguishable in play. This matters more than it looks: a UI that computes paths at runtime and fails silently is a UI where a typo is invisible forever.",
+      "method": "observed",
+      "status": "OPEN",
+      "inherited": false,
+      "outcomes": [
+        {
+          "id": "broken_mark",
+          "label": "It shows a missing-texture mark",
+          "verdict": "YES"
+        },
+        {
+          "id": "blank",
+          "label": "It renders as nothing, the same as a button with no icon at all",
+          "verdict": "NO"
+        },
+        {
+          "id": "control_blank",
+          "label": "The vanilla control did not draw either",
+          "verdict": "INCONCLUSIVE"
+        }
+      ],
+      "depends_on": [
+        "ui.form.button_icon_resolves_an_unindexed_path"
+      ],
+      "legacy": "P6"
+    },
+    {
+      "id": "ui.container.can_be_opened_on_demand_by_script",
+      "question": "Can script open a container UI for a player without the player interacting?",
+      "decides": "Whether a container screen can be part of a scripted flow, or is always something the player has to reach for themselves.",
+      "method": "derived",
+      "status": "SETTLED",
+      "inherited": false,
+      "established_by": "There is no `player.openContainer` in the script API."
+    },
+    {
+      "id": "ui.container.emits_a_change_event",
+      "question": "Is there an event for a container's contents changing?",
+      "decides": "Whether watching a container costs a poll. Cheap for one open container; a real cost if a design wants many.",
+      "method": "derived",
+      "status": "SETTLED",
+      "inherited": false,
+      "established_by": "No container-change event exists; contents must be polled."
+    },
+    {
+      "id": "ui.enchanting.custom_enchantments_or_interception",
+      "question": "Can custom enchantments be defined, or the enchanting-table UI intercepted?",
+      "decides": "Whether the enchanting table is a route to a custom \"attach\"-style interaction. It is a tempting one because the UI already exists and reads as native.",
+      "method": "derived",
+      "status": "SETTLED",
+      "inherited": false,
+      "established_by": "Custom enchantments cannot be defined and the enchanting-table UI cannot be intercepted. The glint still requires a real vanilla enchantment."
+    },
+    {
+      "id": "ui.item_texture.resolvable_from_an_item_id_at_runtime",
+      "question": "Is there an API to resolve an item id to the texture path that draws it?",
+      "decides": "Whether a UI can draw an ARBITRARY item -- including one from another pack. Without it, anything that wants to needs a generated id-to-path table plus a placeholder for everything unrecognised.",
+      "method": "derived",
+      "status": "SETTLED",
+      "inherited": false,
+      "established_by": "Form button `iconPath` is a texture path rather than an item id, and no runtime API maps one to the other. Our own art is unaffected because we control those paths."
+    }
+  ]
+}

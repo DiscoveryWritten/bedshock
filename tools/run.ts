@@ -20,40 +20,94 @@ import { loadPackConfig } from './config.ts';
 import { collect, versionFromLog, type Collected } from './collect.ts';
 import { appendObservations, assertVersion, readLedger, resolveWithDeps } from './ledger.ts';
 import { BUILD_DIR, ROOT } from './paths.ts';
-import type { Observation } from './types.ts';
+import type { Observation, Status } from './types.ts';
 
 /**
- * Which probes are worth a boot on a given version.
+ * Which probes are worth a boot on a given version, and why.
  *
- * `all`     the whole battery. What you want on a version nobody has touched.
- * `open`    only probes carrying a capability this version has no usable answer for. The
- *           "has it become possible yet?" sweep — cheap enough to run against every new
- *           Bedrock, which is the point of writing a test for a capability before it exists.
- * `regress` only probes whose capabilities are ALL already settled here. Pure drift check:
- *           nothing new can come out of it except the one thing worth interrupting for.
+ * `open`      no usable answer here. Never measured, or the apparatus failed, or two runs
+ *             disagree. The obvious sweep.
+ * `negative`  measured NO — **the watchlist**, and the reason this project exists at all.
+ * `regress`   measured YES. A pure drift check: nothing new can come out of it except the one
+ *             verdict worth interrupting for.
  *
- * Both narrowed modes need the version stated up front, because the selection depends on it.
- * That is a real constraint rather than an oversight: you cannot ask "what is still open on
- * this version" of a log that has not been written yet.
+ * THE WATCHLIST IS NOT A CURIOSITY, and treating it as one was a real bug in the first version
+ * of this file: `open` excluded `CLOSED-NEGATIVE`, so a row whose answer was no would never be
+ * re-asked by any narrowed sweep. That is precisely backwards. A battery for a platform that
+ * changes under you is not mainly there to confirm what already works — it is there so that the
+ * day something becomes possible, the test that proves it was written months ago and runs
+ * without anybody deciding to look.
+ *
+ * So a negative is a question with a pending answer, not a closed file. `bedshock watchlist`
+ * prints them with what each would unblock, and a sweep on a new Bedrock normally wants
+ * `--open --negative` together: everything that is not already a confirmed yes.
+ *
+ * Asking for nothing asks everything — an empty list is no narrowing rather than no probes.
  */
-export type Scope = 'all' | 'open' | 'regress';
+export type Ask = 'open' | 'negative' | 'regress';
 
-export function probesFor(scope: Scope, version: string, catalog: Catalog, observations: Observation[]): string[] {
-  if (scope === 'all') return [];
+export const ALL_ASKS: Ask[] = ['open', 'negative', 'regress'];
+
+/** Does this status answer to this reason for asking? */
+export function matchesAsk(status: Status, ask: Ask): boolean {
+  if (ask === 'negative') return status === 'CLOSED-NEGATIVE';
+  if (ask === 'regress') return status === 'SETTLED';
+  // `open` deliberately includes the states that LOOK answered and are not: an apparatus that
+  // failed, a pair of runs that disagree, and a row resting on something unmeasured.
+  return status === 'OPEN' || status === 'INCONCLUSIVE' || status === 'DRIFT' || status === 'UNDERMINED';
+}
+
+export function probesFor(asks: Ask[], version: string, catalog: Catalog, observations: Observation[]): string[] {
+  if (asks.length === 0 || asks.length === ALL_ASKS.length) return [];
   const probes: string[] = [];
   for (const [probe, caps] of catalog.byProbe) {
-    const settled = caps.map((c) => resolveWithDeps(c, version, observations, catalog).status);
-    const anyUnanswered = settled.some((s) => s !== 'SETTLED' && s !== 'CLOSED-NEGATIVE');
-    if (scope === 'open' ? anyUnanswered : !anyUnanswered) probes.push(probe);
+    const wanted = caps.some((c) => {
+      const status = resolveWithDeps(c, version, observations, catalog).status;
+      return asks.some((ask) => matchesAsk(status, ask));
+    });
+    if (wanted) probes.push(probe);
   }
   return probes.sort();
+}
+
+export interface WatchlistEntry {
+  id: string;
+  question: string;
+  /** What flipping this would unblock. */
+  decides: string;
+  measuredAt?: string;
+  evidence?: string;
+}
+
+/**
+ * Every row measured NO at this version: the questions whose answer we are waiting to change.
+ *
+ * Ordered by domain then id so the same version prints the same list twice, which matters
+ * because this is a list people diff between Bedrock releases.
+ */
+export function watchlist(version: string, catalog: Catalog, observations: Observation[]): WatchlistEntry[] {
+  const out: WatchlistEntry[] = [];
+  for (const cap of catalog.capabilities) {
+    if (cap.method === 'derived') continue;
+    const status = resolveWithDeps(cap, version, observations, catalog);
+    if (status.status !== 'CLOSED-NEGATIVE') continue;
+    const top = status.observations[0];
+    out.push({
+      id: cap.id,
+      question: cap.question,
+      decides: cap.decides,
+      ...(status.measuredAt ? { measuredAt: status.measuredAt } : {}),
+      ...(top?.evidence ? { evidence: top.evidence } : {}),
+    });
+  }
+  return out.sort((a, b) => a.id.localeCompare(b.id));
 }
 
 export interface RunOptions {
   /** Declare the version rather than reading it out of the log. Required for a client log. */
   version?: string;
-  /** Narrow the run. `open` and `regress` require `version`. */
-  scope?: Scope;
+  /** Narrow the run to these reasons for asking. Any narrowing requires `version`. */
+  asks?: Ask[];
   /** A specific Bedrock Dedicated Server download URL, to measure a version that is not current. */
   serverUrl?: string;
   /** Skip building — use whatever is already in `build/`. */
@@ -82,23 +136,23 @@ export async function run(opts: RunOptions = {}): Promise<RunResult> {
   const catalog = loadCatalog();
 
   let logPath = opts.fromLog;
-  const scope: Scope = opts.scope ?? 'all';
+  const asks = opts.asks ?? [];
+  const narrowed = asks.length > 0 && asks.length < ALL_ASKS.length;
 
-  if (scope !== 'all' && !opts.version) {
+  if (narrowed && !opts.version) {
     throw new Error(
-      `--${scope} needs --version. Which probes are still worth asking depends on which version ` +
-        `you are asking about, and that cannot be read out of a log that does not exist yet.`,
+      `--${asks.join(' --')} needs --version. Which probes are still worth asking depends on ` +
+        `which version you are asking about, and that cannot be read out of a log that does not ` +
+        `exist yet.`,
     );
   }
 
-  const probes =
-    scope === 'all' ? [] : probesFor(scope, opts.version!, catalog, readLedger());
+  const probes = narrowed ? probesFor(asks, opts.version!, catalog, readLedger()) : [];
 
-  if (scope !== 'all' && probes.length === 0) {
+  if (narrowed && probes.length === 0) {
     throw new Error(
-      scope === 'open'
-        ? `nothing is open on ${opts.version} — every probe's capabilities already have an answer there.`
-        : `nothing is settled on ${opts.version} yet, so there is nothing to re-check for drift.`,
+      `nothing on ${opts.version} matches ${asks.join(', ')}. ` +
+        `Try --open --negative, which is everything that is not already a confirmed yes.`,
     );
   }
 

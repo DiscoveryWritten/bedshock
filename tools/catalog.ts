@@ -12,7 +12,7 @@ import { join } from 'node:path';
 import { parse } from 'yaml';
 
 import type { Capability, CapabilityFile } from './types.ts';
-import { CONTENT_DIR } from './paths.ts';
+import { CATALOG_DIR } from './paths.ts';
 
 export interface Catalog {
   capabilities: Capability[];
@@ -139,7 +139,7 @@ function hasCycle(start: string, all: Capability[]): boolean {
   return false;
 }
 
-export function loadCatalog(dir = join(CONTENT_DIR, 'capabilities')): Catalog {
+export function loadCatalog(dir = CATALOG_DIR): Catalog {
   const files: CapabilityFile[] = readdirSync(dir)
     .filter((f) => f.endsWith('.yaml'))
     .sort()

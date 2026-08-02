@@ -78,6 +78,29 @@ This is also what makes the battery worth keeping for months rather than running
 question stays in the catalog after its answer is `NO`, and `--open` re-asks it on each new
 version. The test for a capability that does not exist yet is written before it exists.
 
+## 4b. A negative is a question with a pending answer
+
+`CLOSED-NEGATIVE` is not a closed file, and the machinery treats it that way: `--negative`
+selects exactly those rows, `bedshock watchlist` prints them with what each would unblock, the
+generated report gives them their own section above the per-domain detail, and the manifest names
+them at the top level.
+
+**This was wrong in the first version and the way it was wrong is instructive.** `--open`
+excluded measured-`no` rows, so no narrowed sweep ever re-asked one. Every individual piece was
+defensible — `open` should mean open — and the composition was exactly backwards for what the
+project is for. A battery for a platform that changes under you is not mainly there to confirm
+what already works. It is there so that the day something becomes possible, the test that proves
+it was written months ago and runs without anybody deciding to look.
+
+`watchlist.test.ts` also asserts that the catalog *contains* rows that come back no. If that
+count ever drops to zero it means either Bedrock grew everything we asked for — worth knowing —
+or somebody quietly removed the questions that were inconvenient, which is worth stopping for.
+
+The same idea applies one level down, inside a probe. The durability ceilings above 32767 are
+declared *expecting* the game to mishandle them, and the mishandling IS the measurement: it is
+how a wrap is told from a clamp. A ceiling list with no above-boundary entry would measure only
+the comfortable half, and `config.ts` refuses one.
+
 ## 5. `LOOK` is not a result, and cannot be made into one
 
 The runtime has separate verbs. `run.ts` records `RESULT` lines and refuses `LOOK` lines — and
@@ -186,3 +209,9 @@ pack consumes the *ledger*, never the probes.
 **An `expect` field.** It has been proposed twice while writing this and it is the same idea as
 §1 wearing a hat. The recorded observation is the expectation; drift is the ledger disagreeing
 with itself.
+
+**A single canonical ledger.** `BEDSHOCK_CATALOG` and `BEDSHOCK_LEDGER` redirect both, and the
+composite action exposes them as inputs, because a project that measures its own answers has a
+better proof than one citing ours. What is worth sharing is the discipline — append-only answers,
+an enumerated answer space, an absent run never recorded as a negative — not the particular
+questions this repository happens to ask.

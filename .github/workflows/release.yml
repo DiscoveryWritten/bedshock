@@ -1,0 +1,171 @@
+name: release
+
+# Publish a capability manifest for one Minecraft version.
+#
+# THE TAG SCHEME, because it is the part that needs explaining.
+#
+# A manifest is a function of TWO things: the game it was measured against, and the catalog of
+# questions that were asked. So the same Minecraft version yields a different manifest whenever
+# a question is added, an answer space is widened, or a probe is repaired -- and both have to be
+# in the identity or a consumer cannot tell two manifests apart.
+#
+#   mc-1.26.36.1-rc3c24c08   immutable. This catalog, measured against this game
+#   mc-1.26.36.1             MOVES. Always the newest revision for that game
+#
+# A consumer pinning `mc-1.26.36.1` gets the best answers available for the game they run on,
+# and one pinning the full id gets a byte-identical artifact forever. The catalog revision is a
+# content hash rather than a counter, because a counter is a thing somebody has to remember to
+# bump and a hash is a thing that cannot be wrong.
+#
+# WHAT IT PUBLISHES. The manifest is the product; the rest rides along because it is cheap:
+#
+#   bedrock-capabilities-<version>.json   what another repository reads
+#   bedrock-capabilities-<version>.md     what a person reads
+#   bedshock-<pack>.mcaddon               the probe pack that produced it
+#   watchlist-<version>.md                the rows measured NO, for the next sweep to aim at
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Minecraft version to publish (blank = newest in the ledger)'
+        required: false
+        default: ''
+      server-url:
+        description: 'Measure first, against this BDS zip. Blank publishes what is already recorded'
+        required: false
+        default: ''
+      record:
+        description: 'Append the measurement to the ledger and commit it'
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+
+      # Nothing gets published from an invalid catalog or a ledger that disagrees with it. A
+      # manifest is meant to be trusted by machines that will never read a warning.
+      - name: Validate
+        run: npm run validate
+
+      - name: Measure, if a server was named
+        if: inputs.server-url != ''
+        run: |
+          npx tsx tools/cli.ts run \
+            --server-url '${{ inputs.server-url }}' \
+            ${{ inputs.record && ' ' || '--dry-run' }}
+
+      - name: Work out what we are publishing
+        id: what
+        run: |
+          set -euo pipefail
+          version='${{ inputs.version }}'
+          [ -n "$version" ] || version="$(npx tsx tools/cli.ts latest-version)"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+          mkdir -p dist
+          npx tsx tools/cli.ts export --version "$version" --out "dist/bedrock-capabilities-$version.json"
+          release="$(python3 -c "import json;print(json.load(open('dist/bedrock-capabilities-$version.json'))['release'])")"
+          echo "release=$release" >> "$GITHUB_OUTPUT"
+          echo "moving=mc-$version" >> "$GITHUB_OUTPUT"
+          echo "Publishing $release (moving tag mc-$version)"
+
+      - name: Regenerate the documents and collect the assets
+        run: |
+          set -euo pipefail
+          npm run report
+          npm run build
+          version='${{ steps.what.outputs.version }}'
+          cp "docs/versions/$version.md" "dist/bedrock-capabilities-$version.md"
+          npx tsx tools/cli.ts watchlist --version "$version" > "dist/watchlist-$version.md"
+
+      # Refuse to publish a manifest nobody could act on. A release whose every row is OPEN is a
+      # release that says "we did not measure anything", and shipping it under a version tag
+      # invites somebody to cite it.
+      - name: Refuse an empty manifest
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, sys
+          version = os.environ['VERSION']
+          m = json.load(open(f'dist/bedrock-capabilities-{version}.json'))
+          answered = m['counts']['SETTLED'] + m['counts']['CLOSED-NEGATIVE']
+          if answered == 0:
+              print('::error::nothing is answered on this version. Run the battery before publishing.')
+              sys.exit(1)
+          if m['counts']['DRIFT']:
+              print(f"::error::{m['counts']['DRIFT']} row(s) are DRIFT. A recorded answer no longer holds; "
+                    "re-measure before publishing a manifest that carries it.")
+              sys.exit(1)
+          print(f"{answered} answered, {m['counts']['OPEN']} open, {len(m['watchlist'])} on the watchlist")
+          PY
+        env:
+          VERSION: ${{ steps.what.outputs.version }}
+
+      - name: Commit a recorded measurement
+        if: inputs.record && inputs.server-url != ''
+        run: |
+          set -euo pipefail
+          git config user.name 'bedshock'
+          git config user.email 'bedshock@users.noreply.github.com'
+          git add ledger/ docs/
+          git diff --cached --quiet || git commit -m "measure ${{ steps.what.outputs.version }} (${{ steps.what.outputs.release }})"
+          git push
+
+      # The immutable release: this catalog, this game, forever.
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.what.outputs.release }}
+          name: 'Bedrock ${{ steps.what.outputs.version }} — ${{ steps.what.outputs.release }}'
+          body: |
+            Capability manifest for **Minecraft Bedrock ${{ steps.what.outputs.version }}**.
+
+            `${{ steps.what.outputs.release }}` is immutable: this catalog of questions, measured
+            against this game. `${{ steps.what.outputs.moving }}` moves to whichever revision is
+            newest for this version — pin that if you want the best answers available for the game
+            you run on, and the full id if you want a byte-identical artifact forever.
+
+            ```
+            bedrock-capabilities-${{ steps.what.outputs.version }}.json   what a machine reads
+            bedrock-capabilities-${{ steps.what.outputs.version }}.md     what a person reads
+            watchlist-${{ steps.what.outputs.version }}.md                measured NO — aim the next sweep here
+            ```
+
+            **`OPEN` is not `no`.** A row nobody measured on this version is a question, not a
+            finding, and a design resting on one needs a fallback. See `status` on each row.
+          files: dist/*
+
+      # The moving tag, force-updated. Two steps rather than one because a release cannot be both
+      # immutable and moving, and pretending otherwise is how a consumer ends up pinned to
+      # something that changed under them.
+      - name: Move the version tag to this revision
+        run: |
+          set -euo pipefail
+          git tag -f '${{ steps.what.outputs.moving }}'
+          git push -f origin '${{ steps.what.outputs.moving }}'
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.what.outputs.moving }}
+          name: 'Bedrock ${{ steps.what.outputs.version }} — latest'
+          body: |
+            The newest capability manifest for **Minecraft Bedrock ${{ steps.what.outputs.version }}**.
+
+            This tag **moves**. It currently points at `${{ steps.what.outputs.release }}`.
+            Pin that instead if you need an artifact that never changes.
+          files: dist/*

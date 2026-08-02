@@ -54,6 +54,14 @@ export interface AmendOptions {
   capability?: string;
   /** Include rows already answered on this version, to re-check them. */
   all?: boolean;
+  /**
+   * Include rows measured NO — the watchlist.
+   *
+   * Off by default, because re-asking every settled negative in every session is noise. On
+   * demand, because they are the rows most worth re-asking when a new Bedrock ships, and the
+   * default header says so with the exact command rather than leaving it to be remembered.
+   */
+  negative?: boolean;
 }
 
 /**
@@ -75,6 +83,7 @@ export function selectForAmendment(catalog: Catalog, observations: Observation[]
   if (!opts.all) {
     caps = caps.filter((c) => {
       const s = resolve(c, opts.version, observations);
+      if (s.status === 'CLOSED-NEGATIVE') return Boolean(opts.negative);
       return s.inherited || s.status === 'OPEN' || s.status === 'INCONCLUSIVE' || s.status === 'DRIFT';
     });
   }
@@ -181,12 +190,23 @@ export async function amend(catalog: Catalog, opts: AmendOptions): Promise<Obser
   const observations = readLedger();
   const due = selectForAmendment(catalog, observations, opts);
 
+  const negatives = catalog.capabilities.filter(
+    (c) => c.method === 'observed' && resolve(c, opts.version, observations).status === 'CLOSED-NEGATIVE',
+  );
+
   if (due.length === 0) {
     stdout.write(
       `\nNothing needs your eyes on ${opts.version}.\n` +
         `${DIM}Every observed capability already has an answer there. ` +
         `Use --all to re-check them anyway.${RESET}\n\n`,
     );
+    if (negatives.length && !opts.negative) {
+      stdout.write(
+        `${negatives.length} row(s) are measured ${BOLD}NO${RESET} here — the watchlist.\n` +
+          `${DIM}Those are the ones worth re-checking on a Bedrock you have not looked at yet:\n` +
+          `  bedshock amend --version ${opts.version} --negative${RESET}\n\n`,
+      );
+    }
     return [];
   }
 

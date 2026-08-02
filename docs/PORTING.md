@@ -55,11 +55,26 @@ got an outcome of its own (`returned_but_contents_unverified`) rather than being
 a clean YES. Adding an outcome that describes the evidence you have is cheaper than a row that
 overstates.
 
-### 3. Delete the host's copy
+### 3. Delete the host's copy — but only what is genuinely duplicated
 
 Once a capability is settled in the ledger, the host-side test that was really re-checking it
-goes. In this migration that retires `spike_caps.ts` (1,286 lines), `gen_probes.ts` (716),
-`probes.yaml` (242) and `probes.test.ts`, plus the battery half of `smoke-test.sh`.
+goes. In this migration that eventually retires `spike_caps.ts` (1,286 lines), `gen_probes.ts`
+(716), `probes.yaml` (242) and `probes.test.ts`, plus the battery half of `smoke-test.sh`.
+
+**Two things stay behind, and neither is an oversight.**
+
+The first is any rig this repository has not rebuilt yet. Deleting the host's copy first would
+leave the apparatus in neither place; the build's cross-check prints that list on every run, so
+it shrinks rather than being remembered.
+
+The second is subtler and more valuable. **A host repository accumulating code that its own
+findings say will fail is a source of future negative probes, not dead weight.** When a mod moves
+a design into a branch because a capability came back no, that branch is the most concrete
+statement anyone has of what the capability would have been *for* — and it is exactly the
+material a future `--negative` probe wants when the question is re-asked on a newer Bedrock.
+
+So: take from it when it is useful, and do not tidy it away. A negative in this ledger is a
+question with a pending answer, and the host's abandoned branch is the answer's other half.
 
 Replace each with a citation where the code rests on the finding:
 
@@ -106,6 +121,11 @@ by reading. Twice a design came to rest on an unmeasured capability anyway, beca
 and a guess look identical in a diff.
 
 ## What to watch for
+
+**Do not delete a host's failing code because a row went negative.** A capability answered `no`
+is not an instruction to erase the design that wanted it. The design is the clearest available
+description of what a flip would unblock, and it is what the probe should be re-derived from
+when the question is asked again. Read it, take from it, leave it where it is.
 
 **Do not move a probe and its answer in one commit.** Move the question first, seed the answer
 from the document, verify the report says what the document said. Only then delete the host's

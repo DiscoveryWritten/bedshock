@@ -55,13 +55,38 @@ item.name.glyph_renders_in_colour     yes       yes
 render.attachable.reads_held_item_durability      no        ·
 ```
 
-Which makes `bedshock run --open` the point of the whole thing: re-run only the rows this
-version has no answer for. **The test for a capability that does not exist yet gets written
-before it exists**, and re-running it against each new Bedrock is how you find out the day it
-starts working — with the measurement already in hand rather than a session ahead of you.
+Which makes narrowing the point of the whole thing. There are three reasons to ask a question,
+and they are different questions:
 
-`--regress` is the mirror: only rows already settled here. Nothing new can come out of it
-except `DRIFT`, which is the one verdict worth interrupting for.
+```bash
+bedshock run --open     --version <new>   # nobody has answered this here
+bedshock run --negative --version <new>   # the answer was NO — the watchlist
+bedshock run --regress  --version <new>   # the answer was YES — a drift check
+```
+
+**`--negative` is the one that matters most**, and treating it as an afterthought was a real bug
+in the first version of this: `--open` excluded measured-`no` rows, so a negative was never
+re-asked by any narrowed sweep. That is exactly backwards. A battery for a platform that changes
+under you is not mainly there to confirm what already works — **it is there so that the day
+something becomes possible, the test that proves it was written months ago.**
+
+So a negative is a question with a pending answer, not a closed file:
+
+```
+$ bedshock watchlist
+
+4 capability(s) measured NO on Bedrock 1.21.120.
+These are questions with a pending answer, not closed files.
+
+  render.attachable.reads_held_item_durability
+    Can a render controller on an attachable read the durability of the item it draws?
+    would unblock: The largest single consequence in this battery. If yes, ONE item type
+    renders every configuration in the hand and hundreds of baked sprites go away.
+```
+
+A sweep on a new Bedrock normally wants `--open --negative`: everything that is not already a
+confirmed yes. And `bedshock diff` between two manifests prints `became_possible` first, because
+that is the single most valuable line this project can produce.
 
 ## Measured, observed, derived
 
@@ -167,6 +192,69 @@ import { requireCapabilities } from 'bedshock';
 requireCapabilities({ version: '1.21.120', ids: [...] });   // throws, naming every failure
 ```
 
+## The manifest, and releases
+
+The Markdown is for people. `bedshock export` writes the thing a machine reads:
+
+```json
+{
+  "schema": 1,
+  "minecraft": "1.21.120",
+  "catalog_revision": "rc3c24c08",
+  "release": "mc-1.21.120-rc3c24c08",
+  "counts": { "SETTLED": 22, "CLOSED-NEGATIVE": 4, "OPEN": 18, "INCONCLUSIVE": 1, "derived": 15 },
+  "watchlist": ["render.attachable.reads_held_item_durability", "..."],
+  "capabilities": [ { "id": "...", "status": "...", "inherited": false, "outcomes": [...] } ]
+}
+```
+
+**A manifest has two halves to its identity**, and both are in the tag. The Minecraft version is
+one; the other is the catalog of questions that were asked, because adding a question or widening
+an answer space makes the *same* game yield a *different* manifest.
+
+| Tag | |
+|---|---|
+| `mc-1.21.120-rc3c24c08` | Immutable. This catalog, measured against this game, forever |
+| `mc-1.21.120` | **Moves.** Always the newest revision for that game |
+
+Pin the moving tag for the best answers available on the game you run, or the full id for a
+byte-identical artifact. The revision is a content hash rather than a counter, because a counter
+is a thing somebody has to remember to bump.
+
+## Vendoring it
+
+bedshock is meant to be submoduled. `action.yml` is a composite action, so a repository that
+vendors it at `vendor/bedshock` runs it as a local action with no registry and no credential:
+
+```yaml
+- uses: ./vendor/bedshock
+  with:
+    mode: run
+    server-url: https://.../bedrock-server-1.26.36.1.zip   # any version, any server build
+    record: true
+```
+
+**And it can measure into its own ledger.** `catalog` and `ledger` inputs — or the
+`BEDSHOCK_CATALOG` / `BEDSHOCK_LEDGER` environment variables locally — point the apparatus at
+files in *your* repository:
+
+```yaml
+- uses: ./vendor/bedshock
+  with:
+    catalog: capabilities/          # your questions
+    ledger: capabilities/observations.jsonl
+    manifest-out: dist/my-capabilities.json
+```
+
+That is deliberately a first-class path rather than a hack. A project that measures its own
+answers has a better proof than one citing ours, and the code that enforces the discipline —
+append-only answers, an enumerated answer space, an absent run never recorded as a negative — is
+the part worth sharing. The questions in this repository are one instance of it.
+
+The server is a seam too: `server-url` takes any Bedrock Dedicated Server zip, and `log` skips
+the server entirely so a harness this action does not know how to start can feed a battery log in
+and get the same collection rules applied to it.
+
 ## Where things are
 
 | | |
@@ -187,11 +275,14 @@ requireCapabilities({ version: '1.21.120', ids: [...] });   // throws, naming ev
 |---|---|
 | `bedshock validate` | The questions and the ledger, checked against each other |
 | `bedshock build` | Emit the probe pack |
-| `bedshock run [--open\|--regress] [--server-url u]` | Boot a real server, record the automated answers |
+| `bedshock run [--open] [--negative] [--regress]` | Boot a real server, record the automated answers |
 | `bedshock collect <log> --version v` | Record from a log captured elsewhere |
 | `bedshock amend [--probe p] [--all]` | Answer the eyes-only rows |
 | `bedshock report` | Regenerate `docs/` |
 | `bedshock check --requires-from <glob> --version v` | Fail a build resting on an unsettled capability |
+| `bedshock watchlist [--version v]` | Every row measured NO, and what flipping it unblocks |
+| `bedshock export [--version v] [--out f]` | The machine-readable manifest |
+| `bedshock diff <a.json> <b.json>` | What moved between two manifests |
 | `bedshock status [prefix]` | What the ledger says right now |
 | `bedshock tidy` | Sort the ledger file. Never alters a line |
 
