@@ -302,6 +302,11 @@ probes:
     # their reported velocity is not reliably the thing that moved them.
     rest_step: 0.002
     rest_ticks: 8
+    # How long to wait for the subject to move AT ALL before concluding it never will. Knockback
+    # is an impulse: it acts in the tick after it is applied or it does not act. Waiting the whole
+    # watch window on an immovable subject costs five times that per row, which is how this probe
+    # first overran the completion wait and had its row dropped entirely.
+    moved_by_ticks: 20
     watch_ticks: 120
     samples: 5
     spread: 0.2

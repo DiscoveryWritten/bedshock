@@ -245,6 +245,7 @@ export const PARAMS = {
     "headroom": 4,
     "rest_step": 0.002,
     "rest_ticks": 8,
+    "moved_by_ticks": 20,
     "watch_ticks": 120,
     "samples": 5,
     "spread": 0.2

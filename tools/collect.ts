@@ -44,6 +44,19 @@ export interface Collected {
 }
 
 const RESULT = /BEDSHOCK RESULT (\S+) (YES|NO|INCONCLUSIVE) (.*)$/;
+/**
+ * The battery's own report that a probe registered for the completion wait and never came back.
+ *
+ * ABSENCE IS THE ONE OUTPUT THAT HIDES. A row that reports INCONCLUSIVE is visible in the
+ * summary and obviously wants attention; a row that never reports at all is simply not in the
+ * list, and the list looks exactly as healthy as it did the run before. That is what happened
+ * the first time a measured probe overran the wait: the count went from twelve observations to
+ * eleven and nothing anywhere said which one, or that anything was wrong.
+ *
+ * The battery already knows -- `done()` names them. This is the collector picking that up so it
+ * reaches the summary rather than dying in the log.
+ */
+const NEVER_REPORTED = /BEDSHOCK NOTE \d+ probe\(s\) never reported back: ([^.]+)\./;
 const LOOK = /BEDSHOCK LOOK (\S+) /;
 const SKIP = /BEDSHOCK SKIP (\S+) (.*)$/;
 const ERROR = /BEDSHOCK ERROR (\S+) (.*)$/;
@@ -58,6 +71,15 @@ export function collect(log: string, catalog: Catalog, opts: CollectOptions): Co
   const seen = new Set<string>();
 
   const complete = /BEDSHOCK DONE \d+/.test(log);
+
+  const absent = NEVER_REPORTED.exec(log);
+  if (absent) {
+    problems.push(
+      `${absent[1]!.trim()} registered for the completion wait and never reported. Those rows are ` +
+        `ABSENT from this run — not negative, not inconclusive, missing. Nothing is recorded for ` +
+        `them, and the likeliest cause is a probe that takes longer than the battery waits.`,
+    );
+  }
 
   for (const line of log.split('\n')) {
     const error = ERROR.exec(line);

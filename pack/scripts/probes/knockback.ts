@@ -127,14 +127,15 @@ function ask(ctx: Ctx, capability: string, box: Arena, summon: () => Entity): vo
       // moving" were the same state, and the apparatus could not tell a settled entity from an
       // immovable one.
       if (furthest < p.rest_step) {
-        if (ticks < p.watch_ticks) return;
+        if (ticks < p.moved_by_ticks) return;
         system.clearRun(handle);
         if (subject.typeId === p.subject) subject.remove();
         // Now this reading means something: it really never moved, over the whole window.
         record(
           null,
-          `the subject never moved at all under ${p.units} unit(s) of knockback, over ${ticks} tick(s) ` +
-            `— it may be immovable, in which case this row needs a different subject`,
+          `the subject never moved at all under ${p.units} unit(s) of knockback, over ${ticks} tick(s). ` +
+            `Knockback is an impulse — it acts at once or not at all — so this subject is immovable ` +
+            `and the row needs a different one.`,
         );
         return;
       }

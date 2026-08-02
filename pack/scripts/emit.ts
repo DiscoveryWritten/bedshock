@@ -159,7 +159,23 @@ export function willReportLater(probe: string): () => void {
  * all. So the wait is bounded and what did not report is NAMED — a reader sees which rows are
  * missing and why, rather than inferring it from a gap.
  */
-export function done(ctx: Ctx, timeoutTicks = 300): void {
+/**
+ * THE WAIT MUST BE SHORTER THAN THE HARNESS'S WAIT, AND NOT MUCH SHORTER.
+ *
+ * `tools/bds.sh` gives the battery 120 seconds to print `DONE` before it kills the server. This
+ * wait used to be 300 ticks -- 15 seconds -- which is less than a single `measure` run takes, so
+ * the game gave up on its own probes with a hundred seconds of budget left. A knockback probe
+ * taking five readings had `DONE` printed out from under it and its row went ABSENT: not a pass,
+ * not a fail, not a skip, just gone. Exactly the failure `willReportLater` exists to prevent,
+ * arriving through the backstop meant to enforce it.
+ *
+ * So this sits just inside the harness's own limit. A genuinely hung probe now costs a minute
+ * and a half before the run reports, which is the right trade -- a slow run is an inconvenience
+ * and a missing row is a lie.
+ */
+const HARNESS_BUDGET_TICKS = 2000;
+
+export function done(ctx: Ctx, timeoutTicks = HARNESS_BUDGET_TICKS): void {
   const finish = (): void => {
     if (outstanding.size > 0) {
       const names = [...outstanding].join(', ');

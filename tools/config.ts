@@ -72,6 +72,7 @@ export interface ProbeConfig {
     headroom: number;
     rest_step: number;
     rest_ticks: number;
+    moved_by_ticks: number;
     watch_ticks: number;
     samples: number;
     spread: number;
@@ -216,6 +217,15 @@ export function validatePackConfig(c: PackConfig): string[] {
       problems.push(`probes.${name}.moved_at_least is further than the arena is long`);
     }
     if (m.headroom < 2) problems.push(`probes.${name}.headroom under 2 clips anything that leaves the ground`);
+  }
+  // Concluding "it never moved" has to be quicker than the whole window, or an immovable subject
+  // costs the full watch time five times over -- which is how this probe overran the battery's
+  // completion wait and had its row dropped from the log entirely.
+  if (p.knockback && p.knockback.moved_by_ticks >= p.knockback.watch_ticks) {
+    problems.push(
+      'probes.knockback.moved_by_ticks must be well under watch_ticks, or an immovable subject ' +
+        'costs the whole window on every reading',
+    );
   }
   // Dividing by the unit count is what makes the answer per-unit, so zero is a division by zero
   // and a negative is a knockback pointing the other way with a sign nobody reads.
