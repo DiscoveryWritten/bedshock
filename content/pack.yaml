@@ -17,20 +17,32 @@ description: A capability battery. Measures what Bedrock can do; ships no gamepl
 
 version: [0, 1, 0]
 
-# The oldest game this pack can run on, and it has to be at least the version that first
-# offered the script module pinned below -- @minecraft/server 2.3.0 arrived in 1.21.120.
+# !! THIS PACK PINS THE NEWEST SCRIPT API, ALWAYS. !!
 #
-# Setting it lower does not widen support, it hides the failure: an older client accepts the
-# pack on this number and then rejects the whole behavior pack over the module dependency,
-# SILENTLY. With it set honestly the same client says "requires a newer version of Minecraft"
-# and you know what happened.
+# The opposite of what a shipping add-on does, and the difference is the whole point. A mod
+# pins LOW because every version it raises is a player whose game is now too old. bedshock ships
+# to nobody: it is installed to ask questions and removed afterwards, so a low pin buys no
+# compatibility and costs the one thing that matters -- **a battery cannot ask about an API it
+# did not declare.**
 #
-# For a battery this number is load-bearing in a way it is not for a normal pack. Sweeping a
-# capability down through older versions means lowering this AND the pins together, and a
-# sweep that silently measured nothing because the pack never loaded is the worst possible
-# outcome -- which is why `bedshock run` fails when the battery does not report back at all,
-# rather than recording an absence as a negative.
-min_engine_version: [1, 21, 120]
+# Pinning an old module makes newer capabilities permanently invisible. Not `OPEN`, which is a
+# question somebody could go and answer; invisible, because the probe that would answer it
+# cannot be written. That is the failure mode this whole repository exists to prevent, arriving
+# through the manifest.
+#
+# So: raise these when a new stable ships, and treat that as routine rather than a compatibility
+# decision. `bedshock validate` warns when they are behind what is published.
+#
+# THE FLOOR STILL HAS TO BE HONEST. It must be at least the game that first offered the pinned
+# module -- @minecraft/server 2.8.0 arrived in 1.26.30. Setting it lower does not widen support,
+# it hides the failure: an older client accepts the pack on this number and then rejects the
+# whole behavior pack over the module dependency, SILENTLY.
+#
+# MEASURING AN OLDER BEDROCK is therefore a deliberate act, not the default. Lower this AND the
+# pins together, and expect fewer questions to be askable -- which is itself a finding worth
+# recording, and is why `bedshock run` fails loudly when the battery does not report back rather
+# than filing an absence as a set of negatives.
+min_engine_version: [1, 26, 30]
 
 uuids:
   bp_header: 50e188fb-286c-4ae4-9cbb-229916c8013a
@@ -41,9 +53,10 @@ uuids:
 
 script:
   entry: scripts/main.js
+  # Newest stable, deliberately. See the note on min_engine_version above.
   modules:
-    "@minecraft/server": "2.3.0"
-    "@minecraft/server-ui": "2.0.0"
+    "@minecraft/server": "2.8.0"
+    "@minecraft/server-ui": "2.1.0"
 
 format_versions:
   item: "1.21.0"

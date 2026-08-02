@@ -62,12 +62,25 @@ export function result(
   verdict: Verdict,
   measurement?: Record<string, unknown>,
   evidence?: string,
+  /**
+   * For a `solved` capability: the value the search converged on.
+   *
+   * Separate from `measurement` because the ledger compares it numerically against the
+   * capability's tolerance. A number buried in a measurement blob is a number nothing can drift
+   * against, and drifting on it is the entire reason these rows exist.
+   */
+  value?: number,
 ): void {
   count++;
-  const payload = JSON.stringify({ ...(measurement ? { measurement } : {}), ...(evidence ? { evidence } : {}) });
+  const payload = JSON.stringify({
+    ...(value !== undefined ? { value } : {}),
+    ...(measurement ? { measurement } : {}),
+    ...(evidence ? { evidence } : {}),
+  });
   console.warn(`${TAG} RESULT ${capability} ${verdict} ${payload}`);
   const colour = verdict === 'YES' ? '§a' : verdict === 'NO' ? '§c' : '§e';
-  ctx.player?.sendMessage(`§b[${TAG}]§r ${colour}${verdict}§r §7${capability}§r ${evidence ?? ''}`);
+  const shown = value === undefined ? '' : `§f${value}§r `;
+  ctx.player?.sendMessage(`§b[${TAG}]§r ${colour}${verdict}§r §7${capability}§r ${shown}${evidence ?? ''}`);
 }
 
 /** Something is now on your screen and only you can read it. Never a pass. */

@@ -88,7 +88,31 @@ A sweep on a new Bedrock normally wants `--open --negative`: everything that is 
 confirmed yes. And `bedshock diff` between two manifests prints `became_possible` first, because
 that is the single most valuable line this project can produce.
 
-## Measured, observed, derived
+## Two axes on every row
+
+**What kind of answer it is** — `automated`, `observed`, `derived`, `solved`.
+
+**What would have to change for the answer to change** — and this one is required, because a
+consumer asking *"will this still hold if I raise my script pin"* gets a different answer for
+each:
+
+| Surface | Moves when | Example |
+|---|---|---|
+| `engine` | Mojang changes the game | how far a thrown item travels; whether an entity blocks a player |
+| `script` | the `@minecraft/server` version moves | whether `setEquipment` sticks; what one knockback unit means |
+| `content` | the pack format or the client's handling of it moves | `max_durability` as an int16; whether a flipbook animates an item tile |
+
+A sweep that finds an `engine` row moved has found a gameplay change. A moved `script` row has
+usually found an API change. Those are different news, and a row guessed into the wrong bucket
+tells someone their pin does not matter when it does.
+
+**This pack always pins the newest script API**, which is the opposite of what a shipping add-on
+does and for the opposite reason. A mod pins low because every version it raises is a player
+whose game is now too old. bedshock ships to nobody — so a low pin buys no compatibility and
+costs the only thing that matters: **a battery cannot ask about an API it did not declare.** An
+old pin does not make a newer capability `OPEN`; it makes it *invisible*.
+
+## Measured, observed, derived — and solved
 
 The distinction is not cosmetic, and the runtime cannot blur it.
 
@@ -102,6 +126,34 @@ exactly and enumerate the outcomes, never to guess the result.
 
 **`derived`** — established by reading what the engine or our own emitted files do. Recorded so
 nobody re-derives them, and so a future contradiction is visible as one.
+
+**`solved`** — the answer is a **number**, not a yes. *How close can a moving block pass beneath
+a falling anvil without interrupting it?* has an answer, and a probe for one of these does not
+check a condition — it searches for the boundary.
+
+These are the rows most worth having and the easiest to overlook. A yes/no capability only
+reports when something appears or disappears. A solved one reports when **the game's constants
+shift underneath a design that was tuned to them** — a reference implementation that still runs,
+still passes, and is now subtly wrong. Nothing else in this battery would notice that.
+
+So a solved row drifts on its *value*, not its verdict: two runs both converging is not agreement
+if they converged somewhere else. Each declares a `tolerance` taken from its own apparatus's
+resolution, because a tolerance of zero reports drift on noise and a drift people learn to ignore
+is worse than none.
+
+Values are rendered as one aligned row of text rather than a chart — logarithmic, so a tenfold
+change is always the same visible jump and a sixteenth of a block is still a readable length:
+
+```
+physics.falling_block.min_clearance_under_a_falling_anvil  ├────●───────────────  0.063 blocks
+physics.falling_block.gravity_curve                        ├───────●────────────  0.33 b/tick
+physics.knockback.blocks_per_unit                          ├──────────●─────────  1.4 b/unit
+physics.throw.item_travel_distance                         ├────────────────●───  28.5 blocks
+                                                           ├────────────────────  log scale, 0.01 to 100
+```
+
+The bar is for the eye; the number beside it is the record. `bedshock diff` reports a moved value
+separately from a status change, because nothing appeared or disappeared — the ground shifted.
 
 A `LOOK` is not a result. The runtime gives it a different verb, and `bedshock run` refuses to
 record one. The only path from an eyes-only row to the ledger runs through a person.

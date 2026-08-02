@@ -95,7 +95,7 @@ export function collect(log: string, catalog: Catalog, opts: CollectOptions): Co
     }
     seen.add(capability);
 
-    let payload: { measurement?: Record<string, unknown>; evidence?: string } = {};
+    let payload: { value?: number; measurement?: Record<string, unknown>; evidence?: string } = {};
     try {
       payload = JSON.parse(payloadRaw.trim() || '{}');
     } catch {
@@ -103,6 +103,13 @@ export function collect(log: string, catalog: Catalog, opts: CollectOptions): Co
     }
 
     const cap = catalog.byId.get(capability)!;
+    // A solved row answered YES without a value is a probe that thinks it measured something and
+    // did not. Recording it would file a convergence with nothing to compare on a later run,
+    // which is the whole point of the row.
+    if (cap.method === 'solved' && verdict === 'YES' && typeof payload.value !== 'number') {
+      problems.push(`"${capability}" is a solved capability but reported YES with no value — dropped`);
+      continue;
+    }
     if (cap.method === 'observed') {
       // The runtime should never emit a RESULT for an observed row, and if it does, taking the
       // verdict at face value would be recording a guess as a measurement.
@@ -120,6 +127,7 @@ export function collect(log: string, catalog: Catalog, opts: CollectOptions): Co
       platform: opts.platform ?? 'bds',
       method: 'automated',
       verdict,
+      ...(typeof payload.value === 'number' ? { value: payload.value } : {}),
       ...(payload.measurement ? { measurement: payload.measurement } : {}),
       ...(payload.evidence ? { evidence: payload.evidence } : {}),
       run: opts.run,

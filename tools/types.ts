@@ -35,7 +35,60 @@
  * of an API, that spending a probe slot on it would be theatre. Recorded so nobody
  * re-derives it, and so a future contradiction is visible as a contradiction.
  */
-export type Method = 'automated' | 'observed' | 'derived';
+export type Method = 'automated' | 'observed' | 'derived' | 'solved';
+
+/**
+ * WHAT WOULD HAVE TO CHANGE for this answer to change — and it is not one thing.
+ *
+ * `engine`   the game's own behaviour. How far a thrown item travels, how a falling block
+ *            interacts with an anvil, whether an entity blocks a player. True or false
+ *            regardless of what any API exposes, and it moves when Mojang changes the game.
+ *
+ * `script`   what `@minecraft/server` lets you do. Whether a render controller can read the
+ *            item it draws, whether `setEquipment` sticks. These move when the API version
+ *            moves — and are invisible entirely if the pack pinned an older module, which is
+ *            why this pack always pins the newest.
+ *
+ * `content`  what the pack format accepts and what the client does with it. `max_durability`
+ *            as an int16, whether `menu_category` hides an item, whether a flipbook entry
+ *            animates an item tile. Moves with the format versions, not with the script API.
+ *
+ * The distinction is load-bearing rather than taxonomic. A consumer asking "will this still be
+ * true if I raise my script pin" needs to know that an `engine` row does not care and a
+ * `script` row might; and a sweep that finds an `engine` row moved has found a gameplay change,
+ * where a moved `script` row has usually found an API change. Those are different news.
+ */
+export type Surface = 'engine' | 'script' | 'content';
+
+/**
+ * What a `solved` capability measures, and how much movement is a finding.
+ *
+ * Some questions do not have a yes. "How close can a moving block pass under a falling anvil
+ * without interrupting it" has an ANSWER, and the answer is a number — the extremal value at
+ * which the thing still works. A probe for one of these does not check a condition; it searches
+ * for the boundary.
+ *
+ * That makes them the most sensitive rows in the battery, and the most useful. A yes/no
+ * capability only reports when a thing appears or disappears. A solved one reports when the
+ * game's numbers shift underneath a design that was tuned to them — which is a change nothing
+ * else here would notice, and which is exactly what breaks a reference implementation quietly.
+ */
+export interface Measures {
+  /** `blocks`, `ticks`, `blocks_per_tick`. Printed beside the value; never converted. */
+  unit: string;
+  /** Which end of the range is being solved for. Decides how a probe searches and reads. */
+  direction: 'minimum' | 'maximum';
+  /**
+   * How much the value may move between runs before it is a finding.
+   *
+   * Not a comfort blanket — a solve has real jitter (tick granularity, spawn rounding) and a
+   * tolerance of zero would report DRIFT on noise, which trains people to ignore drift. Set it
+   * from the apparatus's own resolution, and say so in `notes`.
+   */
+  tolerance: number;
+  /** Bounds the search. Outside these the probe reports INCONCLUSIVE rather than guessing. */
+  search?: { from: number; to: number };
+}
 
 /**
  * The three things an answer can be, and the third one is load-bearing.
@@ -93,6 +146,16 @@ export interface Capability {
    */
   decides: string;
   method: Method;
+  /**
+   * What would have to change for this answer to change. Required — see `Surface`.
+   *
+   * Guessing it wrong is worse than leaving it out would be, so `validate` demands it rather
+   * than defaulting: a row marked `engine` that is really about the API tells a consumer their
+   * script pin does not matter when it does.
+   */
+  surface: Surface;
+  /** For `solved` rows: what is being measured and how much movement is a finding. */
+  measures?: Measures;
   /**
    * Which probe reports this, for `automated` and `observed` rows.
    *
@@ -170,6 +233,16 @@ export interface Observation {
    * ALSO part of that YES. Comparing verdicts alone would miss a change from -32768 to 32767,
    * which is precisely the change that would matter.
    */
+  /**
+   * For a `solved` capability: the value the search converged on.
+   *
+   * Carried beside the verdict rather than buried in `measurement`, because the rollup compares
+   * it NUMERICALLY against the capability's tolerance and a report plots it. `verdict` on a
+   * solved row says whether the search converged at all; this says what it converged on, and
+   * the second is the part that moves when the game's numbers shift under a design tuned to
+   * them.
+   */
+  value?: number;
   measurement?: Record<string, unknown>;
   /** One line of prose from whoever or whatever recorded this. */
   evidence?: string;

@@ -27,6 +27,7 @@ import * as dynprops from './probes/dynprops.ts';
 import * as container from './probes/container.ts';
 import * as offhand from './probes/offhand.ts';
 import * as menu from './probes/menu.ts';
+import * as fallcurve from './probes/fallcurve.ts';
 import * as fallingblock from './probes/fallingblock.ts';
 import * as repair from './probes/repair.ts';
 import * as scenes from './probes/scenes.ts';
@@ -46,6 +47,7 @@ const PROBES: Record<string, Probe> = {
   container: container.run,
   offhand: offhand.run,
   fallingblock: fallingblock.run,
+  fallcurve: fallcurve.run,
   repair: repair.run,
   ruler: scenes.ruler,
   glyphs: scenes.glyphs,

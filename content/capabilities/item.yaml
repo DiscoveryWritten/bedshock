@@ -22,6 +22,7 @@ capabilities:
       (netherite), so anything above that is undocumented territory, and the difference between
       ~6 usable bits and ~15 is the difference between a layout that fits and one that does not.
     method: automated
+    surface: content
     probe: durability
     legacy: P1
     notes: >-
@@ -38,6 +39,7 @@ capabilities:
       If it wraps, whatever builds a packed value has to assert its own range, because nothing
       else will.
     method: automated
+    surface: content
     probe: durability
     depends_on: [item.max_durability.int16_ceiling]
     legacy: P1
@@ -53,6 +55,7 @@ capabilities:
       Whether the whole declared range is usable as a data channel, or only the part vanilla
       tools happen to occupy.
     method: automated
+    surface: content
     probe: durability
     depends_on: [item.max_durability.int16_ceiling]
     legacy: P1
@@ -65,6 +68,7 @@ capabilities:
       fires next, or any other one-dimensional state -- and where the safe rows for baked
       artwork start.
     method: observed
+    surface: content
     probe: ruler
     look_at: >-
       The ruler item in your hotbar. Every one of its 16 rows is a different colour and the
@@ -107,6 +111,7 @@ capabilities:
       track is present at any damage above zero, the bar's footprint is permanent and artwork
       has to be designed around it rather than hoping for the undamaged case.
     method: observed
+    surface: content
     probe: ruler
     look_at: The nearly-pristine ruler copy (damage 1). Look for the dark track, not the fill.
     outcomes:
@@ -127,6 +132,7 @@ capabilities:
       Whether one measurement covers both surfaces, or artwork has to satisfy two different
       occlusion footprints.
     method: observed
+    surface: content
     probe: ruler
     look_at: The same ruler item in the hotbar and then in the inventory grid, at both damages.
     outcomes:
@@ -150,6 +156,7 @@ capabilities:
       encode that state in its type -- because a type swap is a remove-and-give, and that is
       the mechanism by which stack data gets silently dropped.
     method: derived
+    surface: content
     established_by: >-
       `minecraft:icon` is static per item type and Bedrock has no damage-based icon selection;
       that is a Java-only feature. There is nothing resembling `CustomModelData`.
@@ -160,6 +167,7 @@ capabilities:
       Whether a colour axis can be applied at render time or has to be baked. Baking is what
       turns 3 dimensions x 16 colours into 48 sprites instead of 19.
     method: derived
+    surface: content
     established_by: >-
       No runtime tint or sprite-overlay API exists for item icons on Bedrock. Colour has to be
       in the texture, which means in the item type.
@@ -172,6 +180,7 @@ capabilities:
       animation costs one texture no matter how many colours exist, because the frame is a
       separate bone. In the inventory an animated icon bakes with everything else in it.
     method: observed
+    surface: content
     probe: flipbook
     look_at: >-
       The two flipbook probe items in your hotbar. They carry the SAME animation under two
@@ -209,6 +218,7 @@ capabilities:
       button labels, in the actionbar -- anywhere text goes. That is the difference between 48
       item types with baked icons and 3 types with a coloured glyph in the name.
     method: observed
+    surface: content
     probe: glyphs
     look_at: >-
       The four rings printed into chat. They are authored as #d94f4f, #4fd96a, #4f7fd9 and
@@ -234,6 +244,7 @@ capabilities:
       against varying backgrounds. A glyph that fills its cell can only ever be a solid block
       of colour.
     method: observed
+    surface: content
     probe: glyphs
     look_at: The centres of the four rings in chat. Each ring is drawn on transparency.
     outcomes:
@@ -256,6 +267,7 @@ capabilities:
       that works in chat and not on an item would be a trap: the design reads as proven and
       fails exactly where it is needed.
     method: observed
+    surface: content
     probe: glyphs
     look_at: >-
       The glyph probe item in your hotbar -- its nameTag carries all four rings -- and the
@@ -282,6 +294,7 @@ capabilities:
       rejected definition is invisible in exactly the same way a successfully hidden one is,
       so this has to be settled before any visibility reading means anything.
     method: automated
+    surface: content
     probe: menu
     legacy: P7
     notes: >-
@@ -294,6 +307,7 @@ capabilities:
       Whether generated intermediates can be kept out of the picker. The husk-item problem --
       a creative menu full of items that crash to empty -- is downstream of this.
     method: observed
+    surface: content
     probe: menu
     look_at: >-
       The creative menu. Six probe items are generated, each labelled in-game with which
@@ -318,6 +332,7 @@ capabilities:
     question: 'Does an explicit `category: none` hide an item from the creative menu?'
     decides: Same as above, and the two spellings may not behave the same way.
     method: observed
+    surface: content
     probe: menu
     look_at: The creative menu, searching for "P7 category none".
     outcomes:
@@ -339,6 +354,7 @@ capabilities:
       Whether a large generated item table can be made tolerable in the picker, the way wool
       is. Without it, 48 generated variants are 48 separate cells.
     method: observed
+    surface: content
     probe: menu
     look_at: The three items labelled "P7 grouped A/B/C", which share one group string.
     outcomes:
@@ -361,6 +377,7 @@ capabilities:
       output for the picker's benefit and is wrong about the mechanism is doing work that has
       no effect, which is worse than not sorting.
     method: observed
+    surface: content
     probe: menu
     look_at: >-
       The order the six P7 items appear in. They are emitted in the order listed in the probe
@@ -388,6 +405,7 @@ capabilities:
       bit, write back" and never an item-type swap -- which is the mechanism by which the mod
       this pattern was modelled on loses data on every toggle.
     method: automated
+    surface: script
     probe: dynprops
     legacy: P8
 
@@ -397,6 +415,7 @@ capabilities:
       Whether stack state is safe against ordinary play. A property that survives a script
       round trip but not the floor is a property that vanishes the first time someone dies.
     method: observed
+    surface: script
     probe: dynprops
     look_at: >-
       The probe drops a stamped item at your feet. Pick it up, then run
@@ -423,6 +442,7 @@ capabilities:
       decides whether dynamic properties can be the source of truth for anything, or whether
       they are a cache that needs rebuilding from something else on every load.
     method: observed
+    surface: script
     probe: dynprops
     look_at: >-
       Run `/scriptevent bedshock:probe dynprops.stamp`, then QUIT TO TITLE and reload the
@@ -452,6 +472,7 @@ capabilities:
       A real inventory cost, paid deliberately by every item that carries state. Worth knowing
       before designing something that wanted to be stackable.
     method: derived
+    surface: script
     established_by: >-
       Per-stack state cannot survive stacks merging, and Bedrock's API reflects that. Already
       relied on in generated item definitions.
@@ -469,6 +490,7 @@ capabilities:
       ordinary play, so if it reaches a custom item then packed state in durability is corrupted
       by the player simply collecting XP -- silently, with nothing anywhere saying why.
     method: observed
+    surface: engine
     probe: repair
     look_at: >-
       Put Mending on the probe durability item, note the damage the probe prints, collect XP,
@@ -498,6 +520,7 @@ capabilities:
       The same hazard as Mending but player-initiated rather than ambient, which makes it rarer
       and more confusing when it happens.
     method: observed
+    surface: engine
     probe: repair
     look_at: >-
       Take the probe durability item to an anvil, then to a grindstone. Does either offer to
@@ -528,6 +551,7 @@ capabilities:
       Whether the hazard has a one-line fix in the item definition, or has to be mitigated in
       script by treating durability as a cache.
     method: observed
+    surface: engine
     probe: repair
     look_at: >-
       The probe items declare no `minecraft:repairable` -- deliberately, so this is testable at
@@ -552,6 +576,7 @@ capabilities:
       Whether durability drifts on its own during play. A slow drift is worse than an external
       write, because there is no single event to point at.
     method: observed
+    surface: engine
     probe: repair
     look_at: The probe durability item's damage, before and after using it twenty times.
     outcomes:

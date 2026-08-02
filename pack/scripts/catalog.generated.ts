@@ -13,7 +13,7 @@ export interface SessionQuestion {
   outcomes: SessionOutcome[];
 }
 
-export const CATALOG_REVISION = "rc3c24c08";
+export const CATALOG_REVISION = "r5befa0be";
 export const SNAPSHOT_VERSION = "1.21.120";
 export const QUESTIONS: SessionQuestion[] = [
   {

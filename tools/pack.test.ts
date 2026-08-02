@@ -261,12 +261,15 @@ test('the probes not yet ported are exactly the ones we know about', () => {
   const catalog = loadCatalog();
   const implemented = new Set([
     'durability', 'dynprops', 'container', 'offhand', 'menu', 'fallingblock',
-    'repair', 'ruler', 'glyphs', 'flipbook', 'formicon',
+    'fallcurve', 'repair', 'ruler', 'glyphs', 'flipbook', 'formicon',
   ]);
   const missing = [...new Set(
     catalog.capabilities.filter((c) => c.probe && !implemented.has(c.probe)).map((c) => c.probe!),
   )].sort();
-  assert.deepEqual(missing, ['attachable', 'attachable_pose', 'stash']);
+  // `anvilgap`, `knockback` and `throw` are newly-declared SOLVED questions whose search
+  // harness is not written yet. Listed rather than quietly omitted, because the build prints
+  // this same set on every run and a shrinking list is the only progress bar there is.
+  assert.deepEqual(missing, ['anvilgap', 'attachable', 'attachable_pose', 'knockback', 'stash', 'throw']);
 });
 
 /**

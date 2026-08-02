@@ -23,6 +23,7 @@ const base = (over: Record<string, unknown> = {}): Capability =>
     question: 'Does the thing work?',
     decides: 'whether to build on the thing',
     method: 'automated',
+    surface: 'script',
     probe: 'thing',
     ...over,
   }) as Capability;

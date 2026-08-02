@@ -241,6 +241,17 @@ async function main(): Promise<void> {
       const load = (path: string): Manifest => JSON.parse(readFileSync(path, 'utf8')) as Manifest;
       const d = diffManifests(load(a), load(b));
       process.stdout.write(`\n${d.from}  ->  ${d.to}\n\n`);
+      if (d.values_moved.length) {
+        process.stdout.write(`VALUES MOVED (${d.values_moved.length}) — the numbers shifted under something that still works:\n`);
+        for (const r of d.values_moved) {
+          const delta = r.to - r.from;
+          process.stdout.write(
+            `  ~ ${r.id}\n      ${r.from} -> ${r.to} ${r.unit ?? ''}` +
+              ` (${delta > 0 ? '+' : ''}${delta.toFixed(4)}, tolerance ${r.tolerance ?? '—'})\n`,
+          );
+        }
+        process.stdout.write('\n');
+      }
       if (d.became_possible.length) {
         process.stdout.write(`BECAME POSSIBLE (${d.became_possible.length}) — the line this project exists to print:\n`);
         for (const r of d.became_possible) process.stdout.write(`  + ${r.id}\n      ${r.question.replace(/\s+/g, ' ')}\n`);
@@ -263,8 +274,8 @@ async function main(): Promise<void> {
         process.stdout.write('\n');
       }
       const moved =
-        d.became_possible.length + d.became_impossible.length + d.newly_answered.length +
-        d.no_longer_answered.length + d.added.length + d.removed.length;
+        d.values_moved.length + d.became_possible.length + d.became_impossible.length +
+        d.newly_answered.length + d.no_longer_answered.length + d.added.length + d.removed.length;
       if (moved === 0) process.stdout.write('Nothing moved.\n\n');
       break;
     }

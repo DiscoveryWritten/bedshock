@@ -17,6 +17,7 @@ capabilities:
       whole point -- a refusal and an ejection look identical a moment later, and they point at
       different workarounds.
     method: automated
+    surface: script
     probe: offhand
     legacy: P9
 
@@ -28,6 +29,7 @@ capabilities:
       has a shortcut. If it is not, rendering an arbitrary held item has no shortcut around
       attachables.
     method: automated
+    surface: engine
     probe: offhand
     depends_on: [equipment.offhand.accepts_a_script_placed_item]
     legacy: P9
@@ -44,6 +46,7 @@ capabilities:
       off-hand is usable for anything we ship and unusable only for items we do not control --
       which is a much narrower limit than "the off-hand is out".
     method: automated
+    surface: content
     probe: offhand
     depends_on: [equipment.offhand.accepts_a_script_placed_item]
     legacy: P9
@@ -54,6 +57,7 @@ capabilities:
       Whether the off-hand can be an INPUT -- somewhere a player deliberately puts something
       for a pack to notice.
     method: derived
+    surface: engine
     established_by: >-
       The off-hand only accepts items whose definition permits it. This is vanilla behaviour
       and is what rules out "put anything in your off-hand, then open the menu" as an input
@@ -65,4 +69,5 @@ capabilities:
       Whether an off-hand item can be interactive, or is inert decoration. Inert suits a
       decoration; it rules out anything that wanted to be a second tool.
     method: derived
+    surface: engine
     established_by: Bedrock has no off-hand use input on any platform.

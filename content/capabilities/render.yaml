@@ -23,6 +23,7 @@ capabilities:
       land on index 0 except the one that expects zero anyway. Getting this backwards makes
       every rendering measurement unreadable.
     method: derived
+    surface: content
     established_by: >-
       Read off the engine's behaviour across several controller failures. An unresolvable query
       for an ENTITY property additionally fails the whole render controller silently, which is
@@ -38,6 +39,7 @@ capabilities:
       Whether `math.floor` and `math.mod` can safely unpack a value carried in durability or
       any other numeric channel.
     method: derived
+    surface: content
     established_by: >-
       Molang is float-based; integers stay exact well past 2^24, which is far above any packed
       layout worth designing. Use power-of-two bases for readability.
@@ -50,6 +52,7 @@ capabilities:
       queries are blind or whether attachables simply do not work on custom items, and without
       this row underneath it, no result above is readable.
     method: observed
+    surface: content
     probe: attachable
     look_at: >-
       Hold the minimal attachable probe item. One geometry, one texture, one material, one
@@ -87,6 +90,7 @@ capabilities:
       rendered perfectly and been unreadable because it sat at the anchor and the body occluded
       it. Offset first, then measure.
     method: observed
+    surface: content
     probe: attachable
     look_at: >-
       The probe geometry in third person, from an over-the-shoulder camera. The probe's cubes
@@ -113,6 +117,7 @@ capabilities:
       identical in every configuration and its state has to live in its NAME and its DURABILITY
       BAR, which are the only two per-stack visuals left.
     method: observed
+    surface: content
     probe: attachable
     look_at: >-
       Two items, identical but for damage -- A at 5, B at 6. Hold each in turn and read the
@@ -160,6 +165,7 @@ capabilities:
       dimensions x 16 colours is 19 textures. Without it, every axis multiplies with every
       other one.
     method: observed
+    surface: content
     probe: attachable
     look_at: >-
       How many of the four flags draw at once, and whether there is any z-fighting or ordering
@@ -190,6 +196,7 @@ capabilities:
       geometry offsets. The answer changes whether a hand pose needs work or just needs
       coordinates.
     method: derived
+    surface: content
     established_by: >-
       Read directly out of the attachable JSON we emit: it declares only `materials`,
       `textures`, `geometry` and `render_controllers`. With nothing switching poses, the model
@@ -207,6 +214,7 @@ capabilities:
       for flavour and never for information -- but it is the row that makes an in-world model
       presentable at all.
     method: observed
+    surface: content
     probe: attachable_pose
     look_at: >-
       A separate rig carrying `animations` plus a `scripts.animate` list selecting on
