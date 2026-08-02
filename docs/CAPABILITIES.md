@@ -47,8 +47,10 @@ is how you find out the day it starts working.
 | `entity.stash.holder_findable_after_world_reload` | **yes** |
 | `entity.falling_block.is_trackable_by_script` | **yes** |
 | **equipment** |  |
+| `equipment.offhand.vanilla_permitted_item_persists` | · |
 | `equipment.offhand.accepts_a_script_placed_item` | **yes** |
 | `equipment.offhand.script_placed_item_persists` | **no** |
+| `equipment.offhand.ejected_item_survives` | · |
 | `equipment.offhand.custom_item_declaring_allow_off_hand_persists` | **yes** |
 | `equipment.offhand.player_can_place_an_arbitrary_item` | — |
 | `equipment.offhand.has_a_use_input` | — |
@@ -83,6 +85,7 @@ is how you find out the day it starts working.
 | `physics.falling_block.min_clearance_under_a_falling_anvil` | · |
 | `physics.throw.item_travel_distance` | · |
 | `physics.knockback.blocks_per_unit` | · |
+| `physics.knockback.blocks_per_unit_on_an_entity` | · |
 | **render** |  |
 | `render.molang.unknown_query_resolves_to_zero` | — |
 | `render.molang.integer_precision` | — |
@@ -136,7 +139,7 @@ answer. Shown on 1.21.120.
 
 *None measured yet. The questions are written; nobody has run them.*
 
-4 solved row(s) have no value yet: `physics.falling_block.gravity_curve`, `physics.falling_block.min_clearance_under_a_falling_anvil`, `physics.throw.item_travel_distance`, `physics.knockback.blocks_per_unit`
+5 solved row(s) have no value yet: `physics.falling_block.gravity_curve`, `physics.falling_block.min_clearance_under_a_falling_anvil`, `physics.throw.item_travel_distance`, `physics.knockback.blocks_per_unit`, `physics.knockback.blocks_per_unit_on_an_entity`
 
 ## entity
 
@@ -497,6 +500,18 @@ Entities are the only container host Bedrock offers, so every design that needs 
 
 What script can put in a player's equipment slots, and whether it stays there. The gap between those two is the whole content of this file: acceptance by the API is not persistence, and the client has opinions the API does not report.
 
+### `equipment.offhand.vanilla_permitted_item_persists`
+
+**Does a vanilla item the off-hand normally accepts -- a shield -- stay there when a script puts it in?**
+
+*Decides:* Nothing on its own, and that is the point. This is the CONTROL for every other row in this file: it is the one that is SUPPOSED to work. If it does not stay, the apparatus is broken -- the write never landed, or the read is looking at the wrong slot, or there was no player there at all -- and every negative in this file is measuring the probe rather than the game. Without it, a probe that had silently stopped writing anything would report exactly the same confident row of NOs as one working perfectly, and a manifest people design around would be built on it.
+
+<sub>method: `automated` · surface: `engine` · probe: `offhand`</sub>
+
+**Never measured.** This row is a guess, however confident the prose around it sounds.
+
+> READ THIS ROW FIRST when anything else in the file changes. A negative here invalidates the whole file for that version; a negative anywhere else, with this one green, is a finding.
+
 ### `equipment.offhand.accepts_a_script_placed_item`
 
 **Does `setEquipment(Offhand, ...)` succeed for an item the slot would not normally take?**
@@ -524,7 +539,7 @@ What script can put in a player's equipment slots, and whether it stays there. T
 
 ### `equipment.offhand.script_placed_item_persists`
 
-**Is a script-placed arbitrary item still in the off-hand a few seconds later?**
+**Is a script-placed arbitrary vanilla item still in the off-hand a few seconds later?**
 
 *Decides:* Whether the off-hand is free in-world rendering of an arbitrary item -- modded ones included -- with no attachable work at all. If it is, a whole class of display problem has a shortcut. If it is not, rendering an arbitrary held item has no shortcut around attachables.
 
@@ -549,7 +564,19 @@ What script can put in a player's equipment slots, and whether it stays there. T
 
 </details>
 
-> The probe reads the slot back immediately -- confirming the write landed -- and again after a delay. Both readings are in the measurement, because "never arrived" and "arrived and was ejected" are different findings.
+> The probe reads the slot back immediately -- confirming the write landed -- and again after a delay. Both readings are in the measurement, because "never arrived" and "arrived and was ejected" are different findings. MEASURED ACROSS A SPREAD OF ITEMS, not one. A plain material, a tool, a block and a food, because "arbitrary items are ejected" and "that particular item is ejected" are different claims and only the first is worth publishing. The verdict is YES only if every one of them stays and NO if any is ejected -- and if the result is mixed, the per-item breakdown is in the measurement and the evidence names which survived, because a partial allow-list is a far more useful thing for a mod author than either flat answer. THIS IS A ROW WE EXPECT TO BE NO, and it is on the watchlist for exactly that reason. A negative here is not a closed file: it is the question that gets re-asked on every Bedrock nobody has looked at yet, so that the day it flips, the proof was written months earlier.
+
+### `equipment.offhand.ejected_item_survives`
+
+**When the client ejects a script-placed item from the off-hand, does the item still exist?**
+
+*Decides:* Whether writing to the off-hand is SAFE TO ATTEMPT AT ALL. Everything else in this file is about whether a trick works; this is about what it costs when it does not. An ejection that returns the item to the inventory or drops it on the floor is a failed effect. An ejection that destroys it is a pack eating a player's diamonds, and no amount of graceful degradation elsewhere makes that acceptable.
+
+<sub>method: `automated` · surface: `engine` · probe: `offhand` · rests on: `equipment.offhand.accepts_a_script_placed_item`</sub>
+
+**Never measured.** This row is a guess, however confident the prose around it sounds.
+
+> Only meaningful while `equipment.offhand.script_placed_item_persists` is NO -- if the item stays, nothing was ejected and there is nothing to survive. The probe reports INCONCLUSIVE rather than a verdict in that case, because "it was not destroyed" is trivially true of an item that never left. The measurement records WHERE it went -- back to the inventory, onto the floor as an entity, or nowhere -- since those are three different things to design around and only the third is a reason not to try at all.
 
 ### `equipment.offhand.custom_item_declaring_allow_off_hand_persists`
 
@@ -1208,7 +1235,7 @@ The measurable constants of Bedrock's own behaviour: how fast things fall, how f
 
 **Never measured.** This row is a guess, however confident the prose around it sounds.
 
-> Recorded once already, informally, as `-0.04, -0.12, -0.19, -0.26, -0.33` at ticks 2..10. Those numbers are what confirm a watched entity is the real falling block rather than a look-alike, so this row doubles as the identity check for `entity.falling_block.is_trackable_by_script`.
+> Recorded once already, informally, as `-0.04, -0.12, -0.19, -0.26, -0.33` at ticks 2..10. Those numbers are what confirm a watched entity is the real falling block rather than a look-alike, so this row doubles as the identity check for `entity.falling_block.is_trackable_by_script`. IT ALREADY EARNED ITS KEEP, and not in the way it was written for. On 1.26.36.1 this read 0.5697 from 31 sightings, then 0.6777 from 52 -- a move of ten times its own tolerance -- with nothing about Bedrock having changed between the two. A neighbouring probe had been carving the same column and deleting the anvil part-way down, so every earlier reading was a truncated fall. The engine's integration had not moved; the apparatus had. So read the control's warning both ways. If this number moves, either the engine changed or SOMETHING ABOUT THE RIG DID, and until you know which, nothing else measured in this file is comparable across that boundary. A number that moves for a reason nobody identified is not a finding yet.
 
 ### `physics.falling_block.min_clearance_under_a_falling_anvil`
 
@@ -1226,21 +1253,23 @@ The measurable constants of Bedrock's own behaviour: how fast things fall, how f
 
 ### `physics.throw.item_travel_distance`
 
-**How far does a thrown item travel before coming to rest on flat ground?**
+**How far does an item given a fixed impulse travel before coming to rest on flat ground?**
 
-*Decides:* Whether a mechanic that throws something can predict where it lands. Recorded not because throw distance is interesting in itself, but because anything built on top of it inherits the number -- and a design tuned to the old one fails in a way that looks like a bug in the design rather than a change in the game.
+*Decides:* Whether a mechanic that throws something can predict where it lands. Recorded not because throw distance is interesting in itself, but because anything built on top of it inherits the drag, the friction and the integration underneath it -- and a design tuned to the old numbers fails in a way that looks like a bug in the design rather than a change in the game.
 
 <sub>method: `solved` · surface: `engine` · probe: `throw`</sub>
 
-*Solves for the maximum* in `blocks`, tolerating ±0.25 before a move counts as a finding, searching 0…32.
+*Solves for the maximum* in `blocks`, tolerating ±0.25 before a move counts as a finding, searching 0…24.
 
 **Never measured.** This row is a guess, however confident the prose around it sounds.
+
+> THE NUMBER IS RELATIVE TO AN IMPULSE. A player's throw is not scriptable, so the probe applies the impulse declared in `content/pack.yaml` and reports what it buys. Change that impulse and this number changes for a reason that has nothing to do with Bedrock, and readings from either side of the change are not comparable -- the same trap as the anvil's vacate window, in a different costume. The tolerance is a quarter of a block: about the difference one tick of contact with the ground makes at the speed the item is still carrying when it first lands.
 
 ### `physics.knockback.blocks_per_unit`
 
 **How far does one unit of `applyKnockback` actually move a player?**
 
-*Decides:* Whether any momentum design can be written at all. `applyKnockback` is the only way to impose a velocity on a player and its unit is undocumented, so every use of it is a guess until this is measured.
+*Decides:* Whether any momentum design can be written at all. `applyKnockback` is the only way to impose a velocity on a player -- `applyImpulse` refuses them outright -- and its unit is undocumented, so every use of it anywhere is a constant somebody tuned by hand until it looked right.
 
 <sub>method: `solved` · surface: `script` · probe: `knockback`</sub>
 
@@ -1248,7 +1277,21 @@ The measurable constants of Bedrock's own behaviour: how fast things fall, how f
 
 **Never measured.** This row is a guess, however confident the prose around it sounds.
 
-> Marked `script` rather than `engine` deliberately. The distance travelled is engine behaviour, but what one UNIT means is an API contract, and that is the part that moves when the module version moves. A consumer raising their script pin should see this row as one that might change under them.
+> Marked `script` rather than `engine` deliberately. The distance travelled is engine behaviour, but what one UNIT means is an API contract, and that is the part that moves when the module version moves. A consumer raising their script pin should see this row as one that might change under them. MEASURED WITH NO VERTICAL COMPONENT. A knockback with lift travels much further, so mixing the two would make the number depend on a choice the apparatus made rather than on the engine. Anything wanting the airborne figure is asking a different question and wants its own row. Only answerable with a player present, so a server run skips it. Its sibling below is the one that runs headless, and the pair existing separately is the point.
+
+### `physics.knockback.blocks_per_unit_on_an_entity`
+
+**How far does one unit of `applyKnockback` move an ordinary entity?**
+
+*Decides:* Whether one momentum constant covers everything a mechanic might move, or whether players and everything else need separate numbers. A design that pushes both through the same call and assumes the same result is resting on a proposition nobody has checked.
+
+<sub>method: `solved` · surface: `script` · probe: `knockback`</sub>
+
+*Solves for the maximum* in `blocks_per_unit`, tolerating ±0.1 before a move counts as a finding, searching 0…20.
+
+**Never measured.** This row is a guess, however confident the prose around it sounds.
+
+> The same call, the same arena, the same rest test as the player row -- differing in the subject and in nothing else, which is what makes a difference between the two attributable to the subject. WHAT TO DO IF THESE TWO DIVERGE: treat the player row as the one your design has to respect and this one as the warning that a shared constant is wrong. They are recorded separately precisely so that divergence is visible rather than averaged away. THE SUBJECT IS PART OF WHAT THIS ROW MEANS, and it is a dropped item -- named in `content/pack.yaml` rather than left implicit. The first apparatus used an armour stand and Bedrock 1.26.36.1 reported `the subject never moved at all` five times out of five: vanilla armour stands resist knockback outright. Worth knowing on its own, and a reminder that "an ordinary entity" is not one thing. A reading taken against a different subject is not comparable with this one.
 
 ## render
 
@@ -1538,5 +1581,5 @@ other repositories can carry `@requires bedshock:<id>` and `bedshock check` will
 if the cited row is not settled at that pack's `min_engine_version` — so a design can never
 quietly come to rest on a guess.
 
-<sub>64 capabilities · 27 observations · 1 version(s): 1.21.120</sub>
+<sub>67 capabilities · 27 observations · 1 version(s): 1.21.120</sub>
 

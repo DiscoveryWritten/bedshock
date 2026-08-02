@@ -44,6 +44,17 @@ capabilities:
       look-alike, so this row doubles as the identity check for
       `entity.falling_block.is_trackable_by_script`.
 
+      IT ALREADY EARNED ITS KEEP, and not in the way it was written for. On 1.26.36.1 this read
+      0.5697 from 31 sightings, then 0.6777 from 52 -- a move of ten times its own tolerance --
+      with nothing about Bedrock having changed between the two. A neighbouring probe had been
+      carving the same column and deleting the anvil part-way down, so every earlier reading was
+      a truncated fall. The engine's integration had not moved; the apparatus had.
+
+      So read the control's warning both ways. If this number moves, either the engine changed or
+      SOMETHING ABOUT THE RIG DID, and until you know which, nothing else measured in this file
+      is comparable across that boundary. A number that moves for a reason nobody identified is
+      not a finding yet.
+
   - id: physics.falling_block.min_clearance_under_a_falling_anvil
     question: >-
       How far above a falling anvil can a block vacate its path and still be clear when the
@@ -95,12 +106,13 @@ capabilities:
       enough mover crosses a whole block between two ticks and is never seen inside it at all.
 
   - id: physics.throw.item_travel_distance
-    question: How far does a thrown item travel before coming to rest on flat ground?
+    question: >-
+      How far does an item given a fixed impulse travel before coming to rest on flat ground?
     decides: >-
       Whether a mechanic that throws something can predict where it lands. Recorded not because
       throw distance is interesting in itself, but because anything built on top of it inherits
-      the number -- and a design tuned to the old one fails in a way that looks like a bug in the
-      design rather than a change in the game.
+      the drag, the friction and the integration underneath it -- and a design tuned to the old
+      numbers fails in a way that looks like a bug in the design rather than a change in the game.
     method: solved
     surface: engine
     probe: throw
@@ -108,14 +120,58 @@ capabilities:
       unit: blocks
       direction: maximum
       tolerance: 0.25
-      search: { from: 0, to: 32 }
+      # A plausibility range rather than a bracket to bisect. This row is MEASURED, not searched:
+      # the item lands somewhere and the somewhere is the answer, so these bounds only say what
+      # an answer could possibly be. A reading outside them is the apparatus -- an item that fell
+      # down a hole, or an entity that was not the one thrown -- and is discarded rather than
+      # averaged in.
+      search: { from: 0, to: 24 }
+    notes: >-
+      THE NUMBER IS RELATIVE TO AN IMPULSE. A player's throw is not scriptable, so the probe
+      applies the impulse declared in `content/pack.yaml` and reports what it buys. Change that
+      impulse and this number changes for a reason that has nothing to do with Bedrock, and
+      readings from either side of the change are not comparable -- the same trap as the anvil's
+      vacate window, in a different costume.
+
+      The tolerance is a quarter of a block: about the difference one tick of contact with the
+      ground makes at the speed the item is still carrying when it first lands.
 
   - id: physics.knockback.blocks_per_unit
     question: How far does one unit of `applyKnockback` actually move a player?
     decides: >-
       Whether any momentum design can be written at all. `applyKnockback` is the only way to
-      impose a velocity on a player and its unit is undocumented, so every use of it is a guess
-      until this is measured.
+      impose a velocity on a player -- `applyImpulse` refuses them outright -- and its unit is
+      undocumented, so every use of it anywhere is a constant somebody tuned by hand until it
+      looked right.
+    method: solved
+    surface: script
+    probe: knockback
+    measures:
+      unit: blocks_per_unit
+      direction: maximum
+      tolerance: 0.1
+      # Plausibility bounds, not a bisection bracket. See the note on the throw row above.
+      search: { from: 0, to: 20 }
+    notes: >-
+      Marked `script` rather than `engine` deliberately. The distance travelled is engine
+      behaviour, but what one UNIT means is an API contract, and that is the part that moves when
+      the module version moves. A consumer raising their script pin should see this row as one
+      that might change under them.
+
+      MEASURED WITH NO VERTICAL COMPONENT. A knockback with lift travels much further, so mixing
+      the two would make the number depend on a choice the apparatus made rather than on the
+      engine. Anything wanting the airborne figure is asking a different question and wants its
+      own row.
+
+      Only answerable with a player present, so a server run skips it. Its sibling below is the
+      one that runs headless, and the pair existing separately is the point.
+
+  - id: physics.knockback.blocks_per_unit_on_an_entity
+    question: How far does one unit of `applyKnockback` move an ordinary entity?
+    decides: >-
+      Whether one momentum constant covers everything a mechanic might move, or whether players
+      and everything else need separate numbers. A design that pushes both through the same call
+      and assumes the same result is resting on a proposition nobody has checked.
     method: solved
     surface: script
     probe: knockback
@@ -125,7 +181,17 @@ capabilities:
       tolerance: 0.1
       search: { from: 0, to: 20 }
     notes: >-
-      Marked `script` rather than `engine` deliberately. The distance travelled is engine
-      behaviour, but what one UNIT means is an API contract, and that is the part that moves when
-      the module version moves. A consumer raising their script pin should see this row as one
-      that might change under them.
+      The same call, the same arena, the same rest test as the player row -- differing in the
+      subject and in nothing else, which is what makes a difference between the two attributable
+      to the subject.
+
+      WHAT TO DO IF THESE TWO DIVERGE: treat the player row as the one your design has to respect
+      and this one as the warning that a shared constant is wrong. They are recorded separately
+      precisely so that divergence is visible rather than averaged away.
+
+      THE SUBJECT IS PART OF WHAT THIS ROW MEANS, and it is a dropped item -- named in
+      `content/pack.yaml` rather than left implicit. The first apparatus used an armour stand and
+      Bedrock 1.26.36.1 reported `the subject never moved at all` five times out of five: vanilla
+      armour stands resist knockback outright. Worth knowing on its own, and a reminder that
+      "an ordinary entity" is not one thing. A reading taken against a different subject is not
+      comparable with this one.

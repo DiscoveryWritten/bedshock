@@ -170,9 +170,30 @@ probes:
       size: 15
 
   # --- off-hand ------------------------------------------------------------
+  #
+  # THE SLOT A MOD AUTHOR HAS TO CONTORT AROUND. The off-hand is the only place Bedrock renders
+  # an arbitrary held item in the world with no attachable work at all, which makes it perpetually
+  # attractive -- and it does not work, and the way in which it does not work is what a design has
+  # to be built around rather than a flat no.
+  #
+  # So this is measured with a SPREAD rather than a single item, and with a control. One diamond
+  # that gets ejected proves one diamond gets ejected.
   offhand:
-    # A vanilla item the slot would never normally accept.
-    arbitrary_item: 'minecraft:diamond'
+    # A vanilla item the off-hand DOES normally accept, and the control for this whole file.
+    #
+    # If this does not stay, the apparatus is broken and every negative here means nothing -- the
+    # write failed, or the read is looking at the wrong slot, or the player was not really there.
+    # Without it, a probe that had silently stopped writing anything at all would report the same
+    # confident row of NOs as a probe that worked perfectly, and the manifest would be built on it.
+    permitted_item: 'minecraft:shield'
+    # Vanilla items the slot would never normally take. Deliberately spread across kinds -- a
+    # plain material, a tool, a block, a food -- because "arbitrary items are ejected" and "that
+    # particular item is ejected" are different claims and only the first one is worth publishing.
+    arbitrary_items:
+      - 'minecraft:diamond'
+      - 'minecraft:diamond_pickaxe'
+      - 'minecraft:stone'
+      - 'minecraft:bread'
     # Ticks to wait before reading the slot back the second time. The client's ejection is not
     # instant, so an immediate read alone would report a false persistence.
     settle_ticks: 60
@@ -183,6 +204,8 @@ probes:
     # How far above the sample point to spawn it, and how long to watch.
     drop_height: 12
     watch_ticks: 40
+    # See the note on lanes below.
+    lane: 0
 
   # --- anvil clearance ------------------------------------------------------
   #
@@ -237,3 +260,116 @@ probes:
     # is itself the finding -- and it comes back INCONCLUSIVE rather than as a half-narrowed
     # bracket dressed up as a number.
     max_trials: 40
+    lane: 6
+
+  # --- LANES ----------------------------------------------------------------
+  #
+  # Every probe that moves something needs ground nobody else is using, and `lane` is how far
+  # sideways from the sample point it takes.
+  #
+  # THIS IS NOT TIDINESS. Probes run concurrently -- each one starts a tick loop and returns --
+  # so two of them measuring in overlapping space will clear each other's blocks and delete each
+  # other's entities. The result does not look like interference. It looks like physics. The
+  # throw probe lost three readings in five to exactly this the moment a second probe started
+  # spawning items, reporting `the item stopped existing after 7 tick(s), 3.425 blocks along`,
+  # which reads like a despawn and was a neighbour's broom.
+  #
+  # Lanes must be far enough apart to clear each arena's own width, and `bedshock test` checks
+  # they are all different.
+
+  # --- throw ----------------------------------------------------------------
+  #
+  # A MEASUREMENT, not a search: the item lands somewhere and the somewhere is the answer. Which
+  # makes the numbers here work differently from `anvilgap` above -- there is no bracket to
+  # narrow, there is a reading taken several times and a question of whether they agree.
+  #
+  # THE DISTANCE IS RELATIVE TO THE IMPULSE. "How far does a thrown item travel" has no answer
+  # until you say how hard it was thrown, and a player's throw is not scriptable. So the probe
+  # applies the impulse below and reports what it buys. Change the impulse and the number changes
+  # for a reason that has nothing to do with Bedrock, which is exactly why it is declared here and
+  # said out loud in the row's notes rather than buried in the probe.
+  throw:
+    # Small, stackable, no special physics of its own. A boat or an egg would answer about boats
+    # and eggs.
+    item: 'minecraft:stick'
+    # Blocks of clear run to carve, and headroom above it. The arena is verified before every
+    # reading -- an item that stops early because it hit a wall reads exactly like drag.
+    run_length: 24
+    headroom: 4
+    # Where it starts, above the floor. Shoulder height rather than on the ground, so the first
+    # tick is flight rather than a scrape.
+    release_height: 1
+    # The shove. Forward is +x; a little lift so it arcs rather than skidding, because a skid
+    # measures friction and an arc measures both.
+    impulse_forward: 0.6
+    impulse_up: 0.25
+    # Below this horizontal speed for this many ticks, it has stopped. Two ticks is not enough --
+    # an item bouncing off the floor is briefly slow without being finished.
+    rest_speed: 0.003
+    rest_ticks: 8
+    # How far it has to have gone before "it has stopped" is even a question. A speed threshold
+    # cannot answer that -- an item is momentarily slow at the top of its arc and permanently slow
+    # if the impulse did nothing, and those are the same reading until you also ask whether it
+    # ever went anywhere. In blocks, deliberately: this is a distance, and comparing it against a
+    # speed is how the two get confused.
+    moved_at_least: 0.05
+    watch_ticks: 200
+    # Five readings and how far they may scatter. NOT the capability's tolerance: that is how far
+    # the ANSWER may move between runs, this is how far one READING may scatter within a run. The
+    # answer is a median, so its scatter is smaller -- and `bedshock test` checks that it is
+    # smaller than the tolerance rather than leaving it to hope.
+    samples: 5
+    spread: 0.5
+    lane: 12
+
+  # --- knockback ------------------------------------------------------------
+  #
+  # `applyKnockback` is the only way a script can impose momentum on a PLAYER -- `applyImpulse`
+  # refuses them outright -- and its argument has no documented unit. Every use of it anywhere is
+  # therefore a constant somebody tuned by hand until it looked right. This is that constant,
+  # measured.
+  knockback:
+    # What gets knocked back when there is no player.
+    #
+    # AN ARMOUR STAND WAS THE FIRST CHOICE AND IS IMMOVABLE. It has physics and no AI, which is
+    # the right shape -- it goes where it is pushed and does not then wander off and ruin the
+    # reading. But Bedrock 1.26.36.1 answered `the subject never moved at all under 1 unit(s) of
+    # knockback` five times out of five: vanilla armour stands resist knockback outright. That is
+    # a fact about the game worth knowing, and it is why this line is not what it looks like it
+    # ought to be.
+    #
+    # A DROPPED ITEM WAS THE SECOND CHOICE AND REFUSES THE CALL. 1.26.36.1:
+    # `UnsupportedFunctionalityError: applyKnockback is not supported for this entity`. So the
+    # restriction is not knockback resistance, it is the API -- `applyKnockback` is a MOB
+    # operation, and an item entity is not a mob. Two negatives, two different mechanisms, and
+    # both are facts about the API worth having written down.
+    #
+    # THE PACK'S OWN PROBE ENTITY IS THE THIRD, and it is the first one whose properties this
+    # repository controls rather than inherits. It is a real custom entity -- so the call should
+    # be supported -- carrying `minecraft:physics` and no navigation of any kind, so it can be
+    # pushed and cannot walk. An inert body is exactly what this measurement wants, and if it
+    # still will not move, the reason will be in our own entity definition rather than in an
+    # undocumented vanilla one.
+    subject: 'bedshock:probe_box_chest5'
+    # Only consulted when the subject is `minecraft:item`, which needs `spawnItem` rather than
+    # `spawnEntity`. Kept so that path stays available without another edit.
+    subject_stack: 'minecraft:stick'
+    # How much knockback to apply. One unit is the natural thing to measure, and the probe divides
+    # by it, so raising this only buys resolution -- it must not change the answer, and a run
+    # where it does is itself a finding.
+    units: 1
+    run_length: 16
+    headroom: 4
+    # Rest is detected by POSITION, not velocity: a player's movement is client-authoritative and
+    # their reported velocity is not reliably the thing that moved them.
+    rest_step: 0.002
+    rest_ticks: 8
+    # How long to wait for the subject to move AT ALL before concluding it never will. Knockback
+    # is an impulse: it acts in the tick after it is applied or it does not act. Waiting the whole
+    # watch window on an immovable subject costs five times that per row, which is how this probe
+    # first overran the completion wait and had its row dropped entirely.
+    moved_by_ticks: 20
+    watch_ticks: 120
+    samples: 5
+    spread: 0.2
+    lane: 20

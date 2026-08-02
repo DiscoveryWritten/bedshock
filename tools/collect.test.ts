@@ -117,6 +117,43 @@ test('the server version is read out of its own log', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Rows that vanished
+// ---------------------------------------------------------------------------
+
+/**
+ * ABSENCE IS THE ONE OUTPUT THAT HIDES, and this is the test that stops it hiding again.
+ *
+ * A row reporting INCONCLUSIVE is in the summary and obviously wants attention. A row that never
+ * reports at all is simply not in the list — and the list looks exactly as healthy as it did the
+ * run before. That happened: a measured probe overran the completion wait, the observation count
+ * went from twelve to eleven, and nothing anywhere said which row or that anything was wrong.
+ *
+ * The battery already knew. `done()` names the probes that never came back. This is the collector
+ * carrying that into the summary instead of leaving it to die in the log.
+ */
+test('a probe that registered for the wait and never reported is a loud problem', () => {
+  const catalog = loadCatalog();
+  const log = [
+    'BEDSHOCK RESULT item.max_durability.int16_ceiling YES {}',
+    'BEDSHOCK NOTE 1 probe(s) never reported back: knockback. Those rows are ABSENT, not negative.',
+    'BEDSHOCK DONE 2',
+  ].join('\n');
+
+  const result = collect(log, catalog, { version: '1.26.30', run: 'test' });
+  assert.equal(result.observations.length, 1, 'the rows that DID report are still recorded');
+  const problem = result.problems.find((p) => p.includes('knockback'));
+  assert.ok(problem, 'the vanished probe is not mentioned anywhere');
+  assert.match(problem!, /ABSENT/);
+  assert.match(problem!, /not negative/);
+});
+
+test('a clean run reports no absences', () => {
+  const catalog = loadCatalog();
+  const log = 'BEDSHOCK RESULT item.max_durability.int16_ceiling YES {}\nBEDSHOCK DONE 1';
+  assert.deepEqual(collect(log, catalog, { version: '1.26.30', run: 'test' }).problems, []);
+});
+
+// ---------------------------------------------------------------------------
 // Diagnosing a run that never reported
 // ---------------------------------------------------------------------------
 

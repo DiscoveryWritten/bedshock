@@ -29,8 +29,10 @@ import * as offhand from './probes/offhand.ts';
 import * as menu from './probes/menu.ts';
 import * as anvilgap from './probes/anvilgap.ts';
 import * as fallcurve from './probes/fallcurve.ts';
+import * as knockback from './probes/knockback.ts';
 import * as fallingblock from './probes/fallingblock.ts';
 import * as repair from './probes/repair.ts';
+import * as throwProbe from './probes/throw.ts';
 import * as scenes from './probes/scenes.ts';
 import * as session from './session.ts';
 
@@ -53,6 +55,8 @@ const PROBES: Record<string, Probe> = {
   // minutes where the others take ticks. Everything cheap has already reported by the time this
   // starts, so a run cut short still carries the rest of the battery.
   anvilgap: anvilgap.run,
+  throw: throwProbe.run,
+  knockback: knockback.run,
   repair: repair.run,
   ruler: scenes.ruler,
   glyphs: scenes.glyphs,

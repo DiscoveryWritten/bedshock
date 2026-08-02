@@ -206,13 +206,20 @@ export const PARAMS = {
     }
   ],
   "offhand": {
-    "arbitrary_item": "minecraft:diamond",
+    "permitted_item": "minecraft:shield",
+    "arbitrary_items": [
+      "minecraft:diamond",
+      "minecraft:diamond_pickaxe",
+      "minecraft:stone",
+      "minecraft:bread"
+    ],
     "settle_ticks": 60
   },
   "falling_block": {
     "block": "minecraft:anvil",
     "drop_height": 12,
-    "watch_ticks": 40
+    "watch_ticks": 40,
+    "lane": 0
   },
   "anvilgap": {
     "block": "minecraft:anvil",
@@ -222,7 +229,37 @@ export const PARAMS = {
     "vacate_ticks": 6,
     "watch_ticks": 80,
     "repeats": 2,
-    "max_trials": 40
+    "max_trials": 40,
+    "lane": 6
+  },
+  "throw": {
+    "item": "minecraft:stick",
+    "run_length": 24,
+    "headroom": 4,
+    "release_height": 1,
+    "impulse_forward": 0.6,
+    "impulse_up": 0.25,
+    "rest_speed": 0.003,
+    "rest_ticks": 8,
+    "moved_at_least": 0.05,
+    "watch_ticks": 200,
+    "samples": 5,
+    "spread": 0.5,
+    "lane": 12
+  },
+  "knockback": {
+    "subject": "bedshock:probe_box_chest5",
+    "subject_stack": "minecraft:stick",
+    "units": 1,
+    "run_length": 16,
+    "headroom": 4,
+    "rest_step": 0.002,
+    "rest_ticks": 8,
+    "moved_by_ticks": 20,
+    "watch_ticks": 120,
+    "samples": 5,
+    "spread": 0.2,
+    "lane": 20
   }
 } as const;
 export const GLYPHS = ["","","",""];

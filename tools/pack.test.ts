@@ -77,6 +77,53 @@ test('the container variants form a single-variable comparison', () => {
   assert.match(validatePackConfig(mismatched).join('\n'), /share no size/);
 });
 
+/**
+ * THE OFF-HAND FILE NEEDS A CONTROL, and it is the row that is supposed to PASS.
+ *
+ * Every other row here is expected to be NO — that is the whole finding, and it is what a mod
+ * author is meant to design around. Which makes this file uniquely dangerous: a probe that had
+ * silently stopped writing anything at all would produce exactly the same confident row of NOs
+ * as one working perfectly, and nothing about reading the results would show the difference.
+ *
+ * The control is an item the off-hand is SUPPOSED to keep. It has to be answered by the same
+ * probe — a control living somewhere else controls nothing — and it must not be one of the items
+ * the negatives are measured with, or it is not a comparison.
+ */
+test('the off-hand negatives are backed by a control that is supposed to pass', () => {
+  const catalog = loadCatalog();
+  const control = catalog.byId.get('equipment.offhand.vanilla_permitted_item_persists');
+  assert.ok(control, 'the off-hand file has no control');
+  const persists = catalog.byId.get('equipment.offhand.script_placed_item_persists')!;
+  assert.equal(control!.probe, persists.probe, 'the control is answered by a different probe');
+
+  const o = config.probes.offhand;
+  assert.ok(o.permitted_item, 'no control item is declared');
+  assert.ok(!o.arbitrary_items.includes(o.permitted_item), 'the control item is also on trial');
+
+  const noControl: PackConfig = {
+    ...config,
+    probes: { ...config.probes, offhand: { ...o, permitted_item: '' } },
+  };
+  assert.match(validatePackConfig(noControl).join('\n'), /control for this whole file/);
+});
+
+/**
+ * And the negative is measured across a SPREAD. "Arbitrary items are ejected" and "a diamond is
+ * ejected" are different claims; a manifest is only worth contorting around if it makes the
+ * first one.
+ */
+test('the off-hand negative is measured across several kinds of item, not one', () => {
+  const items = config.probes.offhand.arbitrary_items;
+  assert.ok(items.length >= 3, `only ${items.length} item(s) on trial`);
+  assert.equal(new Set(items).size, items.length, 'a duplicate answers the same question twice');
+
+  const single: PackConfig = {
+    ...config,
+    probes: { ...config.probes, offhand: { ...config.probes.offhand, arbitrary_items: ['minecraft:diamond'] } },
+  };
+  assert.match(validatePackConfig(single).join('\n'), /about one item/);
+});
+
 /** The client's ejection is not instant. Reading too early reports a false persistence. */
 test('the off-hand settle delay is at least a second', () => {
   assert.ok(config.probes.offhand.settle_ticks >= 20);
@@ -262,16 +309,112 @@ test('the probes not yet ported are exactly the ones we know about', () => {
   const catalog = loadCatalog();
   const implemented = new Set([
     'durability', 'dynprops', 'container', 'offhand', 'menu', 'fallingblock',
-    'fallcurve', 'anvilgap', 'repair', 'ruler', 'glyphs', 'flipbook', 'formicon',
+    'fallcurve', 'anvilgap', 'throw', 'knockback', 'repair', 'ruler', 'glyphs', 'flipbook',
+    'formicon',
   ]);
   const missing = [...new Set(
     catalog.capabilities.filter((c) => c.probe && !implemented.has(c.probe)).map((c) => c.probe!),
   )].sort();
-  // `knockback` and `throw` are declared SOLVED questions with no trial written yet. Both are
-  // now a trial away rather than a harness away — `solve.ts` is the reusable part and `anvilgap`
-  // is the worked example. Listed rather than quietly omitted, because the build prints this
-  // same set on every run and a shrinking list is the only progress bar there is.
-  assert.deepEqual(missing, ['attachable', 'attachable_pose', 'knockback', 'stash', 'throw']);
+  // What is left is eyes-only apparatus, not measurement: `attachable` and `stash` need a client
+  // to look at. Listed rather than quietly omitted, because the build prints this same set on
+  // every run and a shrinking list is the only progress bar there is.
+  assert.deepEqual(missing, ['attachable', 'attachable_pose', 'stash']);
+});
+
+/**
+ * Both shapes of solved row have a runtime, and the runtime matches the shape.
+ *
+ * A measured row put through `solve` would bisect a boundary that does not exist and burn dozens
+ * of trials arriving at INCONCLUSIVE; a boundary row put through `measure` would ask an apparatus
+ * for a number it cannot produce. Neither mistake shows up in a type — both files compile, both
+ * probes run, and the failure appears only as a strange result on a real server.
+ */
+test('every solved row uses the tool that matches its shape', () => {
+  const dir = join(ROOT, 'pack', 'scripts', 'probes');
+  const sources = new Map<string, string>();
+  for (const name of readdirSync(dir).filter((f) => f.endsWith('.ts'))) {
+    sources.set(name.replace(/\.ts$/, ''), readFileSync(join(dir, name), 'utf8'));
+  }
+
+  // Read from the IMPORTS rather than from call sites, because prose mentions both tools by
+  // name and a scan of the whole file matches the paragraph explaining the choice.
+  const imports = (probe: string): string[] =>
+    [...sources.get(probe)!.matchAll(/from '\.\.\/(\w+)\.ts'/g)].map((m) => m[1]!);
+
+  // A boundary: the apparatus can only say whether something worked, so it is bisected.
+  assert.ok(imports('anvilgap').includes('solve'), 'anvilgap should search for a boundary');
+  assert.ok(!imports('anvilgap').includes('measure'), 'anvilgap measures a number it cannot produce');
+
+  // Measurements: the apparatus hands back a distance, so the readings are summarised.
+  for (const probe of ['throw', 'knockback']) {
+    assert.ok(imports(probe).includes('measure'), `${probe} should measure, not search`);
+    assert.ok(!imports(probe).includes('solve'), `${probe} bisects a boundary that does not exist`);
+  }
+});
+
+/**
+ * EVERY MOVING PROBE NEEDS ITS OWN GROUND, and nothing about reading the code shows when it does
+ * not.
+ *
+ * Probes run concurrently — each one starts a tick loop and returns — so two measuring in
+ * overlapping space clear each other's blocks and delete each other's entities. The result does
+ * not look like interference. It looks like physics: the throw probe lost three readings in five
+ * to exactly this, reporting `the item stopped existing after 7 tick(s), 3.425 blocks along`,
+ * which reads like a despawn and was a neighbour's broom.
+ */
+test('the moving probes are on lanes far enough apart not to sweep each other', () => {
+  const lanes = {
+    fallcurve: config.probes.falling_block.lane,
+    anvilgap: config.probes.anvilgap.lane,
+    throw: config.probes.throw.lane,
+    knockback: config.probes.knockback.lane,
+  };
+  assert.equal(new Set(Object.values(lanes)).size, 4, `two probes share a lane: ${JSON.stringify(lanes)}`);
+
+  const sorted = Object.values(lanes).sort((a, b) => a - b);
+  for (let i = 1; i < sorted.length; i++) {
+    assert.ok(sorted[i]! - sorted[i - 1]! >= 4, `lanes ${sorted[i - 1]} and ${sorted[i]} are too close`);
+  }
+
+  const clashing: PackConfig = {
+    ...config,
+    probes: { ...config.probes, throw: { ...config.probes.throw, lane: config.probes.anvilgap.lane + 1 } },
+  };
+  assert.match(validatePackConfig(clashing).join('\n'), /sweep each other/);
+});
+
+/**
+ * And every probe that moves something has to read its lane, or declaring one changes nothing.
+ */
+test('each moving probe actually offsets itself by its lane', () => {
+  const dir = join(ROOT, 'pack', 'scripts', 'probes');
+  for (const [file, param] of [
+    ['fallcurve.ts', 'falling_block'],
+    ['anvilgap.ts', 'anvilgap'],
+    ['throw.ts', 'throw'],
+    ['knockback.ts', 'knockback'],
+  ]) {
+    const source = readFileSync(join(dir, file!), 'utf8');
+    assert.match(source, new RegExp(`PARAMS\\.${param}\\.lane`), `${file} declares a lane it never uses`);
+  }
+});
+
+/**
+ * A measurement taken in a place nobody checked is a measurement of the terrain.
+ *
+ * An item that stops after two blocks stopped because it hit a wall; an entity that does not move
+ * is standing in a hole. Both produce a number and both look like physics. The arena's `verify()`
+ * is the only thing that tells those apart, so a probe that carves without verifying has quietly
+ * given up the distinction.
+ */
+test('every probe that carves an arena also verifies it before measuring', () => {
+  const dir = join(ROOT, 'pack', 'scripts', 'probes');
+  for (const name of readdirSync(dir).filter((f) => f.endsWith('.ts'))) {
+    const source = readFileSync(join(dir, name), 'utf8');
+    if (!source.includes('arena(')) continue;
+    assert.match(source, /\.verify\(\)/, `${name} builds an arena it never checks is there`);
+    assert.match(source, /record\(null/, `${name} has no path for reporting the arena missing`);
+  }
 });
 
 /**

@@ -23,10 +23,17 @@
  *
  * WHAT YOU GET.
  *
- *   `solve`      a bisection driven across ticks, with the three ways a search lies about
- *                itself already refused. See `solve.ts` and `bisect.ts`.
- *   `bisect`     the same search with no Minecraft in it, if your trial is not a tick loop —
- *                an in-memory measurement, a test, a replay.
+ *   `solve`      a bisection driven across ticks, for a BOUNDARY — when your apparatus can only
+ *                tell you whether something worked. The three ways a search lies about itself
+ *                are already refused. See `solve.ts` and `bisect.ts`.
+ *   `measure`    several readings driven across ticks, for a MEASUREMENT — when your apparatus
+ *                hands back a number and the question is whether the numbers agree. See
+ *                `measure.ts` and `sample.ts`.
+ *   `arena`      a box to measure in, and a check that the box is really there. Somewhere flat,
+ *                empty and confirmed to put a mechanic in and watch what it does.
+ *   `bisect`     the search with no Minecraft in it, if your trial is not a tick loop — an
+ *                in-memory measurement, a test, a replay.
+ *   `summarise`  the same, for readings: the median and the refusals, no game required.
  *   `result`     one measured answer, on the wire the collector reads.
  *   `look`       something is on a screen and only a person can grade it. Never a pass.
  *   `skipped`    why a probe did nothing, so an absent row is never mistaken for a finding.
@@ -56,6 +63,15 @@ export type { Answer, Ask, Direction, Move, Search, SearchSpec } from './bisect.
 
 export { solve } from './solve.ts';
 export type { Settle, SolveSpec, Trial } from './solve.ts';
+
+export { measure } from './measure.ts';
+export type { MeasureSpec, Reading, Record } from './measure.ts';
+
+export { median, medianScatter, summarise } from './sample.ts';
+export type { SampleSpec, Summary } from './sample.ts';
+
+export { arena } from './arena.ts';
+export type { Arena, ArenaSpec } from './arena.ts';
 
 export {
   begin,
