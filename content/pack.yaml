@@ -1,0 +1,172 @@
+# The probe pack's identity, and the parameters every probe is built from.
+#
+# This pack is nothing but instruments. It ships no gameplay, it is not meant to be installed
+# alongside anything a player cares about, and every item in it is deliberately ugly -- several
+# are deliberately in the creative menu, because whether they can be kept OUT of it is one of
+# the questions.
+#
+# !! DO NOT REGENERATE THE UUIDs !!
+# A changed UUID makes the game treat this as a brand new pack. That costs nothing here, since
+# nothing persists between runs -- but a world carrying an old copy alongside a new one is two
+# batteries answering at once, and the readout does not say which.
+
+namespace: bedshock
+
+name: bedshock
+description: A capability battery. Measures what Bedrock can do; ships no gameplay.
+
+version: [0, 1, 0]
+
+# The oldest game this pack can run on, and it has to be at least the version that first
+# offered the script module pinned below -- @minecraft/server 2.3.0 arrived in 1.21.120.
+#
+# Setting it lower does not widen support, it hides the failure: an older client accepts the
+# pack on this number and then rejects the whole behavior pack over the module dependency,
+# SILENTLY. With it set honestly the same client says "requires a newer version of Minecraft"
+# and you know what happened.
+#
+# For a battery this number is load-bearing in a way it is not for a normal pack. Sweeping a
+# capability down through older versions means lowering this AND the pins together, and a
+# sweep that silently measured nothing because the pack never loaded is the worst possible
+# outcome -- which is why `bedshock run` fails when the battery does not report back at all,
+# rather than recording an absence as a negative.
+min_engine_version: [1, 21, 120]
+
+uuids:
+  bp_header: 50e188fb-286c-4ae4-9cbb-229916c8013a
+  bp_module: bff8103f-b1f8-41c5-96a9-e54d8e09513f
+  bp_script: b4164069-329a-47f1-be3e-00daaaac5fbb
+  rp_header: 34befd51-1b7f-4943-9c90-a49bdf0cb670
+  rp_module: d8cbf15c-0ff8-411c-8b82-02b93b965be3
+
+script:
+  entry: scripts/main.js
+  modules:
+    "@minecraft/server": "2.3.0"
+    "@minecraft/server-ui": "2.0.0"
+
+format_versions:
+  item: "1.21.0"
+  item_texture: "1.16.100"
+  entity: "1.21.0"
+
+# ---------------------------------------------------------------------------
+# Probe parameters
+#
+# Everything a probe needs that is a NUMBER rather than a question. The questions live in
+# content/capabilities/; this is the apparatus.
+# ---------------------------------------------------------------------------
+probes:
+  # --- durability ----------------------------------------------------------
+  #
+  # One item per candidate ceiling. Any the game rejects simply will not exist, and the
+  # runtime probe reports which ones it could construct -- `new ItemStack` throwing IS the
+  # measurement, because it is the only way to ask "did the game accept this definition" from
+  # inside the game.
+  #
+  # These are all DECLARED values. What each one REPORTS is a measurement and belongs in the
+  # ledger, never here. That separation is the fix for the thing that would make this whole
+  # system worthless: an expectation quietly edited to make a probe stop complaining.
+  durability:
+    ceilings: [2031, 4096, 16384, 32767, 32768, 65535]
+
+  # --- the durability-bar ruler -------------------------------------------
+  #
+  # 16 rows, 16 distinguishable hues. Two copies are handed out: a nearly-pristine bar (long,
+  # green) and a nearly spent one (1px, red). Both matter -- the dark track is full-width in
+  # both cases, and it is the track that occludes.
+  ruler:
+    max_durability: 2048
+    damage_samples: [1, 2046]
+
+  # --- glyphs --------------------------------------------------------------
+  #
+  # Page E2 -> codepoints U+E200..U+E2FF, 16x16 cells of 16px in a 256x256 page. Each swatch
+  # is a RING on transparency: a shape with a hole, so partial-alpha handling shows up too.
+  glyphs:
+    page: E2
+    swatches: ['#d94f4f', '#4fd96a', '#4f7fd9', '#ffffff']
+
+  # --- form icons ----------------------------------------------------------
+  form_icons:
+    # Written to RP/textures/probe/ and deliberately LEFT OUT of item_texture.json.
+    unindexed_path: 'textures/probe/icon_unindexed'
+    # Vanilla, to confirm the mechanism works at all before blaming our own art.
+    vanilla_path: 'textures/items/apple'
+    # A bare atlas short-name rather than a path. Expected to fail; worth knowing.
+    atlas_key: 'apple'
+    # A deliberate miss. If this renders as blank rather than as a broken-texture mark, then
+    # "no icon" and "wrong path" are indistinguishable in play.
+    missing_path: 'textures/probe/does_not_exist'
+
+  # --- creative menu variants ---------------------------------------------
+  #
+  # Every variant is named with its own label in-game, so the picker screenshot is
+  # self-describing. Emitted in this order, which is what the ordering question reads.
+  menu_variants:
+    - id: omitted
+      label: 'P7 omitted (no menu_category)'
+    - id: none
+      label: 'P7 category none'
+      category: none
+    - id: items
+      label: 'P7 category items'
+      category: items
+    - id: grouped_a
+      label: 'P7 grouped A'
+      category: items
+      group: 'itemGroup.name.probe_group'
+    - id: grouped_b
+      label: 'P7 grouped B'
+      category: items
+      group: 'itemGroup.name.probe_group'
+    - id: grouped_c
+      label: 'P7 grouped C'
+      category: items
+      group: 'itemGroup.name.probe_group'
+
+  # --- flipbook ------------------------------------------------------------
+  #
+  # TWO SPELLINGS, deliberately different in every field that could plausibly be the mistake.
+  # A single frozen icon cannot distinguish "item atlas tiles do not flipbook" from "this entry
+  # is wrong", and that ambiguity cost a reading once already.
+  flipbook:
+    frames: 4
+    ticks_per_frame: 8
+
+  # --- containers ----------------------------------------------------------
+  #
+  # Both variants are minimal on purpose. `chest5` and `horse5` are generated from ONE
+  # template with only `container_type` substituted, which makes the comparison
+  # single-variable rather than a guess about which of a dozen ingredients mattered.
+  #
+  # horse1 and horse15 bracket the screen question: whether the declared size controls the
+  # drawn slot count, up to a ceiling, or never touches it at all.
+  containers:
+    - id: chest5
+      container_type: chest
+      size: 5
+    - id: horse5
+      container_type: horse
+      size: 5
+    - id: horse1
+      container_type: horse
+      size: 1
+    - id: horse15
+      container_type: horse
+      size: 15
+
+  # --- off-hand ------------------------------------------------------------
+  offhand:
+    # A vanilla item the slot would never normally accept.
+    arbitrary_item: 'minecraft:diamond'
+    # Ticks to wait before reading the slot back the second time. The client's ejection is not
+    # instant, so an immediate read alone would report a false persistence.
+    settle_ticks: 60
+
+  # --- falling block -------------------------------------------------------
+  falling_block:
+    block: 'minecraft:anvil'
+    # How far above the sample point to spawn it, and how long to watch.
+    drop_height: 12
+    watch_ticks: 40

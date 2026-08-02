@@ -1,0 +1,126 @@
+/**
+ * `/scriptevent bedshock:probe [what]` — the battery.
+ *
+ * With no argument it runs everything. With a probe name it runs one, which is what you want
+ * when a single row needs re-reading and re-running the lot would bury it. Follow-ups use a dot:
+ * `dynprops.token`, `container.clear`.
+ *
+ * WHAT THIS PACK IS. Nothing but instruments. It ships no gameplay and it is not meant to sit
+ * in a world anyone cares about — several of its items are deliberately in the creative menu,
+ * because whether they can be kept OUT of it is one of the questions. Install it, ask, record,
+ * remove.
+ *
+ * IT RUNS HEADLESS TOO, and that is most of its value. The automated rows need no player, so
+ * `tools/run.ts` boots a real Bedrock Dedicated Server, sends this event, and reads the answers
+ * out of the log — no human, no client, and repeatable on every Minecraft version there is a
+ * server build for. The rows that genuinely need eyes report why they were skipped rather than
+ * being silently absent, because a silently absent probe is indistinguishable from one that
+ * ran and found nothing, and only one of those is a finding.
+ */
+
+import { system, world, type Player } from '@minecraft/server';
+
+import { NAMESPACE, PACK_VERSION } from './generated.ts';
+import { begin, claimTickingArea, done, firstLine, makeCtx, type Ctx } from './emit.ts';
+import * as durability from './probes/durability.ts';
+import * as dynprops from './probes/dynprops.ts';
+import * as container from './probes/container.ts';
+import * as offhand from './probes/offhand.ts';
+import * as menu from './probes/menu.ts';
+import * as fallingblock from './probes/fallingblock.ts';
+import * as scenes from './probes/scenes.ts';
+
+type Probe = (ctx: Ctx) => void;
+
+/**
+ * The registry, and the order is deliberate: everything that can answer without a player runs
+ * first. A headless run then produces its findings before anything has a chance to throw for
+ * want of hands, and a partial log is still a useful log.
+ */
+const PROBES: Record<string, Probe> = {
+  durability: durability.run,
+  menu: menu.run,
+  dynprops: dynprops.run,
+  container: container.run,
+  offhand: offhand.run,
+  fallingblock: fallingblock.run,
+  ruler: scenes.ruler,
+  glyphs: scenes.glyphs,
+  flipbook: scenes.flipbook,
+  formicon: scenes.formIcons,
+};
+
+/** Follow-ups: the halves of a measurement that cannot happen in one call. */
+const FOLLOW_UPS: Record<string, (ctx: Ctx, player: Player) => void> = {
+  'dynprops.stamp': dynprops.stamp,
+  'dynprops.token': dynprops.token,
+  'container.clear': (ctx) => container.clear(ctx),
+};
+
+function runAll(ctx: Ctx): void {
+  begin();
+  ctx.say(`§l${NAMESPACE} ${PACK_VERSION}§r — capability battery`);
+  for (const [name, probe] of Object.entries(PROBES)) {
+    try {
+      probe(ctx);
+    } catch (err) {
+      // One probe throwing must not take the battery with it. A run that dies halfway reports
+      // nothing about the rows it never reached, and an absent row must never be recorded as a
+      // negative one.
+      console.warn(`BEDSHOCK ERROR ${name} ${firstLine(err)}`);
+      ctx.say(`§c${name} threw:§r ${firstLine(err)}`);
+    }
+  }
+  done(ctx);
+}
+
+system.afterEvents.scriptEventReceive.subscribe(
+  (event) => {
+    if (event.id !== `${NAMESPACE}:probe`) return;
+
+    const player = event.sourceEntity?.typeId === 'minecraft:player' ? (event.sourceEntity as Player) : undefined;
+    const ctx = makeCtx(player);
+    const what = event.message.trim();
+
+    claimTickingArea(`${NAMESPACE}_probe`);
+
+    if (what === '') {
+      runAll(ctx);
+      return;
+    }
+
+    const followUp = FOLLOW_UPS[what];
+    if (followUp) {
+      if (!player) {
+        ctx.say('that follow-up needs a player.');
+        return;
+      }
+      followUp(ctx, player);
+      return;
+    }
+
+    const probe = PROBES[what];
+    if (!probe) {
+      ctx.say(
+        `no probe called "${what}". Probes: ${Object.keys(PROBES).join(', ')}. ` +
+          `Follow-ups: ${Object.keys(FOLLOW_UPS).join(', ')}`,
+      );
+      return;
+    }
+
+    begin();
+    try {
+      probe(ctx);
+    } catch (err) {
+      console.warn(`BEDSHOCK ERROR ${what} ${firstLine(err)}`);
+      ctx.say(`§c${what} threw:§r ${firstLine(err)}`);
+    }
+    done(ctx);
+  },
+  // Only our own namespace reaches the handler. Anything else is somebody else's event.
+  { namespaces: [NAMESPACE] },
+);
+
+world.afterEvents.worldLoad.subscribe(() => {
+  console.warn(`BEDSHOCK READY ${NAMESPACE} ${PACK_VERSION} — /scriptevent ${NAMESPACE}:probe`);
+});

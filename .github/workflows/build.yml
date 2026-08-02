@@ -1,0 +1,124 @@
+name: build
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+  # A weekly sweep. Bedrock changes these answers without notice and nothing announces it, so
+  # the only way a DRIFT is found early is by asking again on a schedule. This deliberately
+  # records nothing -- see the `sweep` job.
+  schedule:
+    - cron: '17 6 * * 1'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+
+      # The questions and the ledger, checked against each other. This is where an observation
+      # whose verdict contradicts its own declared outcome gets caught -- an edit that is
+      # invisible by reading and would make the whole document worthless.
+      - name: Validate
+        run: npm run validate
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      # The build cross-references the emitted pack against the catalog and warns about any
+      # capability whose probe has no runtime. Not a failure -- an unported probe is honest
+      # work outstanding -- but it belongs in the log rather than in somebody's memory.
+      - name: Build the probe pack
+        run: npm run build
+
+      # The generated documents must match the ledger they were generated from. A stale
+      # CAPABILITIES.md is exactly the failure mode this repository replaced, so it is a hard
+      # error rather than a nag.
+      - name: The generated documents are up to date
+        run: |
+          npm run report
+          if ! git diff --quiet -- docs/; then
+            echo "docs/ is out of date with the ledger. Run \`npm run report\` and commit."
+            git diff --stat -- docs/
+            exit 1
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bedshock-mcaddon
+          path: dist/*.mcaddon
+          if-no-files-found: error
+
+  # Boot a real Bedrock Dedicated Server and run the battery against it.
+  #
+  # ON A PULL REQUEST THIS RECORDS NOTHING. The run is a smoke test of the apparatus: it proves
+  # the pack loads on a real server, that the script pins are a set some Bedrock will accept,
+  # and that every automated probe still reports. What it must NOT do is append to the ledger
+  # from a branch, because an observation is history and history should not arrive by merge.
+  #
+  # It also cannot know which Minecraft version it measured until the server says so, which is
+  # why --dry-run prints the version it read. Recording is a deliberate act: run `bedshock run`
+  # locally, or dispatch the `sweep` job below.
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+
+      - name: Run the battery against a real server (recording nothing)
+        run: npx tsx tools/cli.ts run --dry-run
+
+  # The same thing, recording, on a schedule or on demand.
+  #
+  # This is the job that keeps the ledger alive over months without anybody remembering to.
+  # It opens a pull request rather than pushing: an observation that contradicts a recorded one
+  # is a DRIFT, and a drift deserves a human looking at it before it lands.
+  sweep:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+
+      - name: Measure the current Bedrock
+        run: npx tsx tools/cli.ts run
+
+      - name: Open a pull request if anything changed
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: sweep/automated
+          title: 'battery sweep: the current Bedrock'
+          commit-message: 'battery sweep: record the current Bedrock'
+          body: |
+            An automated run of the capability battery against the current Bedrock Dedicated
+            Server.
+
+            **Read the diff for `DRIFT` before merging.** A new version column is ordinary — the
+            battery has simply been somewhere new. A changed answer *at a version already in the
+            ledger* is the loud case: either the game changed under a version number, or a probe
+            was edited into lying. Both are worth stopping for.
+
+            Rows needing eyes are not in here. Install the artifact and run `bedshock amend`.
+          add-paths: |
+            ledger/
+            docs/

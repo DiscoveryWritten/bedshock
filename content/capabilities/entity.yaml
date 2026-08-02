@@ -1,0 +1,348 @@
+# Entities: containers, collision, and using an entity as storage.
+#
+# The domain that decides whether a pack can offer a real item slot -- somewhere any item can
+# be dropped, modded ones included, with the game drawing its sprite for you. That is the one
+# thing the scripting UI fundamentally cannot provide.
+
+domain: entity
+about: >-
+  Entities are the only container host Bedrock offers, so every design that needs to hold an
+  arbitrary item ends up here. Storage via `minecraft:inventory` is documented and its knobs
+  are known; what is not documented is how a fully custom entity gets its container OPENED,
+  because on Bedrock that is welded to chest-boat and horse machinery rather than exposed as a
+  component.
+
+capabilities:
+  - id: entity.container.is_the_only_container_host
+    question: Can a custom BLOCK carry a container, or must it be an entity?
+    decides: >-
+      Whether custom storage costs an entity -- with everything that implies about collision,
+      persistence and chunk loading -- or can be a block like a chest.
+    method: derived
+    established_by: >-
+      Blocks cannot be containers on Bedrock; only entities carry `minecraft:inventory`.
+
+  - id: entity.container.storage_via_inventory_component
+    question: >-
+      Does a fully custom entity's `minecraft:inventory` actually store items that script can
+      read and write?
+    decides: >-
+      Whether the storage half of a custom container works at all, before asking the harder
+      question of whether a player can reach it.
+    method: automated
+    probe: container
+    legacy: P11
+    notes: >-
+      The first headless run of this reported failure with `LocationInUnloadedChunkError` for
+      both variants. THAT WAS A DEFECT IN THE PROBE, NOT A FINDING -- with no players
+      connected nothing is loaded or ticking, so the spawn had nowhere to go. The probe now
+      claims a ticking area first. Recorded because it is the exact failure this battery
+      exists to prevent: a confident-looking FAIL that was measuring the instrument.
+
+  - id: entity.container.api_honours_declared_inventory_size
+    question: Does `container.size` report the `inventory_size` the entity declared?
+    decides: >-
+      Whether declared storage capacity is real as far as script is concerned. Note that this
+      is a different question from what the SCREEN draws, and conflating them would overstate
+      the finding.
+    method: automated
+    probe: container
+    depends_on: [entity.container.storage_via_inventory_component]
+    legacy: P11
+
+  - id: entity.container.opens_with_container_type_horse
+    question: 'Does a custom entity declaring `container_type: horse` open for a player?'
+    decides: >-
+      Whether player-facing custom storage is possible at all. Storage existing does not mean a
+      player can get at it, and this is the half that decides whether the route is usable.
+    method: observed
+    probe: container
+    look_at: >-
+      Interact with the entity labelled `horse5`. A failure here means "this recipe does not
+      work", NOT "custom containers are impossible" -- reading it as the latter closes off the
+      only route to an arbitrary-item slot.
+    outcomes:
+      - id: opens
+        label: A real container screen opens
+        verdict: YES
+      - id: no_screen
+        label: Interacting does nothing
+        verdict: 'NO'
+      - id: no_entity
+        label: The entity is not there to interact with
+        verdict: INCONCLUSIVE
+        means: Check the automated storage row -- if the spawn failed, this measures nothing.
+    depends_on: [entity.container.storage_via_inventory_component]
+    legacy: P11
+
+  - id: entity.container.opens_with_container_type_chest
+    question: 'Does the same entity declaring `container_type: chest` open for a player?'
+    decides: >-
+      Which `container_type` to use. The two probe entities are otherwise identical -- same
+      components, same `private: false`, same `is_chested`, same size, generated from one
+      template with only `container_type` substituted -- so this is a single-variable
+      comparison rather than a guess about which of a dozen ingredients mattered.
+    method: observed
+    probe: container
+    look_at: Interact with the entity labelled `chest5`, next to the horse one.
+    outcomes:
+      - id: opens
+        label: A container screen opens
+        verdict: YES
+      - id: no_screen
+        label: Interacting does nothing
+        verdict: 'NO'
+      - id: no_entity
+        label: The entity is not there
+        verdict: INCONCLUSIVE
+    depends_on: [entity.container.storage_via_inventory_component]
+    legacy: P11
+
+  - id: entity.container.screen_draws_declared_slot_count
+    question: Does the container screen draw as many slots as `inventory_size` declares?
+    decides: >-
+      Whether `container.size` and what the player sees are one number or two. If two, slots
+      above the drawn count are script-writable and player-unreachable -- which is a HAZARD if
+      you assumed the screen shows what you stored, and a genuinely useful PRIMITIVE if you
+      wanted storage a player cannot touch.
+    method: observed
+    probe: container
+    look_at: >-
+      Three entities bracket this: `horse1` declares 1, `horse5` declares 5, `horse15` declares
+      15. Open each and count the cells actually drawn. If 1 draws 1 and 15 draws 3, the
+      declared size controls the screen up to a ceiling. If both draw 3, the layout is fixed
+      and the declared size never touches the screen at all. Those are different designs.
+    outcomes:
+      - id: one_for_one
+        label: Each draws exactly what it declared
+        verdict: YES
+      - id: ceiling
+        label: Small sizes draw themselves, large ones cap out -- note the ceiling
+        verdict: 'NO'
+      - id: fixed
+        label: All three draw the same number regardless of what they declared
+        verdict: 'NO'
+        means: The layout is fixed. Note the number in the note.
+      - id: mismatched
+        label: >-
+          At least one draws a different count than it declared, but you could not open enough
+          variants to say which rule applies
+        verdict: 'NO'
+        means: >-
+          Enough to know the two numbers are not the same, which is the hazard. Not enough to
+          know whether the declared size controls the screen below a ceiling or never touches
+          it — and those are different designs. Put the numbers you did see in the note.
+      - id: could_not_open
+        label: Could not open enough of them to compare
+        verdict: INCONCLUSIVE
+    depends_on: [entity.container.opens_with_container_type_horse]
+    legacy: P11
+
+  - id: entity.container.slots_are_untyped
+    question: Are the slots freely usable, or typed the way a real saddle slot is?
+    decides: >-
+      Whether the container is usable for arbitrary items. This was the thing most likely to
+      sink the whole route: a horse screen's slots are normally typed, and a container
+      inheriting that would be useless.
+    method: observed
+    probe: container
+    look_at: >-
+      The open `horse5` screen. Script has already put a diamond in slot 0, so it should be
+      visible. Try moving it between slots, and try putting something else in.
+    outcomes:
+      - id: free
+        label: Any item goes in any slot and stays
+        verdict: YES
+      - id: typed
+        label: Slots reject items, or bounce them back
+        verdict: 'NO'
+      - id: could_not_open
+        label: Could not open it
+        verdict: INCONCLUSIVE
+    depends_on: [entity.container.opens_with_container_type_horse]
+    legacy: P11
+
+  - id: entity.container.script_writes_appear_in_screen
+    question: Do contents written by script appear in the screen the player opens?
+    decides: >-
+      Whether script and the player are looking at the same container, or at two views that can
+      disagree.
+    method: observed
+    probe: container
+    look_at: The diamond script placed in slot 0 of `horse5`, once the screen is open.
+    outcomes:
+      - id: present
+        label: The diamond is there
+        verdict: YES
+      - id: absent
+        label: The screen is empty
+        verdict: 'NO'
+      - id: could_not_open
+        label: Could not open it
+        verdict: INCONCLUSIVE
+    depends_on: [entity.container.opens_with_container_type_horse]
+    legacy: P11
+
+  - id: entity.container.preview_panel_renders_the_entity
+    question: Does the container screen's preview panel draw the entity's own model?
+    decides: >-
+      Whether a container screen carries free identity, or needs a title to say what it is.
+    method: observed
+    probe: container
+    look_at: The left-hand panel of the open container screen. Move the cursor across it.
+    outcomes:
+      - id: renders_and_tracks
+        label: It draws the entity, and it turns to follow the cursor
+        verdict: YES
+      - id: renders_static
+        label: It draws the entity but does not track
+        verdict: YES
+      - id: empty
+        label: No preview panel, or an empty one
+        verdict: 'NO'
+      - id: could_not_open
+        label: Could not open it
+        verdict: INCONCLUSIVE
+    depends_on: [entity.container.opens_with_container_type_horse]
+    legacy: P11
+
+  # --- collision -----------------------------------------------------------
+  - id: entity.collision.blocks_a_player
+    question: >-
+      Is a custom entity solid to a player, given `minecraft:collision_box` and
+      `minecraft:physics` with `has_collision: true`?
+    decides: >-
+      Whether anything that must be walked AROUND can be an entity, or needs a real block.
+    method: derived
+    established_by: >-
+      Measured in play on two separate custom entities: you walk through them. `collision_box`
+      governs hit detection and entity-entity pushing, not player blocking.
+
+  - id: entity.collision.is_a_standing_surface
+    question: Can another entity stand on a custom entity?
+    decides: Whether an entity can serve as a platform or a landing target.
+    method: derived
+    established_by: >-
+      Measured: a dropped anvil passes through a custom entity and lands in its cell. The other
+      half of the same fact as the player row above.
+
+  # --- using an entity as a stash -----------------------------------------
+  - id: entity.stash.preserves_an_opaque_itemstack
+    question: >-
+      Does a real ItemStack survive being moved into a holder entity's inventory and taken back
+      out, without ever being read?
+    decides: >-
+      Whether an item can be stored WITHOUT taking it apart. Any codec that reads an item into
+      JSON and rebuilds it must refuse shulker boxes, written books, potions, fireworks, maps
+      and banners -- handing one back would hand back an empty one. Moving the real stack
+      removes the whole problem, because nothing is ever read or rebuilt.
+    method: observed
+    probe: stash
+    look_at: >-
+      Hold an item with state the script API cannot read -- a shulker box YOU HAVE PUT THINGS
+      IN is the right choice. Run `/scriptevent bedshock:probe stash`, then
+      `/scriptevent bedshock:probe fetch`. Place the returned box and open it. That last step
+      is a human one unavoidably: whether the contents came back cannot be checked from script,
+      and that inability is the reason this route exists at all.
+    outcomes:
+      - id: intact
+        label: It comes back, and its contents are intact
+        verdict: YES
+      - id: returned_but_contents_unverified
+        label: >-
+          It comes back as itself, but you did not check state the script API cannot read
+        verdict: YES
+        means: >-
+          Enough to rule out the flat negative — the move-the-stack route is not broken in
+          principle, so a codec's refusal list is not permanent. NOT enough for the case this
+          exists for. Say in the note what you used; a gun carrying dynamic properties is a
+          weaker witness than a shulker box you filled, because a codec could have carried the
+          first and provably cannot carry the second.
+      - id: emptied
+        label: It comes back empty, or as a different item
+        verdict: 'NO'
+      - id: lost
+        label: Nothing comes back
+        verdict: 'NO'
+      - id: no_holder
+        label: The readout says it could not find the holder entity
+        verdict: INCONCLUSIVE
+    depends_on: [entity.container.storage_via_inventory_component]
+    legacy: P12
+
+  - id: entity.stash.holder_findable_after_chunk_unload
+    question: >-
+      Is a holder entity still findable by `world.getEntity(id)` after its chunk has unloaded
+      and reloaded?
+    decides: >-
+      The size of the whole design. If a holder survives being unloaded, storage can be a
+      holder PER ITEM -- small, local, no world fixtures. If it is only findable while loaded,
+      it has to be a VAULT: a holder in a permanently ticking area at a fixed world location.
+    method: observed
+    probe: stash
+    look_at: >-
+      Stash something, then walk far enough away that the chunk unloads, come back, and fetch.
+      The probe prints the holder's coordinates, so if `getEntity` fails you can walk back to
+      them and fetch again -- which tells "gone forever" apart from "only findable when
+      loaded", and those two point at different designs.
+    outcomes:
+      - id: findable
+        label: The fetch works from wherever you are standing
+        verdict: YES
+      - id: only_when_loaded
+        label: The fetch fails until you walk back to the printed coordinates
+        verdict: 'NO'
+        means: A vault design rather than a holder-per-item design.
+      - id: gone
+        label: The fetch fails even at the printed coordinates
+        verdict: 'NO'
+      - id: no_unload
+        label: The readout says the chunk never actually unloaded
+        verdict: INCONCLUSIVE
+    depends_on: [entity.stash.preserves_an_opaque_itemstack]
+    legacy: P12
+
+  - id: entity.stash.holder_findable_after_world_reload
+    question: Is a holder entity still findable by id after a full quit to title and reload?
+    decides: >-
+      The same fork as the chunk-unload row, and the harder half of it. A world reload is the
+      stress most likely to break entity-id persistence, and it is the one that actually picks
+      the design.
+    method: observed
+    probe: stash
+    look_at: >-
+      Stash, then QUIT TO TITLE and reload, then fetch. The probe stamps a per-load session
+      token into the stash record -- script modules are re-evaluated on every world load, so a
+      value computed at module scope is new each session by construction. Fetch compares them
+      and says outright whether a reload happened, so a run made in one sitting cannot be
+      mistaken for the one that answers the question. A same-session fetch also does NOT spend
+      the stash, because handing the item back would consume the one setup that can answer this.
+    outcomes:
+      - id: findable
+        label: The fetch works, and the readout confirms a reload happened
+        verdict: YES
+      - id: gone
+        label: The holder cannot be found after the reload
+        verdict: 'NO'
+      - id: no_reload
+        label: The readout says no reload happened between stash and fetch
+        verdict: INCONCLUSIVE
+        means: The protocol was not followed. Quit to title, not just to the world list.
+    depends_on: [entity.stash.holder_findable_after_chunk_unload]
+    legacy: P12
+
+  # --- watching vanilla entities ------------------------------------------
+  - id: entity.falling_block.is_trackable_by_script
+    question: >-
+      Can script see a vanilla `minecraft:falling_block` and read its position and velocity
+      every tick while it falls?
+    decides: >-
+      Whether a mechanic built around a falling vanilla block can be driven by watching the
+      real entity, or needs a custom mover standing in for it.
+    method: automated
+    probe: fallingblock
+    notes: >-
+      The measurement records the sampled velocities as well as the sighting count. Vanilla
+      falling-block gravity is a known curve, so the numbers confirm the entity being watched
+      is the real one rather than a look-alike -- and that `getVelocity()` on it is not zeroed
+      the way a collided entity's is.

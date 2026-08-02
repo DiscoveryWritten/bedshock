@@ -1,0 +1,45 @@
+{
+  "name": "bedshock",
+  "version": "0.1.0",
+  "description": "A capability battery for Minecraft Bedrock: what the game can actually do, measured, per version, and written down where a build can read it.",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": "./tools/api.ts",
+    "./ledger": "./tools/ledger.ts",
+    "./catalog": "./tools/catalog.ts"
+  },
+  "bin": {
+    "bedshock": "./tools/cli.ts"
+  },
+  "files": [
+    "tools/",
+    "content/",
+    "ledger/",
+    "docs/CAPABILITIES.md"
+  ],
+  "scripts": {
+    "bedshock": "tsx tools/cli.ts",
+    "build": "tsx tools/cli.ts build",
+    "report": "tsx tools/cli.ts report",
+    "validate": "tsx tools/cli.ts validate",
+    "check": "tsx tools/cli.ts check",
+    "amend": "tsx tools/cli.ts amend",
+    "run": "tsx tools/cli.ts run",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test tools/*.test.ts",
+    "clean": "rm -rf build dist"
+  },
+  "devDependencies": {
+    "@minecraft/server": "2.3.0",
+    "@minecraft/server-ui": "2.0.0",
+    "@types/node": "^22.10.2",
+    "@types/pngjs": "^6.0.5",
+    "ajv": "^8.17.1",
+    "esbuild": "^0.24.2",
+    "pngjs": "^7.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "yaml": "^2.9.0"
+  }
+}

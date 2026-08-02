@@ -1,0 +1,457 @@
+# Items: definitions, icons, names, durability, and the creative menu.
+#
+# Every row here is a question the official docs do not answer and the surrounding web
+# answers wrongly. Nothing in this file contains an answer -- answers live in
+# ledger/observations.jsonl, keyed by the Minecraft version they were true on.
+
+domain: item
+about: >-
+  What an item definition is allowed to declare, what the client does with it, and which of
+  an item's visuals can vary per stack rather than per type. The last one governs more design
+  than anything else in this battery: Bedrock gives an item exactly one static icon, so every
+  distinguishable visual state costs an item type unless it can be pushed into the name or
+  the durability bar.
+
+capabilities:
+  # --- durability ----------------------------------------------------------
+  - id: item.max_durability.int16_ceiling
+    question: >-
+      Does `max_durability` report back exactly what was declared, all the way up to 32767?
+    decides: >-
+      How many bits a packed-durability design has to work with. Vanilla's own ceiling is 2031
+      (netherite), so anything above that is undocumented territory, and the difference between
+      ~6 usable bits and ~15 is the difference between a layout that fits and one that does not.
+    method: automated
+    probe: durability
+    legacy: P1
+    notes: >-
+      The dangerous outcome here was never rejection -- it was a silent CLAMP. A clamped field
+      means the item exists, the pack loads, and every packed value quietly lands somewhere
+      else. That is a fault which otherwise surfaces late and by accident, which is why this
+      row is measured rather than assumed even though the answer now looks obvious.
+
+  - id: item.max_durability.overflow_wraps_rather_than_clamps
+    question: Above the ceiling, does `max_durability` wrap negative rather than clamping?
+    decides: >-
+      Whether an over-large computed code has a safe failure mode. A clamp degrades to the
+      maximum and stays sane; a wrap goes negative and nonsensical while the item still loads.
+      If it wraps, whatever builds a packed value has to assert its own range, because nothing
+      else will.
+    method: automated
+    probe: durability
+    depends_on: [item.max_durability.int16_ceiling]
+    legacy: P1
+    notes: >-
+      Measured differentially rather than inferred, because the packed layout sits right on
+      this edge. The measurement carries the reported value for each declared ceiling, so a
+      change from "32768 wraps to -32768" to "32768 clamps to 32767" reads as DRIFT even
+      though the verdict on this row would stay the same.
+
+  - id: item.max_durability.damage_writable_across_range
+    question: Can `damage` be written all the way to `max_durability - 1`?
+    decides: >-
+      Whether the whole declared range is usable as a data channel, or only the part vanilla
+      tools happen to occupy.
+    method: automated
+    probe: durability
+    depends_on: [item.max_durability.int16_ceiling]
+    legacy: P1
+
+  # --- the durability bar --------------------------------------------------
+  - id: item.durability_bar.rows_covered
+    question: Which pixel rows of the 16x16 icon does the durability bar's dark track cover?
+    decides: >-
+      Whether a second bar can be drawn snug above the vanilla one -- to show which chamber
+      fires next, or any other one-dimensional state -- and where the safe rows for baked
+      artwork start.
+    method: observed
+    probe: ruler
+    look_at: >-
+      The ruler item in your hotbar. Every one of its 16 rows is a different colour and the
+      bottom five are pure primaries, so you can count off which rows the bar eats. Two copies
+      are given: one nearly pristine (long green bar) and one nearly spent (1px red). The dark
+      track is full-width in both, and it is the track that occludes.
+    outcomes:
+      - id: rows_13_15
+        label: The track covers rows 13, 14 and 15 (the bottom three)
+        verdict: YES
+      - id: rows_14_15
+        label: The track covers rows 14 and 15 (the bottom two)
+        verdict: YES
+      - id: rows_12_15
+        label: The track covers rows 12 through 15 (the bottom four)
+        verdict: YES
+      - id: other_rows
+        label: Some other set of rows -- write it in the note
+        verdict: YES
+        means: >-
+          Any definite reading is a pass. Put the exact rows in the note; the report prints it.
+      - id: no_track
+        label: No dark track appears at all
+        verdict: 'NO'
+        means: >-
+          Would contradict a rule this battery treats as established, so re-check that the
+          items really are damaged before recording it.
+      - id: unreadable
+        label: Cannot count the rows -- too small, or the colours blur together
+        verdict: INCONCLUSIVE
+        means: >-
+          The ruler's palette needs work rather than the answer being no. An earlier version
+          used two blues 83 apart in RGB and they were indistinguishable at hotbar scale.
+    legacy: P2
+
+  - id: item.durability_bar.track_appears_at_damage_one
+    question: Does the dark track appear at `damage == 1`, not just when the item is visibly worn?
+    decides: >-
+      Whether an item carrying packed state in low bits can ever show a clean icon. If the
+      track is present at any damage above zero, the bar's footprint is permanent and artwork
+      has to be designed around it rather than hoping for the undamaged case.
+    method: observed
+    probe: ruler
+    look_at: The nearly-pristine ruler copy (damage 1). Look for the dark track, not the fill.
+    outcomes:
+      - id: present
+        label: The track is there at damage 1
+        verdict: YES
+      - id: absent
+        label: No track at damage 1 -- it only appears once the item is visibly worn
+        verdict: 'NO'
+      - id: unreadable
+        label: Cannot tell whether that is a track or the icon's own dark row
+        verdict: INCONCLUSIVE
+    legacy: P2
+
+  - id: item.durability_bar.hotbar_matches_inventory_grid
+    question: Do the hotbar and the inventory grid draw the bar over the same rows?
+    decides: >-
+      Whether one measurement covers both surfaces, or artwork has to satisfy two different
+      occlusion footprints.
+    method: observed
+    probe: ruler
+    look_at: The same ruler item in the hotbar and then in the inventory grid, at both damages.
+    outcomes:
+      - id: agree
+        label: Same rows in both
+        verdict: YES
+      - id: differ
+        label: Different rows -- note which, for each
+        verdict: 'NO'
+      - id: unreadable
+        label: Cannot compare them reliably
+        verdict: INCONCLUSIVE
+    legacy: P2
+
+  # --- icons ---------------------------------------------------------------
+  - id: item.icon.varies_per_stack
+    question: Can two stacks of the same item type draw different inventory icons?
+    decides: >-
+      Everything about how much state an item can show. If no, every distinguishable visual
+      configuration costs one item type, and any item that changes state constantly must NOT
+      encode that state in its type -- because a type swap is a remove-and-give, and that is
+      the mechanism by which stack data gets silently dropped.
+    method: derived
+    established_by: >-
+      `minecraft:icon` is static per item type and Bedrock has no damage-based icon selection;
+      that is a Java-only feature. There is nothing resembling `CustomModelData`.
+
+  - id: item.icon.runtime_tint_or_overlay
+    question: Can an icon be tinted or composited at runtime, at any layer?
+    decides: >-
+      Whether a colour axis can be applied at render time or has to be baked. Baking is what
+      turns 3 dimensions x 16 colours into 48 sprites instead of 19.
+    method: derived
+    established_by: >-
+      No runtime tint or sprite-overlay API exists for item icons on Bedrock. Colour has to be
+      in the texture, which means in the item type.
+
+  - id: item.icon.animates_from_flipbook
+    question: Does an item atlas tile animate from a `flipbook_textures.json` entry?
+    decides: >-
+      Whether an animated panel can live in the inventory icon at all. Flipbooks are proven
+      for blocks; for item atlas tiles it is folklore. Note the asymmetry: in the world an
+      animation costs one texture no matter how many colours exist, because the frame is a
+      separate bone. In the inventory an animated icon bakes with everything else in it.
+    method: observed
+    probe: flipbook
+    look_at: >-
+      The two flipbook probe items in your hotbar. They carry the SAME animation under two
+      deliberately different spellings -- one with explicit `frames: [0,1,2,3]` and
+      `blend_frames: false`, one omitting `frames` with `blend_frames: true`. Different in
+      every field that could plausibly be the mistake.
+    outcomes:
+      - id: both_cycle
+        label: Both icons cycle
+        verdict: YES
+      - id: one_cycles
+        label: One cycles, one is frozen
+        verdict: YES
+        means: >-
+          Item flipbooks work and the frozen spelling was simply wrong. Note which one cycled.
+      - id: both_frozen
+        label: Both frozen on frame 0
+        verdict: 'NO'
+        means: >-
+          Still short of proof. Two negatives on two spellings look like a limit, but the
+          definitive control is a flipbook on a BLOCK texture -- the case flipbooks are known
+          to serve. Record this, and treat it as leaning-no rather than closed.
+      - id: unreadable
+        label: Cannot tell -- the frames may be too similar, or nothing rendered
+        verdict: INCONCLUSIVE
+    legacy: P10
+
+  # --- names ---------------------------------------------------------------
+  - id: item.name.glyph_renders_in_colour
+    question: Do custom font glyph pages render in full colour rather than being flattened?
+    decides: >-
+      Whether the ONE per-stack visual Bedrock allows in the inventory can carry colour. The
+      16x16 icon square is static per item type and nothing changes that, but `nameTag` is
+      per-stack. If glyphs carry colour, a coloured mark can sit in an item's name, in form
+      button labels, in the actionbar -- anywhere text goes. That is the difference between 48
+      item types with baked icons and 3 types with a coloured glyph in the name.
+    method: observed
+    probe: glyphs
+    look_at: >-
+      The four rings printed into chat. They are authored as #d94f4f, #4fd96a, #4f7fd9 and
+      #ffffff -- red, green, blue, white. Vanilla's own pages are near-monochrome, which is
+      the only reason this is in doubt.
+    outcomes:
+      - id: full_colour
+        label: All four render in their own colours
+        verdict: YES
+      - id: flattened
+        label: They render, but flattened to white or grey
+        verdict: 'NO'
+      - id: absent
+        label: Nothing renders where the glyphs should be
+        verdict: INCONCLUSIVE
+        means: The glyph page did not load. That is an apparatus fault, not an answer.
+    legacy: P5
+
+  - id: item.name.glyph_alpha_is_honoured
+    question: Is a glyph's transparency preserved, or does it fill with a background?
+    decides: >-
+      Whether a glyph can be a shape with a hole -- a ring, an outline, anything that reads
+      against varying backgrounds. A glyph that fills its cell can only ever be a solid block
+      of colour.
+    method: observed
+    probe: glyphs
+    look_at: The centres of the four rings in chat. Each ring is drawn on transparency.
+    outcomes:
+      - id: transparent
+        label: The centres read as background -- the holes are holes
+        verdict: YES
+      - id: filled
+        label: The centres are filled, black or white
+        verdict: 'NO'
+      - id: absent
+        label: Nothing rendered
+        verdict: INCONCLUSIVE
+    depends_on: [item.name.glyph_renders_in_colour]
+    legacy: P5
+
+  - id: item.name.glyph_renders_in_item_name
+    question: Does a glyph render in an ITEM's name and in the actionbar, not only in chat?
+    decides: >-
+      Whether the coloured-glyph route is actually usable for per-stack item state. A glyph
+      that works in chat and not on an item would be a trap: the design reads as proven and
+      fails exactly where it is needed.
+    method: observed
+    probe: glyphs
+    look_at: >-
+      The glyph probe item in your hotbar -- its nameTag carries all four rings -- and the
+      actionbar line the probe prints. Compare both against the chat line.
+    outcomes:
+      - id: all_three
+        label: Chat, item name and actionbar all show the coloured rings
+        verdict: YES
+      - id: chat_only
+        label: Chat shows them; the item name or the actionbar does not
+        verdict: 'NO'
+        means: Note which surface failed -- they are separate renderers and may differ.
+      - id: unreadable
+        label: Could not compare all three
+        verdict: INCONCLUSIVE
+    depends_on: [item.name.glyph_renders_in_colour]
+    legacy: P5
+
+  # --- the creative menu ---------------------------------------------------
+  - id: item.creative.custom_group_is_accepted
+    question: Does a custom `menu_category.group` string get the item definition rejected?
+    decides: >-
+      Whether generated items can be nested under a group name of our choosing at all. A
+      rejected definition is invisible in exactly the same way a successfully hidden one is,
+      so this has to be settled before any visibility reading means anything.
+    method: automated
+    probe: menu
+    legacy: P7
+    notes: >-
+      Separating existence from visibility is the whole point of running this headless first.
+      Reading a rejection as successful hiding would be an expensive mistake to build on.
+
+  - id: item.creative.hidden_by_omitting_category
+    question: Does omitting `menu_category` entirely hide an item from the creative menu?
+    decides: >-
+      Whether generated intermediates can be kept out of the picker. The husk-item problem --
+      a creative menu full of items that crash to empty -- is downstream of this.
+    method: observed
+    probe: menu
+    look_at: >-
+      The creative menu. Six probe items are generated, each labelled in-game with which
+      variant it is, so the picker screenshot is self-describing. Search for "P7".
+    outcomes:
+      - id: hidden
+        label: The omitted-category item does not appear
+        verdict: YES
+      - id: visible
+        label: It appears anyway, in some default category
+        verdict: 'NO'
+      - id: unreadable
+        label: Could not find the labelled items at all
+        verdict: INCONCLUSIVE
+        means: >-
+          Check the automated existence row first. If the items do not exist, this reading is
+          about a rejection rather than about hiding.
+    depends_on: [item.creative.custom_group_is_accepted]
+    legacy: P7
+
+  - id: item.creative.hidden_by_category_none
+    question: 'Does an explicit `category: none` hide an item from the creative menu?'
+    decides: Same as above, and the two spellings may not behave the same way.
+    method: observed
+    probe: menu
+    look_at: The creative menu, searching for "P7 category none".
+    outcomes:
+      - id: hidden
+        label: It does not appear
+        verdict: YES
+      - id: visible
+        label: It appears
+        verdict: 'NO'
+      - id: unreadable
+        label: Could not find the labelled items
+        verdict: INCONCLUSIVE
+    depends_on: [item.creative.custom_group_is_accepted]
+    legacy: P7
+
+  - id: item.creative.custom_group_nests_items
+    question: Does a shared custom `group` collapse several items into one expandable pile?
+    decides: >-
+      Whether a large generated item table can be made tolerable in the picker, the way wool
+      is. Without it, 48 generated variants are 48 separate cells.
+    method: observed
+    probe: menu
+    look_at: The three items labelled "P7 grouped A/B/C", which share one group string.
+    outcomes:
+      - id: nested
+        label: They collapse into one cell that expands
+        verdict: YES
+      - id: flat
+        label: They sit as three separate cells
+        verdict: 'NO'
+      - id: unreadable
+        label: Could not find them
+        verdict: INCONCLUSIVE
+    depends_on: [item.creative.custom_group_is_accepted]
+    legacy: P7
+
+  - id: item.creative.order_follows_emission
+    question: Does the creative menu order items by the order their files are emitted?
+    decides: >-
+      Whether a generator's emission order is a usable sort key. A build system that sorts its
+      output for the picker's benefit and is wrong about the mechanism is doing work that has
+      no effect, which is worse than not sorting.
+    method: observed
+    probe: menu
+    look_at: >-
+      The order the six P7 items appear in. They are emitted in the order listed in the probe
+      config -- omitted, none, items, grouped A, B, C.
+    outcomes:
+      - id: emission_order
+        label: They appear in emission order
+        verdict: YES
+      - id: some_other_order
+        label: Some other order -- alphabetical, or by id. Note what you see
+        verdict: 'NO'
+      - id: unreadable
+        label: Could not see enough of them to tell
+        verdict: INCONCLUSIVE
+    depends_on: [item.creative.custom_group_is_accepted]
+    legacy: P7
+
+  # --- stack state ---------------------------------------------------------
+  - id: item.dynamic_properties.survive_get_set_round_trip
+    question: >-
+      Do an ItemStack's dynamic properties survive being read out of a container and written
+      back?
+    decides: >-
+      Whether stack state can be mutated in place. If yes, a state toggle is "read, flip a
+      bit, write back" and never an item-type swap -- which is the mechanism by which the mod
+      this pattern was modelled on loses data on every toggle.
+    method: automated
+    probe: dynprops
+    legacy: P8
+
+  - id: item.dynamic_properties.survive_drop_and_pickup
+    question: Do dynamic properties survive the stack being dropped and picked up again?
+    decides: >-
+      Whether stack state is safe against ordinary play. A property that survives a script
+      round trip but not the floor is a property that vanishes the first time someone dies.
+    method: observed
+    probe: dynprops
+    look_at: >-
+      The probe drops a stamped item at your feet. Pick it up, then run
+      `/scriptevent bedshock:probe dynprops.token`. The readout says whether the token came
+      back off the picked-up copy.
+    outcomes:
+      - id: survived
+        label: The readout says the token came back
+        verdict: YES
+      - id: lost
+        label: The readout says the token is gone
+        verdict: 'NO'
+      - id: no_item
+        label: The follow-up says it could not find the item
+        verdict: INCONCLUSIVE
+        means: You are holding the wrong stack, or it never dropped. Re-run the probe.
+    depends_on: [item.dynamic_properties.survive_get_set_round_trip]
+    legacy: P8
+
+  - id: item.dynamic_properties.survive_world_reload
+    question: Do dynamic properties on an ItemStack survive a full quit to title and reload?
+    decides: >-
+      Whether stack state is durable at all, or only within a session. This is the leg that
+      decides whether dynamic properties can be the source of truth for anything, or whether
+      they are a cache that needs rebuilding from something else on every load.
+    method: observed
+    probe: dynprops
+    look_at: >-
+      Run `/scriptevent bedshock:probe dynprops.stamp`, then QUIT TO TITLE and reload the
+      world, then run `/scriptevent bedshock:probe dynprops.token`. The probe stamps a
+      per-load session token, so the readout can tell you outright whether a reload actually
+      happened between the two halves -- a run made in one sitting reports itself as such
+      rather than being mistaken for the real measurement.
+    outcomes:
+      - id: survived
+        label: The property came back, and the readout confirms a reload happened
+        verdict: YES
+      - id: lost
+        label: The property is gone after the reload
+        verdict: 'NO'
+      - id: no_reload
+        label: The readout says no reload happened between the two halves
+        verdict: INCONCLUSIVE
+        means: >-
+          The protocol was not followed, so this measures nothing. Quit to title -- leaving
+          the world to the main menu is not always enough.
+    depends_on: [item.dynamic_properties.survive_get_set_round_trip]
+    legacy: P8
+
+  - id: item.dynamic_properties.require_unstackable_items
+    question: 'Do dynamic properties require an item with `max_stack_size: 1`?'
+    decides: >-
+      A real inventory cost, paid deliberately by every item that carries state. Worth knowing
+      before designing something that wanted to be stackable.
+    method: derived
+    established_by: >-
+      Per-stack state cannot survive stacks merging, and Bedrock's API reflects that. Already
+      relied on in generated item definitions.
