@@ -40,18 +40,40 @@ export interface Citation {
   id: string;
   file: string;
   line: number;
+  /** `@requires-not`: the code rests on this capability being ABSENT. */
+  negated?: boolean;
 }
 
 /**
- * `@requires bedshock:<id>` anywhere in a file — comment syntax is deliberately not enforced,
- * so this works in TypeScript, JSON5, YAML, Markdown and shell alike.
+ * Two forms, and the difference is which answer the code is resting on.
+ *
+ * `@requires bedshock:<id>`      this breaks if the capability is absent.
+ * `@requires-not bedshock:<id>`  this EXISTS because the capability is absent — a workaround,
+ *                                a baked asset table, a refusal list. It does not break if the
+ *                                capability appears; it becomes unnecessary.
+ *
+ * The second form is not symmetry for its own sake. Half the design decisions downstream of a
+ * capability battery are made from NEGATIVES: hundreds of sprites get baked because a render
+ * controller cannot read the item it draws, and a codec refuses shulker boxes because nothing
+ * can carry one opaquely. Those are load-bearing citations too, and citing them with `@requires`
+ * would fail the build for the wrong reason — the row is measured, it is just measured NO.
+ *
+ * It also gives the version axis somewhere to pay off. A `@requires-not` is a tripwire: the day
+ * a sweep on a newer Bedrock turns that row positive, the build says which workaround can now
+ * go. That is the "prove if and when things become possible" case, and it fires by itself
+ * rather than waiting for somebody to re-read a document.
+ *
+ * Comment syntax is deliberately not enforced, so both work in TypeScript, JSON5, YAML,
+ * Markdown and shell alike.
  */
-const CITATION = /@requires\s+bedshock:([a-z][a-z0-9_]*(?:\.[a-z0-9_]+)+)/g;
+const CITATION = /@requires(-not)?\s+bedshock:([a-z][a-z0-9_]*(?:\.[a-z0-9_]+)+)/g;
 
 export function citationsIn(source: string, file: string): Citation[] {
   const out: Citation[] = [];
   source.split('\n').forEach((line, i) => {
-    for (const m of line.matchAll(CITATION)) out.push({ id: m[1]!, file, line: i + 1 });
+    for (const m of line.matchAll(CITATION)) {
+      out.push({ id: m[2]!, file, line: i + 1, ...(m[1] ? { negated: true } : {}) });
+    }
   });
   return out;
 }
@@ -111,6 +133,26 @@ export function checkCitations(
     if (cap.method === 'derived') continue;
 
     const status = resolveWithDeps(cap, version, observations, catalog);
+
+    // A workaround for an absent capability. Measured-NO is what it wants; measured-YES means
+    // it is now unnecessary, which is good news rather than a broken build.
+    if (citation.negated) {
+      if (status.status === 'CLOSED-NEGATIVE') continue;
+      problems.push({
+        citation,
+        severity: status.status === 'SETTLED' ? 'warning' : 'error',
+        message:
+          status.status === 'SETTLED'
+            ? `this works around a capability that is now SETTLED on ${status.measuredAt}. ` +
+              `Nothing is broken — the workaround has become unnecessary, and that is the whole ` +
+              `reason to keep asking a question after its answer was no.`
+            : status.status === 'OPEN'
+              ? `works around a capability nobody has measured at or below ${version}. An absence ` +
+                `nobody confirmed is as much a guess as a presence nobody confirmed.`
+              : `${status.status} on ${version}${status.conflict ? ` — ${status.conflict}` : ''}`,
+      });
+      continue;
+    }
 
     switch (status.status) {
       case 'SETTLED':
@@ -186,7 +228,7 @@ export function formatCheckResult(result: CheckResult, version: string): string 
   for (const p of result.problems) {
     const tag = p.severity === 'error' ? 'FAIL' : 'warn';
     lines.push(`${tag} ${p.citation.file}:${p.citation.line}`);
-    lines.push(`     @requires bedshock:${p.citation.id}`);
+    lines.push(`     @requires${p.citation.negated ? '-not' : ''} bedshock:${p.citation.id}`);
     lines.push(`     ${p.message}`);
     lines.push('');
   }

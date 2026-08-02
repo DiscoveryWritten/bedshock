@@ -140,6 +140,26 @@ about a pack declaring it runs on 1.21.120 — the newer engine is exactly where
 not used to work starts working. A pack that wants a capability its floor cannot prove has to
 raise the floor or carry a fallback.
 
+### Citing a negative
+
+Half the decisions downstream of a capability battery are made from *absences*. Hundreds of
+sprites get baked because a render controller cannot read the item it draws; a codec refuses
+shulker boxes because nothing can carry one opaquely. Those rest on a capability too — on it
+being measured **no** — so they get their own form:
+
+```ts
+/** @requires-not bedshock:render.attachable.reads_held_item_durability */
+const BAKED_SPRITES = everyCombination();
+```
+
+That passes while the row is `CLOSED-NEGATIVE`, fails while it is unmeasured — an absence
+nobody confirmed is as much a guess as a presence nobody confirmed — and **warns the day the
+row turns positive**, naming the workaround that has become unnecessary.
+
+Which is the version axis paying off. A question stays in the catalog after its answer is no;
+`--open` re-asks it on each new Bedrock; and when one finally comes back yes, the build tells
+you what you can now delete. Nobody has to remember to go and re-read a document.
+
 There is a programmatic form too, for a build that prefers a list to comments:
 
 ```ts

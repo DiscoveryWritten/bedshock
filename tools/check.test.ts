@@ -147,3 +147,58 @@ test('a row resting on an open dependency warns rather than passing silently', (
   assert.equal(result.problems[0]!.severity, 'warning');
   assert.match(result.problems[0]!.message, /rests on/);
 });
+
+// ---------------------------------------------------------------------------
+// @requires-not — code that exists BECAUSE a capability is absent
+// ---------------------------------------------------------------------------
+
+const citeNot = (id: string) => [{ id, file: 'tools/gen.ts', line: 40, negated: true }];
+
+test('a workaround for a measured-NO capability passes', () => {
+  const result = checkCitations(
+    citeNot('item.max_durability.int16_ceiling'),
+    catalog,
+    [obs({ verdict: 'NO' })],
+    '1.21.120',
+  );
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.problems, []);
+});
+
+/**
+ * The tripwire, and the reason a question stays in the catalog after its answer is no. Nothing
+ * is broken when a capability appears — the workaround has simply become unnecessary, and the
+ * build is where that news should arrive rather than in somebody re-reading a document.
+ */
+test('a workaround for a capability that has since become available warns, and does not fail', () => {
+  const result = checkCitations(
+    citeNot('item.max_durability.int16_ceiling'),
+    catalog,
+    [obs({ verdict: 'YES' })],
+    '1.21.120',
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.problems[0]!.severity, 'warning');
+  assert.match(result.problems[0]!.message, /has become unnecessary/);
+});
+
+/** An absence nobody confirmed is as much a guess as a presence nobody confirmed. */
+test('a workaround for an unmeasured capability fails the build', () => {
+  const result = checkCitations(citeNot('item.max_durability.int16_ceiling'), catalog, [], '1.21.120');
+  assert.equal(result.ok, false);
+  assert.match(result.problems[0]!.message, /nobody has measured/);
+});
+
+test('both citation forms are recognised, and told apart', () => {
+  const found = citationsIn(
+    [
+      '/** @requires bedshock:item.max_durability.int16_ceiling */',
+      '/** @requires-not bedshock:render.attachable.reads_held_item_durability */',
+    ].join('\n'),
+    'x.ts',
+  );
+  assert.equal(found.length, 2);
+  assert.equal(found[0]!.negated, undefined);
+  assert.equal(found[1]!.negated, true);
+  assert.equal(found[1]!.id, 'render.attachable.reads_held_item_durability');
+});
