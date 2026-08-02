@@ -103,6 +103,42 @@ capabilities:
     depends_on: [entity.container.storage_via_inventory_component]
     legacy: P11
 
+  - id: entity.container.reachable_slots_match_declared_size
+    question: >-
+      Can a player reach every slot the container declares, or only some of them?
+    decides: >-
+      How much of a declared inventory is actually usable, which is the number a design has to be
+      built on rather than `inventory_size`. Storage the player cannot reach is storage a pack can
+      write into and nobody can ever get back out -- a silent one-way hole, and the worst version
+      of this failure because both the API and the screen look fine.
+    method: automated
+    surface: engine
+    probe: container
+    depends_on: [entity.container.api_honours_declared_inventory_size]
+    notes: >-
+      THE PLAYER IS THE HANDS, NOT THE INSTRUMENT, and that is why this is `automated` rather
+      than `observed` despite needing somebody present. Script fills every declared slot with a
+      marker, a person opens each container and empties it, and script reads back WHICH slots
+      went empty. Nobody counts cells; nobody types a number; the verdict is computed from
+      container state.
+
+      That distinction is worth more than this row. An eyes-only question costs a person their
+      judgement and returns one number they may have miscounted -- an informal session reported
+      `horse1` drawing nothing and `horse5` drawing "about three (?)", and the question mark is
+      the problem. A hands-only question costs a person a gesture and returns an exact set.
+      Anything answerable this way should be.
+
+      NOT THE SAME QUESTION AS `screen_draws_declared_slot_count`, which stays. That one asks how
+      many cells are DRAWN; this asks how many can be REACHED. A slot that is drawn but inert
+      would make them differ, and that difference is a finding rather than a contradiction.
+
+      THE MEASUREMENT CARRIES A RULE FIT. Candidate rules -- reachable equals declared, declared
+      floored to a multiple of three, declared minus two, a fixed vanilla ceiling -- are checked
+      against every variant and the ones still standing are named. They are rules CONSISTENT WITH
+      the readings, never rules proven: with few sizes several survive, and the evidence says how
+      many did rather than picking one. The sizes in `content/pack.yaml` are chosen to be where
+      those candidates disagree.
+
   - id: entity.container.screen_draws_declared_slot_count
     question: Does the container screen draw as many slots as `inventory_size` declares?
     decides: >-

@@ -78,6 +78,62 @@ test('the container variants form a single-variable comparison', () => {
 });
 
 /**
+ * THE CONTAINER SIZES EXIST TO TELL RULES APART, not to sample evenly.
+ *
+ * An informal session reported `horse1` drawing nothing and `horse5` drawing "about three (?)".
+ * At least two rules fit both of those — `declared - 2` and `declared floored to a multiple of
+ * 3` — and they agree at 1 and 5, which is exactly the pair that happened to get tried. They
+ * disagree at 3, 4 and 6.
+ *
+ * So a variant list without one of those sizes cannot separate the candidates however many
+ * containers a person empties by hand, and the whole discovery pass becomes busywork that
+ * confirms what was already ambiguous.
+ */
+test('the container sizes include one where the candidate slot-count rules disagree', () => {
+  const horses = config.probes.containers.filter((v) => v.container_type === 'horse').map((v) => v.size);
+  assert.ok(horses.some((n) => [3, 4, 6].includes(n)), `horse sizes ${horses.join(', ')} cannot separate the rules`);
+
+  // And the two rules really do agree on the sizes that were tried informally, which is why
+  // this test exists rather than a comment.
+  const minusTwo = (d: number) => Math.max(0, d - 2);
+  const flooredToThree = (d: number) => Math.floor(d / 3) * 3;
+  for (const agreed of [1, 5]) assert.equal(minusTwo(agreed), flooredToThree(agreed));
+  for (const differs of [3, 4, 6]) assert.notEqual(minusTwo(differs), flooredToThree(differs));
+
+  const blind: PackConfig = {
+    ...config,
+    probes: {
+      ...config.probes,
+      containers: [
+        { id: 'chest5', container_type: 'chest', size: 5 },
+        { id: 'horse5', container_type: 'horse', size: 5 },
+        { id: 'horse1', container_type: 'horse', size: 1 },
+      ],
+    },
+  };
+  assert.match(validatePackConfig(blind).join('\n'), /candidate slot-count rules disagree/);
+});
+
+/**
+ * The discovery pass has two halves and the second one has to be reachable.
+ *
+ * Filling every slot with a marker is useless if nothing reads them back, and the read-back is a
+ * separate scriptevent because a person has to empty the containers in between. A registry that
+ * lost the follow-up would leave the probe setting up an experiment nobody can conclude.
+ */
+test('the container discovery pass can actually be read back', () => {
+  const main = readFileSync(join(ROOT, 'pack', 'scripts', 'main.ts'), 'utf8');
+  assert.match(main, /'container\.read'/, 'the read-back follow-up is not registered');
+  const source = readFileSync(join(ROOT, 'pack', 'scripts', 'probes', 'container.ts'), 'utf8');
+  assert.match(source, /export function read/);
+  // The person is the hands, not the instrument: the verdict must come from container state,
+  // never from a `look` asking them for a number.
+  assert.match(source, /reachable_slots_match_declared_size/);
+  const readBody = source.slice(source.indexOf('export function read'));
+  assert.ok(!/\blook\(/.test(readBody), 'the discovery read-back asks a person to report something');
+});
+
+/**
  * THE OFF-HAND FILE NEEDS A CONTROL, and it is the row that is supposed to PASS.
  *
  * Every other row here is expected to be NO — that is the whole finding, and it is what a mod

@@ -68,6 +68,7 @@ const PROBES: Record<string, Probe> = {
 const FOLLOW_UPS: Record<string, (ctx: Ctx, player: Player) => void> = {
   'dynprops.stamp': dynprops.stamp,
   'dynprops.token': dynprops.token,
+  'container.read': (ctx) => container.read(ctx),
   'container.clear': (ctx) => container.clear(ctx),
 };
 
