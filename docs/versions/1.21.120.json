@@ -3,7 +3,7 @@
   "minecraft": "1.21.120",
   "catalog_revision": "rc3c24c08",
   "release": "mc-1.21.120-rc3c24c08",
-  "generated_at": "2026-08-02T06:31:38.276Z",
+  "measured_through": "2026-08-02T05:01:00Z",
   "counts": {
     "SETTLED": 22,
     "CLOSED-NEGATIVE": 4,

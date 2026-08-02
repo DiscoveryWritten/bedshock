@@ -43,12 +43,21 @@ jobs:
       # The generated documents must match the ledger they were generated from. A stale
       # CAPABILITIES.md is exactly the failure mode this repository replaced, so it is a hard
       # error rather than a nag.
-      - name: The generated documents are up to date
+      #
+      # It is also a reproducibility check, and that is not a side effect. A manifest tagged
+      # `mc-<version>-<revision>` promises to be byte-identical forever; the first version of
+      # `manifest.ts` carried a wall-clock `generated_at`, which broke that promise AND made this
+      # step fail on every run for a reason nobody could act on. Generating twice and demanding
+      # both match the tree is the cheapest way to keep that honest.
+      - name: The generated documents are up to date, and reproducible
         run: |
           npm run report
+          npm run report
           if ! git diff --quiet -- docs/; then
-            echo "docs/ is out of date with the ledger. Run \`npm run report\` and commit."
-            git diff --stat -- docs/
+            echo "docs/ is out of date with the ledger, or generating it twice produced two answers."
+            echo "Run \`npm run report\` and commit — and if the diff is a timestamp, that is a bug:"
+            echo "a released manifest has to be a pure function of its inputs."
+            git diff -- docs/ | head -40
             exit 1
           fi
 

@@ -26,7 +26,7 @@ import { join } from 'node:path';
 
 import type { Capability, Observation, Status } from './types.ts';
 import type { Catalog } from './catalog.ts';
-import { resolveWithDeps, versionsInLedger } from './ledger.ts';
+import { compareVersions, resolveWithDeps, versionsInLedger } from './ledger.ts';
 import { CATALOG_DIR } from './paths.ts';
 
 export interface ManifestRow {
@@ -65,7 +65,20 @@ export interface Manifest {
   catalog_revision: string;
   /** `mc-<minecraft>-<catalog_revision>` — the immutable release tag for this manifest. */
   release: string;
-  generated_at: string;
+  /**
+   * The timestamp of the newest observation this manifest is built from.
+   *
+   * DELIBERATELY NOT A GENERATION TIME. A wall-clock field would make the same inputs produce
+   * different bytes on every export, which quietly breaks the one promise the tag scheme makes:
+   * `mc-<version>-<revision>` is supposed to be byte-identical forever, so two people exporting
+   * the same manifest can compare them and a consumer can cache one. It also broke the check
+   * that keeps the committed documents honest — `docs/` was "out of date" on every run, for no
+   * reason anybody could act on.
+   *
+   * This says something more useful anyway: how current the ANSWERS are, rather than when
+   * somebody happened to run a generator.
+   */
+  measured_through?: string;
   counts: Record<Status | 'derived', number>;
   /**
    * Rows measured NO. Called out at the top level because it is the list a consumer most wants
@@ -93,12 +106,7 @@ export function catalogRevision(dir = CATALOG_DIR): string {
   return `r${hash.digest('hex').slice(0, 8)}`;
 }
 
-export function buildManifest(
-  catalog: Catalog,
-  observations: Observation[],
-  version: string,
-  now = new Date().toISOString(),
-): Manifest {
+export function buildManifest(catalog: Catalog, observations: Observation[], version: string): Manifest {
   const revision = catalogRevision();
   const counts: Record<string, number> = {
     SETTLED: 0, 'CLOSED-NEGATIVE': 0, OPEN: 0, INCONCLUSIVE: 0, DRIFT: 0, UNDERMINED: 0, derived: 0,
@@ -149,12 +157,19 @@ export function buildManifest(
     };
   });
 
+  // Everything this manifest actually rests on: observations at or below its version, since
+  // those are the only ones `resolve` will ever use.
+  const relevant = observations
+    .filter((o) => compareVersions(o.version, version) <= 0)
+    .map((o) => o.at)
+    .sort();
+
   return {
     schema: 1,
     minecraft: version,
     catalog_revision: revision,
     release: `mc-${version}-${revision}`,
-    generated_at: now,
+    ...(relevant.length ? { measured_through: relevant.at(-1)! } : {}),
     counts: counts as Manifest['counts'],
     watchlist: rows.filter((r) => r.status === 'CLOSED-NEGATIVE').map((r) => r.id),
     capabilities: rows,

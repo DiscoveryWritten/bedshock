@@ -131,7 +131,7 @@ test('at least one probe declares samples it expects the game to mishandle', () 
 // ---------------------------------------------------------------------------
 
 test('the manifest carries both halves of its identity', () => {
-  const m = buildManifest(catalog, ledger, V, '2026-08-02T00:00:00Z');
+  const m = buildManifest(catalog, ledger, V);
   assert.equal(m.minecraft, V);
   assert.match(m.catalog_revision, /^r[0-9a-f]{8}$/);
   assert.equal(m.release, `mc-${V}-${m.catalog_revision}`);
@@ -233,10 +233,42 @@ test('a YES turning into a NO is reported separately, because it means something
 });
 
 test('two identical manifests diff to nothing', () => {
-  const m = buildManifest(catalog, ledger, V, '2026-08-02T00:00:00Z');
+  const m = buildManifest(catalog, ledger, V);
   const d = diffManifests(m, m);
   assert.deepEqual(
     [d.became_possible, d.became_impossible, d.newly_answered, d.no_longer_answered, d.added, d.removed],
     [[], [], [], [], [], []],
   );
+});
+
+/**
+ * The tag scheme promises `mc-<version>-<revision>` is byte-identical forever. That is only true
+ * if a manifest is a pure function of its inputs — and the first version of this file had a
+ * wall-clock `generated_at`, which made every export differ, broke the committed-documents check
+ * for no actionable reason, and would have made two people's "same" release incomparable.
+ */
+test('a manifest is byte-identical across exports', () => {
+  const a = JSON.stringify(buildManifest(catalog, ledger, V));
+  const b = JSON.stringify(buildManifest(catalog, ledger, V));
+  assert.equal(a, b);
+  assert.ok(!a.includes('generated_at'), 'a wall-clock field would break the immutable-tag promise');
+});
+
+test('measured_through is the newest observation the manifest rests on, not the newest anywhere', () => {
+  const later: Observation[] = [
+    ...ledger,
+    {
+      capability: 'item.max_durability.int16_ceiling',
+      version: '1.26.30',
+      platform: 'bds',
+      method: 'automated',
+      verdict: 'YES',
+      run: 'future',
+      at: '2027-06-01T00:00:00Z',
+    },
+  ];
+  // The 1.26.30 observation is newer in time but ABOVE this manifest's version, and evidence
+  // never inherits upward — so it is not part of what this manifest rests on.
+  assert.notEqual(buildManifest(catalog, later, V).measured_through, '2027-06-01T00:00:00Z');
+  assert.equal(buildManifest(catalog, later, '1.26.30').measured_through, '2027-06-01T00:00:00Z');
 });
