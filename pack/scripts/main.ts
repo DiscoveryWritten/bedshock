@@ -27,6 +27,7 @@ import * as dynprops from './probes/dynprops.ts';
 import * as container from './probes/container.ts';
 import * as offhand from './probes/offhand.ts';
 import * as menu from './probes/menu.ts';
+import * as anvilgap from './probes/anvilgap.ts';
 import * as fallcurve from './probes/fallcurve.ts';
 import * as fallingblock from './probes/fallingblock.ts';
 import * as repair from './probes/repair.ts';
@@ -48,6 +49,10 @@ const PROBES: Record<string, Probe> = {
   offhand: offhand.run,
   fallingblock: fallingblock.run,
   fallcurve: fallcurve.run,
+  // Last of the headless probes, and deliberately so: a solve is dozens of trials and takes
+  // minutes where the others take ticks. Everything cheap has already reported by the time this
+  // starts, so a run cut short still carries the rest of the battery.
+  anvilgap: anvilgap.run,
   repair: repair.run,
   ruler: scenes.ruler,
   glyphs: scenes.glyphs,

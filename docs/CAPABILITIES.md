@@ -1212,17 +1212,17 @@ The measurable constants of Bedrock's own behaviour: how fast things fall, how f
 
 ### `physics.falling_block.min_clearance_under_a_falling_anvil`
 
-**How close can a moving block pass beneath a falling anvil without interrupting its fall?**
+**How far above a falling anvil can a block vacate its path and still be clear when the anvil arrives?**
 
-*Decides:* The tightest a pass-under mechanic can be built before it becomes unreliable. This is a technical problem asking to be optimised into a reference implementation, and the number it optimises to is only meaningful if somebody is watching whether it moves.
+*Decides:* The tightest a pass-under mechanic can be built before it becomes unreliable. Something has to move out of the way, moving takes time, and this is how much room that time costs. It is a technical problem asking to be optimised into a reference implementation, and the number it optimises to is only meaningful if somebody is watching whether it moves.
 
 <sub>method: `solved` · surface: `engine` · probe: `anvilgap`</sub>
 
-*Solves for the minimum* in `blocks`, tolerating ±0.07 before a move counts as a finding, searching 0…4.
+*Solves for the maximum* in `blocks`, tolerating ±0.6 before a move counts as a finding, searching 0…8.
 
 **Never measured.** This row is a guess, however confident the prose around it sounds.
 
-> THE FAILURE MODE TO WATCH FOR is a solve that converges on its own search bound. A result sitting exactly at `from` or `to` usually means the trial never actually failed, or never actually passed -- so the probe reports INCONCLUSIVE at a bound rather than recording the bound as an answer. A number that is really the edge of the search is not a measurement of anything.
+> THE FAILURE MODE TO WATCH FOR is a solve that converges on its own search bound. A result sitting exactly at `from` or `to` usually means the trial never actually failed, or never actually passed -- so the probe reports INCONCLUSIVE at a bound rather than recording the bound as an answer. A number that is really the edge of the search is not a measurement of anything. WHAT THIS NUMBER IS PHYSICALLY. It is how far the anvil travels while the plane is empty, which is why the vacate window in `content/pack.yaml` is part of what the row MEANS rather than a tuning detail -- widen the window and the number grows, and readings taken either side of that change are not comparable. It is close kin to the tunnelling threshold: a fast enough mover crosses a whole block between two ticks and is never seen inside it at all.
 
 ### `physics.throw.item_travel_distance`
 

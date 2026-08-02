@@ -488,8 +488,35 @@ export function sessionQuestions(catalog: Catalog): Capability[] {
  * thirty every time. Which rows genuinely need answering is settled when the code is redeemed,
  * against a ledger that may have moved since.
  */
+/**
+ * The search each `solved` row declares, handed to the runtime as data.
+ *
+ * A solve has two halves that live in two files for a reason. The RANGE, the DIRECTION, the UNIT
+ * and the TOLERANCE belong to the question — they say what is being measured and how finely the
+ * answer means anything — so they live in the catalog beside the question. Repeats, timings and
+ * block choices belong to the instrument and live in `content/pack.yaml`.
+ *
+ * Copying either into the other would let a probe search a range the catalog does not describe,
+ * and the ledger would record the number under a row that asked something else. So the runtime
+ * reads the question's half from here rather than restating it.
+ */
+export function solveSpecs(catalog: Catalog): Capability[] {
+  return catalog.capabilities
+    .filter((c) => c.method === 'solved' && c.measures?.search)
+    .sort((a, b) => a.id.localeCompare(b.id));
+}
+
 export function sessionModule(catalog: Catalog, observations: Observation[], version: string): string {
   const questions = sessionQuestions(catalog);
+  const solves = solveSpecs(catalog).map((cap) => ({
+    id: cap.id,
+    probe: cap.probe ?? '',
+    unit: cap.measures!.unit,
+    direction: cap.measures!.direction,
+    from: cap.measures!.search!.from,
+    to: cap.measures!.search!.to,
+    tolerance: cap.measures!.tolerance,
+  }));
   const rows = questions.map((cap, index) => {
     const status = resolveWithDeps(cap, version, observations, catalog).status;
     return {
@@ -527,9 +554,20 @@ export function sessionModule(catalog: Catalog, observations: Observation[], ver
     '  outcomes: SessionOutcome[];',
     '}',
     '',
+    'export interface SolveSpec {',
+    '  id: string;',
+    '  probe: string;',
+    '  unit: string;',
+    "  direction: 'minimum' | 'maximum';",
+    '  from: number;',
+    '  to: number;',
+    '  tolerance: number;',
+    '}',
+    '',
     `export const CATALOG_REVISION = ${JSON.stringify(catalogRevision())};`,
     `export const SNAPSHOT_VERSION = ${JSON.stringify(version)};`,
     `export const QUESTIONS: SessionQuestion[] = ${JSON.stringify(rows, null, 2)};`,
+    `export const SOLVES: SolveSpec[] = ${JSON.stringify(solves, null, 2)};`,
     '',
   ].join('\n');
 }

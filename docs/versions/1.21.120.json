@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "minecraft": "1.21.120",
-  "catalog_revision": "r5befa0be",
-  "release": "mc-1.21.120-r5befa0be",
+  "catalog_revision": "rd912823c",
+  "release": "mc-1.21.120-rd912823c",
   "measured_through": "2026-08-02T05:01:00Z",
   "counts": {
     "SETTLED": 22,
@@ -1371,19 +1371,19 @@
     },
     {
       "id": "physics.falling_block.min_clearance_under_a_falling_anvil",
-      "question": "How close can a moving block pass beneath a falling anvil without interrupting its fall?",
-      "decides": "The tightest a pass-under mechanic can be built before it becomes unreliable. This is a technical problem asking to be optimised into a reference implementation, and the number it optimises to is only meaningful if somebody is watching whether it moves.",
+      "question": "How far above a falling anvil can a block vacate its path and still be clear when the anvil arrives?",
+      "decides": "The tightest a pass-under mechanic can be built before it becomes unreliable. Something has to move out of the way, moving takes time, and this is how much room that time costs. It is a technical problem asking to be optimised into a reference implementation, and the number it optimises to is only meaningful if somebody is watching whether it moves.",
       "method": "solved",
       "surface": "engine",
       "status": "OPEN",
       "inherited": false,
       "measures": {
         "unit": "blocks",
-        "direction": "minimum",
-        "tolerance": 0.07,
+        "direction": "maximum",
+        "tolerance": 0.6,
         "search": {
           "from": 0,
-          "to": 4
+          "to": 8
         }
       }
     },

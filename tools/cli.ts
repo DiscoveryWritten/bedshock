@@ -14,7 +14,7 @@
  */
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { dirname, relative } from 'node:path';
 import process from 'node:process';
 
 import { amend } from './amend.ts';
@@ -28,8 +28,10 @@ import {
 } from './ledger.ts';
 import { writeReports } from './report.ts';
 import { buildManifest, catalogRevision, diffManifests, type Manifest } from './manifest.ts';
+import { ROOT } from './paths.ts';
 import { formatRedeem, redeem } from './redeem.ts';
 import { ALL_ASKS, formatRunResult, run, watchlist, type Ask } from './run.ts';
+import { scaffold } from './scaffold.ts';
 import type { Platform } from './types.ts';
 
 interface Args {
@@ -58,6 +60,12 @@ function parseArgs(argv: string[]): Args {
 
 const str = (v: unknown): string | undefined => (typeof v === 'string' ? v : undefined);
 const list = (v: unknown): string[] => (typeof v === 'string' ? v.split(',').map((s) => s.trim()) : []);
+
+/** Whichever of the two spellings is shorter to read; a wall of `../` helps nobody. */
+function nearestPath(path: string): string {
+  const rel = relative(process.cwd(), path) || '.';
+  return rel.startsWith('..') && rel.length > path.length / 2 ? path : rel;
+}
 
 function fail(message: string): never {
   process.stderr.write(`${message}\n`);
@@ -333,6 +341,33 @@ async function main(): Promise<void> {
     }
 
     // -----------------------------------------------------------------------
+    // The other half of a capability battery: everybody else's questions.
+    case 'init': {
+      const dir = args._[1] ?? str(args.dir) ?? 'capabilities';
+      const result = scaffold({
+        dir,
+        domain: str(args.domain) ?? 'mypack',
+        bedshock: str(args.bedshock) ?? '../vendor/bedshock',
+      });
+      for (const path of result.skipped) process.stderr.write(`kept  ${path} (already there)\n`);
+      for (const path of result.written) process.stdout.write(`wrote ${path}\n`);
+      if (!result.written.length) {
+        process.stdout.write('\nNothing written — everything already exists.\n');
+        break;
+      }
+      process.stdout.write(
+        `\nIt already runs. Point bedshock at it and nothing else changes:\n\n` +
+          `  export BEDSHOCK_CATALOG=${dir}/capabilities\n` +
+          `  export BEDSHOCK_LEDGER=${dir}/observations.jsonl\n` +
+          `  export BEDSHOCK_DOCS=${dir}/report\n` +
+          `  npx tsx ${nearestPath(ROOT)}/tools/cli.ts validate\n\n` +
+          `Then rewrite the example row into a question you actually have, and the trial in\n` +
+          `${dir}/probes/ into one that answers it. See docs/SOLVING.md.\n`,
+      );
+      break;
+    }
+
+    // -----------------------------------------------------------------------
     case 'tidy': {
       const n = tidyLedger();
       process.stdout.write(`${n} observations, sorted. No line altered.\n`);
@@ -364,6 +399,8 @@ async function main(): Promise<void> {
           '  export [--version v] [--out f]    the machine-readable manifest a consumer reads',
           '  diff <a.json> <b.json>            what moved between two manifests',
           '  latest-version                    the newest version in the ledger, bare, for scripts',
+          '  init [dir] [--domain d] [--bedshock ../vendor/bedshock]',
+          '                                    a catalog, probe and ledger of your OWN questions',
           '  tidy                              sort the ledger file (never alters a line)',
           '',
         ].join('\n'),

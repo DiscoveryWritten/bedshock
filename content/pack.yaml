@@ -183,3 +183,57 @@ probes:
     # How far above the sample point to spawn it, and how long to watch.
     drop_height: 12
     watch_ticks: 40
+
+  # --- anvil clearance ------------------------------------------------------
+  #
+  # THE OBSTRUCTION VACATES AND COMES BACK. Three shapes to get here, and the last correction
+  # came from a real server rather than from reading.
+  #
+  # FIRST SHAPE: make a block APPEAR beneath the falling anvil at a chosen clearance. Unrunnable.
+  # The clearance you can ASK for is not the clearance you can HIT -- the anvil only exists at
+  # tick-spaced positions, so below one tick of travel there is no moment at which it is 0.3
+  # blocks above anything. Every fine trial has to abort, INCLUDING the tight bound, and a search
+  # whose tight bound cannot be evaluated has nothing to bisect between.
+  #
+  # SECOND SHAPE: REMOVE a block that was already there, at the chosen clearance. Runnable, and
+  # wrong. Bedrock 1.26.36.1 reported `held even at 0, the tight end of the search` -- the anvil
+  # got through even when the block left at the instant of contact. Obvious in hindsight: removal
+  # keyed to the anvil's own arrival is never late, so the trial was measuring its trigger
+  # condition and would have reported the same thing on every version of the game. A row that
+  # cannot move is not a row worth watching, and it took a run to see it.
+  #
+  # THIRD SHAPE, the one here: remove the block at the chosen clearance and PUT IT BACK a fixed
+  # number of ticks later. The clearance now sets how EARLY the mover leaves, and the question is
+  # whether the plane is still empty when the anvil arrives. Leave late and it slips through;
+  # leave early and the block is back in time to catch it. That is a pass-under's actual timing
+  # budget -- and both ends of the search are now grounded in a measurement rather than in
+  # reasoning. Zero clearance passing is the run quoted above; a clearance past the whole drop
+  # restores the block long before the anvil is near it.
+  anvilgap:
+    block: 'minecraft:anvil'
+    # Not gravity-affected, or the obstruction would fall out of the way on its own and the
+    # probe would measure the wrong block leaving.
+    obstruction: 'minecraft:stone'
+    # Where the obstruction sits, above the sample point.
+    plane_height: 4
+    # How far above the obstruction's top face the anvil starts. The catalog's search range must
+    # extend PAST this, or the tight bound cannot fail by construction -- there is no clearance
+    # wider than the drop. `bedshock test` pins that.
+    drop_height: 6
+    # HOW LONG THE MOVER IS OUT OF THE WAY. The measured clearance is whatever distance the anvil
+    # covers in this window, so this is the knob that decides what the number MEANS: a wider
+    # window measures a longer budget and lands on a larger clearance. Changing it invalidates
+    # every reading taken before, which is why it is here and stated rather than inline.
+    vacate_ticks: 6
+    # Long enough for the whole fall at Bedrock's leisurely gravity curve, which is far slower
+    # than intuition suggests: about 0.33 blocks/tick after ten ticks.
+    watch_ticks: 80
+    # How many times a clearance has to survive to count as surviving. Two, because the question
+    # is whether a pass-under works RELIABLY at that clearance and a single lucky tick alignment
+    # is not a design anyone can build on. Raising it costs run time linearly and buys confidence
+    # against tick phase, which is this apparatus's main source of jitter.
+    repeats: 2
+    # A ceiling, not a schedule. Reached only if trials keep disagreeing with themselves, which
+    # is itself the finding -- and it comes back INCONCLUSIVE rather than as a half-narrowed
+    # bracket dressed up as a number.
+    max_trials: 40

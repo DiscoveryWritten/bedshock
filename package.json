@@ -7,7 +7,9 @@
   "exports": {
     ".": "./tools/api.ts",
     "./ledger": "./tools/ledger.ts",
-    "./catalog": "./tools/catalog.ts"
+    "./catalog": "./tools/catalog.ts",
+    "./harness": "./pack/scripts/harness.ts",
+    "./bisect": "./pack/scripts/bisect.ts"
   },
   "bin": {
     "bedshock": "./tools/cli.ts"
@@ -16,7 +18,9 @@
     "tools/",
     "content/",
     "ledger/",
-    "docs/CAPABILITIES.md"
+    "pack/scripts/",
+    "docs/CAPABILITIES.md",
+    "docs/SOLVING.md"
   ],
   "scripts": {
     "bedshock": "tsx tools/cli.ts",

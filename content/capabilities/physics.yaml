@@ -46,27 +46,53 @@ capabilities:
 
   - id: physics.falling_block.min_clearance_under_a_falling_anvil
     question: >-
-      How close can a moving block pass beneath a falling anvil without interrupting its fall?
+      How far above a falling anvil can a block vacate its path and still be clear when the
+      anvil arrives?
     decides: >-
-      The tightest a pass-under mechanic can be built before it becomes unreliable. This is a
-      technical problem asking to be optimised into a reference implementation, and the number it
-      optimises to is only meaningful if somebody is watching whether it moves.
+      The tightest a pass-under mechanic can be built before it becomes unreliable. Something has
+      to move out of the way, moving takes time, and this is how much room that time costs. It is
+      a technical problem asking to be optimised into a reference implementation, and the number
+      it optimises to is only meaningful if somebody is watching whether it moves.
     method: solved
     surface: engine
     probe: anvilgap
     measures:
       unit: blocks
-      direction: minimum
-      # The probe steps in sixteenths of a block; anything under that is below its own
-      # resolution and cannot be attributed to the game.
-      tolerance: 0.07
-      search: { from: 0, to: 4 }
+      # MAXIMUM, and the direction was inverted by a measurement rather than by reasoning.
+      #
+      # The first runnable apparatus removed the obstruction and left it gone, which made the
+      # search a minimum: how LATE can it leave. Bedrock 1.26.36.1 answered `held even at 0` --
+      # removal keyed to the anvil's own arrival is never late, so every clearance passed. The
+      # probe now puts the block BACK after a fixed window, which makes the clearance mean how
+      # EARLY the mover leaves, and early is the direction that eventually fails.
+      direction: maximum
+      # ONE TICK OF TRAVEL, and this number is the apparatus rather than an ambition.
+      #
+      # The anvil only exists at tick-spaced positions, so the finest clearance the probe can
+      # distinguish is how far it moves in one tick -- about 0.6 blocks by the time it reaches
+      # the plane after a six-block drop. Asking for finer would report DRIFT on tick phase
+      # forever, and a drift report people learn to ignore is worse than no drift report.
+      #
+      # Shorten the drop and this gets finer; lengthen it and it gets coarser. If the drop in
+      # `content/pack.yaml` changes, this has to change with it.
+      tolerance: 0.6
+      # Past the drop height on purpose, and both ends are now grounded in a run rather than in
+      # reasoning. Zero clearance passing is what 1.26.36.1 reported when the block simply left;
+      # a clearance wider than the whole drop puts the block back long before the anvil is near
+      # it, so the tight end must fail by construction. `bedshock test` pins that.
+      search: { from: 0, to: 8 }
     notes: >-
       THE FAILURE MODE TO WATCH FOR is a solve that converges on its own search bound. A result
       sitting exactly at `from` or `to` usually means the trial never actually failed, or never
       actually passed -- so the probe reports INCONCLUSIVE at a bound rather than recording the
       bound as an answer. A number that is really the edge of the search is not a measurement of
       anything.
+
+      WHAT THIS NUMBER IS PHYSICALLY. It is how far the anvil travels while the plane is empty,
+      which is why the vacate window in `content/pack.yaml` is part of what the row MEANS rather
+      than a tuning detail -- widen the window and the number grows, and readings taken either
+      side of that change are not comparable. It is close kin to the tunnelling threshold: a fast
+      enough mover crosses a whole block between two ticks and is never seen inside it at all.
 
   - id: physics.throw.item_travel_distance
     question: How far does a thrown item travel before coming to rest on flat ground?

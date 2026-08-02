@@ -41,6 +41,16 @@ export interface ProbeConfig {
   containers: ContainerVariant[];
   offhand: { arbitrary_item: string; settle_ticks: number };
   falling_block: { block: string; drop_height: number; watch_ticks: number };
+  anvilgap: {
+    block: string;
+    obstruction: string;
+    plane_height: number;
+    drop_height: number;
+    vacate_ticks: number;
+    watch_ticks: number;
+    repeats: number;
+    max_trials: number;
+  };
 }
 
 export interface PackConfig {
@@ -107,6 +117,50 @@ export function validatePackConfig(c: PackConfig): string[] {
         'instant, and reading too early reports a false persistence',
     );
   }
+  // A solve is only as good as the room it has to move in. The anvil has to start clear of the
+  // obstruction, and the obstruction has to be somewhere a trial can put it.
+  const a = p.anvilgap;
+  if (a) {
+    if (a.drop_height < 2) {
+      problems.push('probes.anvilgap.drop_height under 2 leaves the anvil no room to accelerate before the plane');
+    }
+    if (a.plane_height < 1) {
+      problems.push('probes.anvilgap.plane_height must be at least 1, or the obstruction sits in the floor');
+    }
+    // The anvil falls at well under a block a tick for the first second. A window shorter than
+    // the fall settles every trial as "neither outcome observed", which reads as an apparatus
+    // failure on a perfectly good apparatus.
+    if (a.watch_ticks < a.drop_height * 8) {
+      problems.push(
+        `probes.anvilgap.watch_ticks (${a.watch_ticks}) is short for a ${a.drop_height}-block drop — ` +
+          'Bedrock gravity is about 0.33 blocks/tick after ten ticks, so allow at least 8 ticks a block',
+      );
+    }
+    if (a.repeats < 1) problems.push('probes.anvilgap.repeats below 1 means no trial is ever run');
+    // Zero ticks out of the way is no window at all: the block leaves and returns in the same
+    // tick, nothing ever gets through, and every trial reports caught. That reads as a game that
+    // never lets anything pass, which is a statement about the probe.
+    if (a.vacate_ticks < 1) {
+      problems.push('probes.anvilgap.vacate_ticks below 1 leaves no window for anything to pass through');
+    }
+    // And a window longer than the fall means the block is still away when the anvil arrives at
+    // every clearance, so nothing is ever caught and the search has no tight bound.
+    if (a.vacate_ticks >= a.watch_ticks) {
+      problems.push(
+        `probes.anvilgap.vacate_ticks (${a.vacate_ticks}) is not shorter than the whole watch ` +
+          `window, so the obstruction never returns and no trial can fail`,
+      );
+    }
+    // Two bound checks plus the halvings, times the repeats. A ceiling under that turns every
+    // run into "ran out of trials", which reports as INCONCLUSIVE and looks like a broken game.
+    if (a.max_trials < (2 + 6) * Math.max(1, a.repeats)) {
+      problems.push(
+        `probes.anvilgap.max_trials (${a.max_trials}) is below what two bound checks and six ` +
+          `halvings cost at ${a.repeats} repeat(s); the solve would run out before it converged`,
+      );
+    }
+  }
+
   const ids = (p.menu_variants ?? []).map((v) => v.id);
   if (new Set(ids).size !== ids.length) problems.push('probes.menu_variants has a duplicate id');
   const cids = (p.containers ?? []).map((v) => v.id);
