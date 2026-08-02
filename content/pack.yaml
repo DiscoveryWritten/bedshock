@@ -268,6 +268,12 @@ probes:
     # an item bouncing off the floor is briefly slow without being finished.
     rest_speed: 0.003
     rest_ticks: 8
+    # How far it has to have gone before "it has stopped" is even a question. A speed threshold
+    # cannot answer that -- an item is momentarily slow at the top of its arc and permanently slow
+    # if the impulse did nothing, and those are the same reading until you also ask whether it
+    # ever went anywhere. In blocks, deliberately: this is a distance, and comparing it against a
+    # speed is how the two get confused.
+    moved_at_least: 0.05
     watch_ticks: 200
     # Five readings and how far they may scatter. NOT the capability's tolerance: that is how far
     # the ANSWER may move between runs, this is how far one READING may scatter within a run. The

@@ -60,6 +60,10 @@ const DEFAULT_READING_TIMEOUT = 200;
 export function measure(ctx: Ctx, spec: MeasureSpec, take: Reading): void {
   const reported = willReportLater(spec.probe);
   const readings: (number | null)[] = [];
+  // Kept beside the readings so a refusal can carry the apparatus's own account of why. Losing
+  // these cost a real run: five readings failed, the summary said "5 failed", and the five
+  // sentences explaining it went nowhere.
+  const notes: (string | undefined)[] = [];
   let finished = false;
 
   const emit = (summary: Summary, note?: string): void => {
@@ -102,7 +106,7 @@ export function measure(ctx: Ctx, spec: MeasureSpec, take: Reading): void {
 
   const next = (index: number): void => {
     if (index >= spec.samples) {
-      emit(summarise(readings, spec));
+      emit(summarise(readings, spec, notes));
       return;
     }
 
@@ -132,6 +136,7 @@ export function measure(ctx: Ctx, spec: MeasureSpec, take: Reading): void {
       system.clearRun(watchdog);
 
       readings.push(value === null || !Number.isFinite(value as number) ? null : value);
+      notes.push(note);
       if (note) ctx.say(`§8  reading ${index + 1}: ${value === null ? 'failed' : value} — ${note}§r`);
 
       const cooldown = spec.cooldown ?? DEFAULT_COOLDOWN;

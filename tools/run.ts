@@ -283,7 +283,12 @@ export function formatRunResult(result: RunResult, dryRun = false): string {
   lines.push('');
 
   for (const o of result.observations) {
-    lines.push(`  ${o.verdict.padEnd(13)} ${o.capability}`);
+    // The VALUE, not just the evidence. A solved row's whole point is the number, and printing
+    // only the prose around it cost a run: `median of 5 reading(s), scattering 0` reads as a
+    // clean measurement whether the item travelled six blocks or never left the origin, and
+    // there was no way to tell which from the summary.
+    const value = typeof o.value === 'number' ? `  = ${o.value}` : '';
+    lines.push(`  ${o.verdict.padEnd(13)} ${o.capability}${value}`);
     if (o.evidence) lines.push(`                ${o.evidence}`);
   }
   if (result.observations.length === 0) lines.push('  (no automated results)');

@@ -59,6 +59,7 @@ export interface ProbeConfig {
     impulse_forward: number;
     impulse_up: number;
     rest_speed: number;
+    moved_at_least: number;
     rest_ticks: number;
     watch_ticks: number;
     samples: number;
@@ -209,6 +210,11 @@ export function validatePackConfig(c: PackConfig): string[] {
       problems.push(`probes.${name}.watch_ticks leaves no room to move before the rest test could pass`);
     }
     if (m.run_length < 4) problems.push(`probes.${name}.run_length under 4 blocks is a wall, not an arena`);
+    // The movement threshold has to be reachable inside the arena, or nothing ever counts as
+    // having moved and every reading reports the subject stuck at the origin.
+    if ('moved_at_least' in m && m.moved_at_least >= m.run_length) {
+      problems.push(`probes.${name}.moved_at_least is further than the arena is long`);
+    }
     if (m.headroom < 2) problems.push(`probes.${name}.headroom under 2 clips anything that leaves the ground`);
   }
   // Dividing by the unit count is what makes the answer per-unit, so zero is a division by zero

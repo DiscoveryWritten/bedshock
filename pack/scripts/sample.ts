@@ -64,7 +64,19 @@ export interface Summary {
   why: string;
 }
 
-export function summarise(readings: readonly (number | null)[], spec: SampleSpec): Summary {
+/**
+ * `notes` are the apparatus's own account of each reading, positionally aligned with `readings`.
+ *
+ * They exist because of a real run. Five readings failed, the summary said `5 reading(s) failed
+ * outright`, and that was the whole diagnosis available from the log — the probe had said WHY
+ * five times and every one of those sentences was thrown away here. A refusal that does not carry
+ * its reason costs a run to re-learn something the apparatus already knew.
+ */
+export function summarise(
+  readings: readonly (number | null)[],
+  spec: SampleSpec,
+  notes: readonly (string | undefined)[] = [],
+): Summary {
   const attempted = readings.length;
   const failed = readings.filter((r) => r === null || !Number.isFinite(r)).length;
 
@@ -88,9 +100,15 @@ export function summarise(readings: readonly (number | null)[], spec: SampleSpec
         ? `${rejected} landed outside the plausible range of ${spec.range.from}..${spec.range.to}`
         : '',
     ].filter(Boolean);
+    // The distinct reasons, not all of them: five identical failures are one fact, and a wall of
+    // repeated text is how a diagnosis gets skimmed past.
+    const reasons = [...new Set(
+      readings.map((r, i) => (r === null || !Number.isFinite(r as number) ? notes[i] : undefined)).filter(Boolean),
+    )].slice(0, 3);
     return no(
       `only ${kept.length} of ${attempted} reading(s) survived${bits.length ? ` — ${bits.join(', ')}` : ''}. ` +
-        `A number from a rig that mostly does not work is a number about the rig.`,
+        `A number from a rig that mostly does not work is a number about the rig.` +
+        (reasons.length ? ` The apparatus said: ${reasons.join('; ')}` : ''),
     );
   }
 

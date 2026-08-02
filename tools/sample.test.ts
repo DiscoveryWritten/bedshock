@@ -69,6 +69,40 @@ test('a rig that mostly failed does not get to speak for the readings that worke
   assert.match(s.why, /3 reading\(s\) failed/);
 });
 
+/**
+ * The refusal has to carry the diagnosis, and this is why.
+ *
+ * A real run lost all five knockback readings. The summary said `5 reading(s) failed outright`
+ * and that was the entire diagnosis available from the log — the probe had explained itself five
+ * times and every one of those sentences was discarded here. Re-learning something the apparatus
+ * already knew cost a whole server run.
+ */
+test('a refusal carries what the apparatus said, deduplicated', () => {
+  const s = summarise(
+    [null, null, null, null, null],
+    { samples: 5, spread: 0.2 },
+    ['it never moved', 'it never moved', 'it never moved', 'the arena had no floor', 'it never moved'],
+  );
+  assert.equal(s.verdict, 'INCONCLUSIVE');
+  assert.match(s.why, /The apparatus said:/);
+  assert.match(s.why, /it never moved/);
+  assert.match(s.why, /the arena had no floor/);
+  // Five identical failures are one fact. A wall of repeated text is how a diagnosis gets skimmed.
+  assert.equal(s.why.match(/it never moved/g)!.length, 1);
+});
+
+test('only the failed readings explain themselves, not the ones that worked', () => {
+  const s = summarise([4, null, null, null, 4.1], { samples: 5, spread: 0.5 }, ['fine', 'broke', 'broke', 'broke', 'fine']);
+  assert.match(s.why, /broke/);
+  assert.ok(!s.why.includes('fine'), 'a successful reading has nothing to explain');
+});
+
+test('notes are optional, and a summary without them still reads', () => {
+  const s = summarise([null, null, null, 4, 4], { samples: 5, spread: 0.5 });
+  assert.equal(s.verdict, 'INCONCLUSIVE');
+  assert.ok(!s.why.includes('The apparatus said'));
+});
+
 test('exactly half surviving is not a majority', () => {
   const four: SampleSpec = { ...SPEC, samples: 4 };
   assert.equal(summarise([null, null, 4, 4], four).verdict, 'INCONCLUSIVE');

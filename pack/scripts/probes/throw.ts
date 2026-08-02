@@ -94,6 +94,20 @@ export function run(ctx: Ctx): void {
       }
 
       furthest = Math.max(furthest, box.distanceFrom(here));
+
+      // AN ITEM THAT NEVER MOVED IS NOT A THROW OF ZERO. Zero is inside the plausible range, so
+      // an item stuck against a wall -- or one whose impulse never took -- would be recorded five
+      // times over as a confident distance of nothing, with perfect agreement between the
+      // readings to make it look solid. The rest test cannot fire until it has actually gone
+      // somewhere, which is the same correction the knockback probe needed.
+      if (furthest < p.moved_at_least) {
+        if (ticks < p.watch_ticks) return;
+        system.clearRun(handle);
+        box.sweep('minecraft:item');
+        record(null, `the item never left the origin over ${ticks} tick(s) — the impulse did nothing`);
+        return;
+      }
+
       const speed = Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
       still = speed < p.rest_speed ? still + 1 : 0;
 

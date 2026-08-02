@@ -95,6 +95,7 @@ function ask(ctx: Ctx, capability: string, box: Arena, summon: () => Entity): vo
     let ticks = 0;
     let still = 0;
     let last = from;
+    let furthest = 0;
 
     const handle = system.runInterval(() => {
       ticks++;
@@ -116,19 +117,34 @@ function ask(ctx: Ctx, capability: string, box: Arena, summon: () => Entity): vo
 
       const step = Math.hypot(here.x - last.x, here.z - last.z);
       last = here;
+      furthest = Math.max(furthest, Math.hypot(here.x - from.x, here.z - from.z));
+
+      // REST ONLY COUNTS ONCE IT HAS MOVED, and this is the fix for a real run rather than a
+      // precaution. Bedrock 1.26.36.1 lost all five readings here: the countdown began at tick
+      // one, when the subject had of course not gone anywhere yet, and eight ticks later the
+      // probe concluded it was at rest at the origin. A knockback applied in the tick a thing
+      // spawned does not move it in that same tick -- so "has not moved yet" and "has stopped
+      // moving" were the same state, and the apparatus could not tell a settled entity from an
+      // immovable one.
+      if (furthest < p.rest_step) {
+        if (ticks < p.watch_ticks) return;
+        system.clearRun(handle);
+        if (subject.typeId === p.subject) subject.remove();
+        // Now this reading means something: it really never moved, over the whole window.
+        record(
+          null,
+          `the subject never moved at all under ${p.units} unit(s) of knockback, over ${ticks} tick(s) ` +
+            `— it may be immovable, in which case this row needs a different subject`,
+        );
+        return;
+      }
+
       still = step < p.rest_step ? still + 1 : 0;
 
       if (still >= p.rest_ticks) {
         system.clearRun(handle);
         const moved = Math.hypot(here.x - from.x, here.z - from.z);
         if (subject.typeId === p.subject) subject.remove();
-        // Nothing moving at all is not a distance of zero, it is a subject that cannot be
-        // knocked back — an immovable entity, a player in a gamemode that ignores it, a bad
-        // argument. Recording 0 would put a confident constant in the ledger.
-        if (moved < p.rest_step) {
-          record(null, `the subject did not move at all under ${p.units} unit(s) of knockback`);
-          return;
-        }
         record(moved / p.units, `${round(moved)} blocks from ${p.units} unit(s), over ${ticks} tick(s)`);
         return;
       }
@@ -136,7 +152,7 @@ function ask(ctx: Ctx, capability: string, box: Arena, summon: () => Entity): vo
       if (ticks < p.watch_ticks) return;
       system.clearRun(handle);
       if (subject.typeId === p.subject) subject.remove();
-      record(null, `still moving after ${ticks} tick(s)`);
+      record(null, `still moving after ${ticks} tick(s), ${round(furthest)} blocks out`);
     }, 1);
   };
 

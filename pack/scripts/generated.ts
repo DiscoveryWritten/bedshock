@@ -233,6 +233,7 @@ export const PARAMS = {
     "impulse_up": 0.25,
     "rest_speed": 0.003,
     "rest_ticks": 8,
+    "moved_at_least": 0.05,
     "watch_ticks": 200,
     "samples": 5,
     "spread": 0.5
