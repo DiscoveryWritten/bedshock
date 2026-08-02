@@ -21,7 +21,7 @@
 import { system, world, type Player } from '@minecraft/server';
 
 import { NAMESPACE, PACK_VERSION } from './generated.ts';
-import { begin, claimTickingArea, done, firstLine, makeCtx, type Ctx } from './emit.ts';
+import { begin, claimTickingArea, done, firstLine, makeCtx, whenChunkIsLive, type Ctx } from './emit.ts';
 import * as durability from './probes/durability.ts';
 import * as dynprops from './probes/dynprops.ts';
 import * as container from './probes/container.ts';
@@ -59,20 +59,23 @@ const FOLLOW_UPS: Record<string, (ctx: Ctx, player: Player) => void> = {
   'container.clear': (ctx) => container.clear(ctx),
 };
 
+/** Run one probe, surviving whatever it throws. */
+function runOne(ctx: Ctx, name: string, probe: Probe): void {
+  try {
+    probe(ctx);
+  } catch (err) {
+    // One probe throwing must not take the battery with it. A run that dies halfway reports
+    // nothing about the rows it never reached, and an absent row must never be recorded as a
+    // negative one.
+    console.warn(`BEDSHOCK ERROR ${name} ${firstLine(err)}`);
+    ctx.say(`§c${name} threw:§r ${firstLine(err)}`);
+  }
+}
+
 function runAll(ctx: Ctx): void {
   begin();
   ctx.say(`§l${NAMESPACE} ${PACK_VERSION}§r — capability battery`);
-  for (const [name, probe] of Object.entries(PROBES)) {
-    try {
-      probe(ctx);
-    } catch (err) {
-      // One probe throwing must not take the battery with it. A run that dies halfway reports
-      // nothing about the rows it never reached, and an absent row must never be recorded as a
-      // negative one.
-      console.warn(`BEDSHOCK ERROR ${name} ${firstLine(err)}`);
-      ctx.say(`§c${name} threw:§r ${firstLine(err)}`);
-    }
-  }
+  for (const [name, probe] of Object.entries(PROBES)) runOne(ctx, name, probe);
   done(ctx);
 }
 
@@ -84,10 +87,14 @@ system.afterEvents.scriptEventReceive.subscribe(
     const ctx = makeCtx(player);
     const what = event.message.trim();
 
+    // Claim the area, then WAIT for it. The claim does not take effect in the tick it is
+    // issued, and a battery that claims and immediately spawns is still asking about an
+    // unloaded chunk -- which is how this battery's first real server run turned three rows
+    // into LocationInUnloadedChunkError and said nothing about Bedrock at all.
     claimTickingArea(`${NAMESPACE}_probe`);
 
     if (what === '') {
-      runAll(ctx);
+      whenChunkIsLive(ctx, () => runAll(ctx));
       return;
     }
 
@@ -110,14 +117,11 @@ system.afterEvents.scriptEventReceive.subscribe(
       return;
     }
 
-    begin();
-    try {
-      probe(ctx);
-    } catch (err) {
-      console.warn(`BEDSHOCK ERROR ${what} ${firstLine(err)}`);
-      ctx.say(`§c${what} threw:§r ${firstLine(err)}`);
-    }
-    done(ctx);
+    whenChunkIsLive(ctx, () => {
+      begin();
+      runOne(ctx, what, probe);
+      done(ctx);
+    });
   },
   // Only our own namespace reaches the handler. Anything else is somebody else's event.
   { namespaces: [NAMESPACE] },

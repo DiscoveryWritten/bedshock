@@ -12,12 +12,15 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { PNG } from 'pngjs';
 
 import { loadCatalog } from './catalog.ts';
 import { loadPackConfig, validatePackConfig, type PackConfig } from './config.ts';
 import { minimumRowSeparation, RULER_ROWS, glyphPage, rulerSprite, flipbookStrip } from './gen/assets.ts';
 import { generatedModule, packFiles, probeIds } from './gen/pack.ts';
+import { ROOT } from './paths.ts';
 
 const config = loadPackConfig();
 const files = packFiles(config);
@@ -280,4 +283,51 @@ test('exactly one item is enchantable, and it is still not repairable', () => {
   assert.match(enchantable[0]!.path, /probe_repair/);
   assert.ok(!String(enchantable[0]!.data).includes('minecraft:repairable'));
   assert.ok(String(enchantable[0]!.data).includes('minecraft:durability'));
+});
+
+/**
+ * A probe that reports on a timer must register for the wait.
+ *
+ * `DONE` is the marker the harness watches, and it stops the server the moment it appears. So a
+ * probe still counting ticks when `DONE` printed has its result thrown away — and the row is
+ * then ABSENT from the log: not a pass, not a fail, not even a skip. That is the one output
+ * this battery must never produce silently, because absence is indistinguishable from a
+ * question nobody asked.
+ *
+ * It happened on the first real server run: `entity.falling_block.is_trackable_by_script`
+ * appeared nowhere in the log at all. Nothing about reading the code makes it visible, which is
+ * why the guard is mechanical.
+ */
+test('every probe that reports on a timer registers for the completion wait', () => {
+  const dir = join(ROOT, 'pack', 'scripts', 'probes');
+  const offenders: string[] = [];
+  for (const name of readdirSync(dir).filter((f) => f.endsWith('.ts'))) {
+    const source = readFileSync(join(dir, name), 'utf8');
+    const deferred = /system\.run(Interval|Timeout)/.test(source);
+    // A `result(` call inside the file is only a hazard when something defers; a probe that
+    // only *sets a scene* on a timer has nothing to lose.
+    const reports = /\bresult\(/.test(source);
+    if (deferred && reports && !source.includes('willReportLater')) offenders.push(name);
+  }
+  assert.deepEqual(
+    offenders,
+    [],
+    `these report after a delay but do not call willReportLater(), so their rows would vanish: ${offenders.join(', ')}`,
+  );
+});
+
+/**
+ * And the ticking area has to be waited FOR, not merely claimed.
+ *
+ * The claim does not take effect in the tick it is issued. Claiming and immediately spawning is
+ * still asking about an unloaded chunk — which is how the first real run turned three rows into
+ * `LocationInUnloadedChunkError` and said nothing whatsoever about Bedrock.
+ */
+test('the battery waits for the chunk rather than only claiming it', () => {
+  const main = readFileSync(join(ROOT, 'pack', 'scripts', 'main.ts'), 'utf8');
+  assert.match(main, /claimTickingArea/);
+  assert.match(main, /whenChunkIsLive/);
+  const claimAt = main.indexOf('claimTickingArea(`');
+  const waitAt = main.indexOf('whenChunkIsLive(');
+  assert.ok(claimAt !== -1 && waitAt !== -1 && waitAt > claimAt, 'the wait must come after the claim');
 });

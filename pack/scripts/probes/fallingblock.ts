@@ -16,7 +16,7 @@
 import { system, world } from '@minecraft/server';
 
 import { PARAMS } from '../generated.ts';
-import { firstLine, result, HEADLESS_AT, type Ctx } from '../emit.ts';
+import { firstLine, result, willReportLater, HEADLESS_AT, type Ctx } from '../emit.ts';
 
 export function run(ctx: Ctx): void {
   const at = ctx.player?.location ?? HEADLESS_AT;
@@ -33,6 +33,11 @@ export function run(ctx: Ctx): void {
       `could not place the block to drop: ${firstLine(err)}`);
     return;
   }
+
+  // This probe answers on a timer, so `done()` has to wait for it. Without that the marker the
+  // harness watches for is printed first, the server is stopped, and this row vanishes from the
+  // log entirely -- neither pass, fail nor skip.
+  const reported = willReportLater('fallingblock');
 
   const samples: { tick: number; y: number; vy: number }[] = [];
   let ticks = 0;
@@ -54,6 +59,7 @@ export function run(ctx: Ctx): void {
 
     if (ticks < PARAMS.falling_block.watch_ticks) return;
     system.clearRun(handle);
+    reported();
 
     const moving = samples.filter((s) => s.vy !== 0);
     result(

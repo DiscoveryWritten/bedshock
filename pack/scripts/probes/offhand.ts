@@ -22,7 +22,7 @@
 import { EquipmentSlot, ItemStack, system, type Player } from '@minecraft/server';
 
 import { IDS, PARAMS } from '../generated.ts';
-import { result, skipped, type Ctx } from '../emit.ts';
+import { result, skipped, willReportLater, type Ctx } from '../emit.ts';
 
 function equipment(player: Player) {
   return player.getComponent('minecraft:equippable');
@@ -86,6 +86,10 @@ export function run(ctx: Ctx): void {
 
   const arbitrary = PARAMS.offhand.arbitrary_item;
 
+  // Two chained settle delays, so this finishes several seconds after `run` returns. `done()`
+  // waits for the release below rather than printing its marker over the top of these results.
+  const reported = willReportLater('offhand');
+
   trial(ctx, player, arbitrary, (vanilla) => {
     result(
       ctx,
@@ -137,6 +141,7 @@ export function run(ctx: Ctx): void {
       } catch {
         /* leaving it is harmless */
       }
+      reported();
     });
   });
 }

@@ -23,7 +23,7 @@
  * must never be recorded as a set of negative results.
  */
 
-import { world, type Player } from '@minecraft/server';
+import { system, world, type Player } from '@minecraft/server';
 
 export const TAG = 'BEDSHOCK';
 
@@ -101,22 +101,98 @@ export function firstLine(err: unknown): string {
 
 export function begin(): void {
   count = 0;
+  pending = 0;
   console.warn(`${TAG} BEGIN ${new Date().toISOString()}`);
 }
 
-export function done(ctx: Ctx): void {
-  ctx.say(`§l---§r battery complete: ${count} line(s). Eyes-only rows are recorded by \`bedshock amend\`.`);
-  console.warn(`${TAG} DONE ${count}`);
+// ---------------------------------------------------------------------------
+// Probes that cannot answer in one tick
+// ---------------------------------------------------------------------------
+
+/**
+ * Some measurements ARE the passage of time and cannot be squeezed into one tick. Whether the
+ * client ejects an off-hand item takes seconds by construction; watching a block fall takes as
+ * long as the fall.
+ *
+ * Which creates a trap the first CI run walked straight into. `DONE` is the marker the harness
+ * waits on, and it stops the server the moment it appears — so a probe still counting ticks
+ * when `DONE` printed had its result thrown away with the server. The row was then ABSENT from
+ * the log: not a pass, not a fail, not even a skip, just gone. And an absent row is the one
+ * thing this battery must never produce silently, because absence is indistinguishable from a
+ * question nobody asked.
+ *
+ * So a probe that will report later says so, and `done()` waits for it.
+ */
+let pending = 0;
+const outstanding = new Set<string>();
+
+export function willReportLater(probe: string): () => void {
+  pending++;
+  outstanding.add(probe);
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    pending--;
+    outstanding.delete(probe);
+  };
 }
 
 /**
- * Where a headless run puts things, and why it has to claim a ticking area first.
+ * Print `DONE`, once nothing is still counting ticks.
  *
- * With no players connected, nothing is loaded or ticking and spawning anywhere throws
- * `LocationInUnloadedChunkError`. The first CI run of a battery like this duly reported that
- * as two container failures, which said nothing whatsoever about Bedrock — a confident-looking
- * FAIL that was measuring the instrument. Claiming the area is the fix, and it is done once,
- * here, rather than remembered by each probe.
+ * The timeout is a backstop rather than a schedule: if a probe never releases, waiting forever
+ * would hang the harness until ITS timeout, and a run killed from outside reports nothing at
+ * all. So the wait is bounded and what did not report is NAMED — a reader sees which rows are
+ * missing and why, rather than inferring it from a gap.
+ */
+export function done(ctx: Ctx, timeoutTicks = 300): void {
+  const finish = (): void => {
+    if (outstanding.size > 0) {
+      const names = [...outstanding].join(', ');
+      console.warn(
+        `${TAG} NOTE ${outstanding.size} probe(s) never reported back: ${names}. ` +
+          `Those rows are ABSENT, not negative.`,
+      );
+      ctx.player?.sendMessage(`§b[${TAG}]§r §e${outstanding.size} probe(s) never reported: ${names}§r`);
+    }
+    ctx.say(`§l---§r battery complete: ${count} line(s). Eyes-only rows are recorded by \`bedshock amend\`.`);
+    console.warn(`${TAG} DONE ${count}`);
+  };
+
+  if (pending === 0) {
+    finish();
+    return;
+  }
+
+  let waited = 0;
+  const handle = system.runInterval(() => {
+    waited += 2;
+    if (pending > 0 && waited < timeoutTicks) return;
+    system.clearRun(handle);
+    finish();
+  }, 2);
+}
+
+// ---------------------------------------------------------------------------
+// Getting a chunk to exist
+// ---------------------------------------------------------------------------
+
+/**
+ * Where a headless run puts things, and why claiming a ticking area is only half the fix.
+ *
+ * With no players connected nothing is loaded or ticking, and touching any location throws
+ * `LocationInUnloadedChunkError`. Claiming a ticking area is what fixes that — but the claim
+ * does not take effect in the tick it is issued, and a battery that claims and then immediately
+ * spawns is still asking about an unloaded chunk.
+ *
+ * That is exactly what happened on this battery's first real run against a Bedrock server:
+ * three rows came back INCONCLUSIVE quoting `LocationInUnloadedChunkError`, which said nothing
+ * whatsoever about Bedrock. The predecessor project hit the identical failure and recorded it
+ * as "the exact failure this document exists to prevent: a confident-looking FAIL that was
+ * measuring the instrument." Inheriting the lesson and not the fix is its own small lesson.
+ *
+ * So: claim, then WAIT for the chunk to actually answer, then measure.
  */
 export const HEADLESS_AT = { x: 0.5, y: 8, z: 0.5 };
 
@@ -130,4 +206,46 @@ export function claimTickingArea(name: string): boolean {
     // Already claimed is the common case and is fine.
     return false;
   }
+}
+
+/** Can we touch the place the headless probes want to use? */
+function chunkIsLive(): boolean {
+  try {
+    return world.getDimension('overworld').getBlock(HEADLESS_AT) !== undefined;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Run `then` once the headless location is usable, or after `tries` attempts either way.
+ *
+ * Running anyway on timeout is deliberate. The probes each report their own
+ * `LocationInUnloadedChunkError` as INCONCLUSIVE, which is the honest verdict — the apparatus
+ * failed, the game did not answer — and one loud NOTE above them says they share a cause.
+ * Refusing to run at all would produce a battery with no output, which is worse: it looks the
+ * same as a pack that never loaded.
+ */
+export function whenChunkIsLive(ctx: Ctx, then: () => void, tries = 40): void {
+  if (chunkIsLive()) {
+    then();
+    return;
+  }
+  let n = 0;
+  const handle = system.runInterval(() => {
+    n++;
+    if (chunkIsLive()) {
+      system.clearRun(handle);
+      then();
+      return;
+    }
+    if (n < tries) return;
+    system.clearRun(handle);
+    console.warn(
+      `${TAG} NOTE the ticking area never came up after ${tries} tries. Everything below that ` +
+        `reports LocationInUnloadedChunkError is measuring the instrument, not the game.`,
+    );
+    ctx.say('§ethe ticking area never came up — INCONCLUSIVE rows below are the apparatus, not Bedrock§r');
+    then();
+  }, 5);
 }
