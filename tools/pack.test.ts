@@ -258,10 +258,26 @@ test('the probes not yet ported are exactly the ones we know about', () => {
   const catalog = loadCatalog();
   const implemented = new Set([
     'durability', 'dynprops', 'container', 'offhand', 'menu', 'fallingblock',
-    'ruler', 'glyphs', 'flipbook', 'formicon',
+    'repair', 'ruler', 'glyphs', 'flipbook', 'formicon',
   ]);
   const missing = [...new Set(
     catalog.capabilities.filter((c) => c.probe && !implemented.has(c.probe)).map((c) => c.probe!),
   )].sort();
   assert.deepEqual(missing, ['attachable', 'attachable_pose', 'stash']);
+});
+
+/**
+ * The external-writes probe is the only enchantable item here, and that is load-bearing in two
+ * directions. It must be enchantable, or Mending cannot be applied to ask the question. And it
+ * must still omit `minecraft:repairable`, because that omission IS the mitigation being tested
+ * — declaring it would answer the question by construction.
+ */
+test('exactly one item is enchantable, and it is still not repairable', () => {
+  const enchantable = files
+    .filter((f) => f.path.startsWith('BP/items/'))
+    .filter((f) => String(f.data).includes('minecraft:enchantable'));
+  assert.equal(enchantable.length, 1);
+  assert.match(enchantable[0]!.path, /probe_repair/);
+  assert.ok(!String(enchantable[0]!.data).includes('minecraft:repairable'));
+  assert.ok(String(enchantable[0]!.data).includes('minecraft:durability'));
 });

@@ -46,6 +46,7 @@ export function probeIds(c: PackConfig) {
       id: `${ns}:${PREFIX}_dur_${declared}`,
     })),
     ruler: `${ns}:${PREFIX}_ruler`,
+    repair: `${ns}:${PREFIX}_repair`,
     glyph: `${ns}:${PREFIX}_glyph`,
     dynprop: `${ns}:${PREFIX}_dynprop`,
     offhand_custom: `${ns}:${PREFIX}_offhand_ok`,
@@ -109,6 +110,8 @@ interface ItemSpec {
   maxDurability?: number;
   stackSize?: number;
   allowOffHand?: boolean;
+  /** Only the external-writes probe wants this. Everything else must stay un-enchantable. */
+  enchantable?: { slot: string; value: number };
 }
 
 function itemFile(c: PackConfig, spec: ItemSpec): OutFile {
@@ -124,6 +127,9 @@ function itemFile(c: PackConfig, spec: ItemSpec): OutFile {
     // worse than no probe.
   }
   if (spec.allowOffHand) components['minecraft:allow_off_hand'] = true;
+  if (spec.enchantable) {
+    components['minecraft:enchantable'] = { slot: spec.enchantable.slot, value: spec.enchantable.value };
+  }
 
   const item: Record<string, unknown> = {
     format_version: c.format_versions.item,
@@ -163,6 +169,19 @@ function itemSpecs(c: PackConfig): ItemSpec[] {
     name: 'P2 durability-bar ruler',
     category: 'items',
     maxDurability: p.ruler.max_durability,
+  });
+
+  // The one item in the pack that is deliberately ENCHANTABLE, because the question it serves
+  // is whether Mending can reach a custom item's damage. It still omits `minecraft:repairable`
+  // -- that omission is the mitigation being tested, so declaring it would answer the question
+  // by construction.
+  specs.push({
+    id: ids.repair,
+    texture: `${PREFIX}_dur`,
+    name: 'external writes: can anything reach this damage?',
+    category: 'items',
+    maxDurability: 250,
+    enchantable: { slot: 'pickaxe', value: 15 },
   });
 
   specs.push({ id: ids.glyph, texture: `${PREFIX}_glyph`, name: 'P5 glyph carrier', category: 'items' });
@@ -406,6 +425,7 @@ export function generatedModule(c: PackConfig): string {
     '  glyph: string;',
     '  dynprop: string;',
     '  offhand_custom: string;',
+    '  repair: string;',
     '  flipbook: string[];',
     '  menu: MenuId[];',
     '  containers: ContainerId[];',

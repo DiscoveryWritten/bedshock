@@ -74,6 +74,10 @@ is how you find out the day it starts working.
 | `item.dynamic_properties.survive_drop_and_pickup` | **yes** |
 | `item.dynamic_properties.survive_world_reload` | · |
 | `item.dynamic_properties.require_unstackable_items` | — |
+| `item.durability.mending_can_reach_a_custom_item` | · |
+| `item.durability.anvil_or_grindstone_can_reach_a_custom_item` | · |
+| `item.durability.omitting_repairable_blocks_external_writes` | · |
+| `item.durability.ordinary_use_consumes_it` | · |
 | **render** |  |
 | `render.molang.unknown_query_resolves_to_zero` | — |
 | `render.molang.integer_precision` | — |
@@ -1063,6 +1067,96 @@ What an item definition is allowed to declare, what the client does with it, and
 
 *Established by:* Per-stack state cannot survive stacks merging, and Bedrock's API reflects that. Already relied on in generated item definitions.
 
+### `item.durability.mending_can_reach_a_custom_item`
+
+**Does a Mending enchantment repair a custom item's `damage`?**
+
+*Decides:* Whether durability can be a source of truth at all. Mending fires continuously during ordinary play, so if it reaches a custom item then packed state in durability is corrupted by the player simply collecting XP -- silently, with nothing anywhere saying why.
+
+<sub>method: `observed` · probe: `repair` · formerly: manual</sub>
+
+**Never measured.** This row is a guess, however confident the prose around it sounds.
+
+*To answer it:* Put Mending on the probe durability item, note the damage the probe prints, collect XP, then run the probe again to re-read it.
+
+<details><summary>The answer space this probe can distinguish</summary>
+
+| Outcome | Means | |
+|---|---|---|
+| `repairs` | The damage went down | YES — A hazard, and the mitigation is known: keep the real state in dynamic properties and treat durability as a WRITE-ONLY display cache, rewritten whenever it drifts. Nothing external can corrupt state it is not the source of. |
+| `untouched` | The damage is unchanged | NO |
+| `no_enchant` | Mending could not be applied to the item at all | INCONCLUSIVE — Worth recording in the note either way -- an item that refuses the enchantment is safe for a different reason, but this probe did not measure the one it was asking about. |
+
+</details>
+
+### `item.durability.anvil_or_grindstone_can_reach_a_custom_item`
+
+**Can an anvil or a grindstone alter a custom item's `damage`?**
+
+*Decides:* The same hazard as Mending but player-initiated rather than ambient, which makes it rarer and more confusing when it happens.
+
+<sub>method: `observed` · probe: `repair` · formerly: manual</sub>
+
+**Never measured.** This row is a guess, however confident the prose around it sounds.
+
+*To answer it:* Take the probe durability item to an anvil, then to a grindstone. Does either offer to repair or strip it? If one does, take the offer and re-read the damage.
+
+<details><summary>The answer space this probe can distinguish</summary>
+
+| Outcome | Means | |
+|---|---|---|
+| `neither` | Neither block will touch it | NO |
+| `anvil_only` | The anvil repairs it; the grindstone does not | YES |
+| `grindstone_only` | The grindstone touches it; the anvil does not | YES |
+| `both` | Both will alter it | YES |
+| `unreadable` | Could not get either block to accept the item to find out | INCONCLUSIVE |
+
+</details>
+
+### `item.durability.omitting_repairable_blocks_external_writes`
+
+**Is omitting `minecraft:repairable` enough to keep anvils, grindstones and Mending away from an item's damage?**
+
+*Decides:* Whether the hazard has a one-line fix in the item definition, or has to be mitigated in script by treating durability as a cache.
+
+<sub>method: `observed` · probe: `repair` · formerly: manual · rests on: `item.durability.mending_can_reach_a_custom_item`</sub>
+
+**Never measured.** This row is a guess, however confident the prose around it sounds.
+
+*To answer it:* The probe items declare no `minecraft:repairable` -- deliberately, so this is testable at all. Answer this only after reading the two rows above.
+
+<details><summary>The answer space this probe can distinguish</summary>
+
+| Outcome | Means | |
+|---|---|---|
+| `sufficient` | Nothing external could reach the damage | YES |
+| `insufficient` | At least one route got through anyway | NO — Name which, in the note. The mitigation then has to be in script. |
+| `unreadable` | The rows above are not answered yet | INCONCLUSIVE |
+
+</details>
+
+### `item.durability.ordinary_use_consumes_it`
+
+**Does using a custom item consume durability the way a tool's does?**
+
+*Decides:* Whether durability drifts on its own during play. A slow drift is worse than an external write, because there is no single event to point at.
+
+<sub>method: `observed` · probe: `repair` · formerly: manual</sub>
+
+**Never measured.** This row is a guess, however confident the prose around it sounds.
+
+*To answer it:* The probe durability item's damage, before and after using it twenty times.
+
+<details><summary>The answer space this probe can distinguish</summary>
+
+| Outcome | Means | |
+|---|---|---|
+| `unchanged` | The damage is unchanged | NO |
+| `consumed` | The damage went up | YES |
+| `unreadable` | Could not get the item to register a use | INCONCLUSIVE |
+
+</details>
+
 ## render
 
 What can be drawn, and what the thing drawing it is allowed to know. The load-bearing question in the whole battery lives here: whether a render controller can be told which item it is drawing. If it can, one item type renders every configuration. If it cannot, every distinguishable configuration needs its own item type, and the asset count multiplies instead of layering.
@@ -1351,5 +1445,5 @@ other repositories can carry `@requires bedshock:<id>` and `bedshock check` will
 if the cited row is not settled at that pack's `min_engine_version` — so a design can never
 quietly come to rest on a guess.
 
-<sub>56 capabilities · 26 observations · 1 version(s): 1.21.120</sub>
+<sub>60 capabilities · 26 observations · 1 version(s): 1.21.120</sub>
 

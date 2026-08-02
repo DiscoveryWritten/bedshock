@@ -455,3 +455,113 @@ capabilities:
     established_by: >-
       Per-stack state cannot survive stacks merging, and Bedrock's API reflects that. Already
       relied on in generated item definitions.
+
+  # --- external writes to `damage` ----------------------------------------
+  #
+  # If durability carries packed state, ANY external write to it corrupts that state with no
+  # error and no visible cause. The list is uncomfortably long and Mending is the worst of it,
+  # because it fires continuously during ordinary play. These are hazards rather than
+  # curiosities, and each one is a separate row because each has its own mitigation.
+  - id: item.durability.mending_can_reach_a_custom_item
+    question: Does a Mending enchantment repair a custom item's `damage`?
+    decides: >-
+      Whether durability can be a source of truth at all. Mending fires continuously during
+      ordinary play, so if it reaches a custom item then packed state in durability is corrupted
+      by the player simply collecting XP -- silently, with nothing anywhere saying why.
+    method: observed
+    probe: repair
+    look_at: >-
+      Put Mending on the probe durability item, note the damage the probe prints, collect XP,
+      then run the probe again to re-read it.
+    outcomes:
+      - id: repairs
+        label: The damage went down
+        verdict: YES
+        means: >-
+          A hazard, and the mitigation is known: keep the real state in dynamic properties and
+          treat durability as a WRITE-ONLY display cache, rewritten whenever it drifts. Nothing
+          external can corrupt state it is not the source of.
+      - id: untouched
+        label: The damage is unchanged
+        verdict: 'NO'
+      - id: no_enchant
+        label: Mending could not be applied to the item at all
+        verdict: INCONCLUSIVE
+        means: >-
+          Worth recording in the note either way -- an item that refuses the enchantment is safe
+          for a different reason, but this probe did not measure the one it was asking about.
+    legacy: manual
+
+  - id: item.durability.anvil_or_grindstone_can_reach_a_custom_item
+    question: Can an anvil or a grindstone alter a custom item's `damage`?
+    decides: >-
+      The same hazard as Mending but player-initiated rather than ambient, which makes it rarer
+      and more confusing when it happens.
+    method: observed
+    probe: repair
+    look_at: >-
+      Take the probe durability item to an anvil, then to a grindstone. Does either offer to
+      repair or strip it? If one does, take the offer and re-read the damage.
+    outcomes:
+      - id: neither
+        label: Neither block will touch it
+        verdict: 'NO'
+      - id: anvil_only
+        label: The anvil repairs it; the grindstone does not
+        verdict: YES
+      - id: grindstone_only
+        label: The grindstone touches it; the anvil does not
+        verdict: YES
+      - id: both
+        label: Both will alter it
+        verdict: YES
+      - id: unreadable
+        label: Could not get either block to accept the item to find out
+        verdict: INCONCLUSIVE
+    legacy: manual
+
+  - id: item.durability.omitting_repairable_blocks_external_writes
+    question: >-
+      Is omitting `minecraft:repairable` enough to keep anvils, grindstones and Mending away
+      from an item's damage?
+    decides: >-
+      Whether the hazard has a one-line fix in the item definition, or has to be mitigated in
+      script by treating durability as a cache.
+    method: observed
+    probe: repair
+    look_at: >-
+      The probe items declare no `minecraft:repairable` -- deliberately, so this is testable at
+      all. Answer this only after reading the two rows above.
+    outcomes:
+      - id: sufficient
+        label: Nothing external could reach the damage
+        verdict: YES
+      - id: insufficient
+        label: At least one route got through anyway
+        verdict: 'NO'
+        means: Name which, in the note. The mitigation then has to be in script.
+      - id: unreadable
+        label: The rows above are not answered yet
+        verdict: INCONCLUSIVE
+    depends_on: [item.durability.mending_can_reach_a_custom_item]
+    legacy: manual
+
+  - id: item.durability.ordinary_use_consumes_it
+    question: Does using a custom item consume durability the way a tool's does?
+    decides: >-
+      Whether durability drifts on its own during play. A slow drift is worse than an external
+      write, because there is no single event to point at.
+    method: observed
+    probe: repair
+    look_at: The probe durability item's damage, before and after using it twenty times.
+    outcomes:
+      - id: unchanged
+        label: The damage is unchanged
+        verdict: 'NO'
+      - id: consumed
+        label: The damage went up
+        verdict: YES
+      - id: unreadable
+        label: Could not get the item to register a use
+        verdict: INCONCLUSIVE
+    legacy: manual

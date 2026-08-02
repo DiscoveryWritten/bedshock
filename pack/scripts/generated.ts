@@ -14,6 +14,7 @@ export const IDS: {
   glyph: string;
   dynprop: string;
   offhand_custom: string;
+  repair: string;
   flipbook: string[];
   menu: MenuId[];
   containers: ContainerId[];
@@ -45,6 +46,7 @@ export const IDS: {
     }
   ],
   "ruler": "bedshock:probe_ruler",
+  "repair": "bedshock:probe_repair",
   "glyph": "bedshock:probe_glyph",
   "dynprop": "bedshock:probe_dynprop",
   "offhand_custom": "bedshock:probe_offhand_ok",

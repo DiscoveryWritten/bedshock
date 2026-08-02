@@ -28,6 +28,7 @@ import * as container from './probes/container.ts';
 import * as offhand from './probes/offhand.ts';
 import * as menu from './probes/menu.ts';
 import * as fallingblock from './probes/fallingblock.ts';
+import * as repair from './probes/repair.ts';
 import * as scenes from './probes/scenes.ts';
 
 type Probe = (ctx: Ctx) => void;
@@ -44,6 +45,7 @@ const PROBES: Record<string, Probe> = {
   container: container.run,
   offhand: offhand.run,
   fallingblock: fallingblock.run,
+  repair: repair.run,
   ruler: scenes.ruler,
   glyphs: scenes.glyphs,
   flipbook: scenes.flipbook,
