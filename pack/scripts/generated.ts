@@ -239,7 +239,8 @@ export const PARAMS = {
     "spread": 0.5
   },
   "knockback": {
-    "subject": "minecraft:armor_stand",
+    "subject": "minecraft:item",
+    "subject_stack": "minecraft:stick",
     "units": 1,
     "run_length": 16,
     "headroom": 4,

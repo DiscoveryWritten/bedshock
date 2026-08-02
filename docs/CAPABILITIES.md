@@ -1265,7 +1265,7 @@ The measurable constants of Bedrock's own behaviour: how fast things fall, how f
 
 **Never measured.** This row is a guess, however confident the prose around it sounds.
 
-> The same call, the same arena, the same rest test as the player row -- differing in the subject and in nothing else, which is what makes a difference between the two attributable to the subject. WHAT TO DO IF THESE TWO DIVERGE: treat the player row as the one your design has to respect and this one as the warning that a shared constant is wrong. They are recorded separately precisely so that divergence is visible rather than averaged away.
+> The same call, the same arena, the same rest test as the player row -- differing in the subject and in nothing else, which is what makes a difference between the two attributable to the subject. WHAT TO DO IF THESE TWO DIVERGE: treat the player row as the one your design has to respect and this one as the warning that a shared constant is wrong. They are recorded separately precisely so that divergence is visible rather than averaged away. THE SUBJECT IS PART OF WHAT THIS ROW MEANS, and it is a dropped item -- named in `content/pack.yaml` rather than left implicit. The first apparatus used an armour stand and Bedrock 1.26.36.1 reported `the subject never moved at all` five times out of five: vanilla armour stands resist knockback outright. Worth knowing on its own, and a reminder that "an ordinary entity" is not one thing. A reading taken against a different subject is not comparable with this one.
 
 ## render
 

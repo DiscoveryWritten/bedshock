@@ -21,7 +21,7 @@
  * same test is used for the entity so the two rows differ in their subject and in nothing else.
  */
 
-import { system, world, type Entity, type Vector3 } from '@minecraft/server';
+import { ItemStack, system, world, type Entity, type Vector3 } from '@minecraft/server';
 
 import { PARAMS } from '../generated.ts';
 import { SOLVES } from '../catalog.generated.ts';
@@ -40,9 +40,15 @@ export function run(ctx: Ctx): void {
 
   // The entity row first: it runs everywhere, so a session that a person abandons half way
   // through has still produced the reading that does not need them.
+  //
+  // The branch is not a nicety: item entities are spawned through `spawnItem` and everything else
+  // through `spawnEntity`, and the subject had to become an item because the armour stand this
+  // started with turned out to resist knockback entirely. See `content/pack.yaml`.
   ask(ctx, ENTITY, box, () => {
     box.sweep(p.subject);
-    return dimension.spawnEntity(p.subject, box.at(0, 1));
+    return p.subject === 'minecraft:item'
+      ? dimension.spawnItem(new ItemStack(p.subject_stack, 1), box.at(0, 1))
+      : dimension.spawnEntity(p.subject, box.at(0, 1));
   });
 
   if (!ctx.player) {

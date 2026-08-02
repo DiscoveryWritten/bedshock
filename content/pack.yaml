@@ -289,9 +289,22 @@ probes:
   # therefore a constant somebody tuned by hand until it looked right. This is that constant,
   # measured.
   knockback:
-    # What gets knocked back when there is no player. An armour stand has physics and no AI, so
-    # it goes where it is pushed and does not then wander off and ruin the reading.
-    subject: 'minecraft:armor_stand'
+    # What gets knocked back when there is no player.
+    #
+    # AN ARMOUR STAND WAS THE FIRST CHOICE AND IS IMMOVABLE. It has physics and no AI, which is
+    # the right shape -- it goes where it is pushed and does not then wander off and ruin the
+    # reading. But Bedrock 1.26.36.1 answered `the subject never moved at all under 1 unit(s) of
+    # knockback` five times out of five: vanilla armour stands resist knockback outright. That is
+    # a fact about the game worth knowing, and it is why this line is not what it looks like it
+    # ought to be.
+    #
+    # A DROPPED ITEM has no AI either, no knockback resistance, and is a thing any mechanic that
+    # moves the world actually has to move. It is also the same body the throw probe measures,
+    # which makes the two rows readable side by side: same subject, different force.
+    subject: 'minecraft:item'
+    # Item entities are spawned through `spawnItem` rather than `spawnEntity`, so the stack has to
+    # be named as well as the entity type.
+    subject_stack: 'minecraft:stick'
     # How much knockback to apply. One unit is the natural thing to measure, and the probe divides
     # by it, so raising this only buys resolution -- it must not change the answer, and a run
     # where it does is itself a finding.

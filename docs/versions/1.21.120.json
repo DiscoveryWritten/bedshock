@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "minecraft": "1.21.120",
-  "catalog_revision": "rf6ebdbea",
-  "release": "mc-1.21.120-rf6ebdbea",
+  "catalog_revision": "rd41e0ac3",
+  "release": "mc-1.21.120-rd41e0ac3",
   "measured_through": "2026-08-02T05:01:00Z",
   "counts": {
     "SETTLED": 22,

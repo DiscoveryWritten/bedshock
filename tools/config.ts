@@ -67,6 +67,7 @@ export interface ProbeConfig {
   };
   knockback: {
     subject: string;
+    subject_stack: string;
     units: number;
     run_length: number;
     headroom: number;
