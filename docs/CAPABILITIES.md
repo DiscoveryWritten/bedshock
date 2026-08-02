@@ -1209,7 +1209,7 @@ The measurable constants of Bedrock's own behaviour: how fast things fall, how f
 
 **Never measured.** This row is a guess, however confident the prose around it sounds.
 
-> Recorded once already, informally, as `-0.04, -0.12, -0.19, -0.26, -0.33` at ticks 2..10. Those numbers are what confirm a watched entity is the real falling block rather than a look-alike, so this row doubles as the identity check for `entity.falling_block.is_trackable_by_script`.
+> Recorded once already, informally, as `-0.04, -0.12, -0.19, -0.26, -0.33` at ticks 2..10. Those numbers are what confirm a watched entity is the real falling block rather than a look-alike, so this row doubles as the identity check for `entity.falling_block.is_trackable_by_script`. IT ALREADY EARNED ITS KEEP, and not in the way it was written for. On 1.26.36.1 this read 0.5697 from 31 sightings, then 0.6777 from 52 -- a move of ten times its own tolerance -- with nothing about Bedrock having changed between the two. A neighbouring probe had been carving the same column and deleting the anvil part-way down, so every earlier reading was a truncated fall. The engine's integration had not moved; the apparatus had. So read the control's warning both ways. If this number moves, either the engine changed or SOMETHING ABOUT THE RIG DID, and until you know which, nothing else measured in this file is comparable across that boundary. A number that moves for a reason nobody identified is not a finding yet.
 
 ### `physics.falling_block.min_clearance_under_a_falling_anvil`
 
