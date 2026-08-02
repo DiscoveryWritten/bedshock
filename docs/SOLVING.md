@@ -24,7 +24,14 @@ by asking a yes/no trial repeatedly at different values, worth recording per Min
 because the answer moves when the engine moves underneath it.
 
 So the apparatus is the part worth sharing. **You bring the questions and the trial; this brings
-the search, the ledger, the drift detection, and the report.**
+the search, the box to run it in, the ledger, the drift detection, and the report.**
+
+| | |
+|---|---|
+| `solve` | A **boundary**. Your trial answers yes/no at a value; this bisects it. |
+| `measure` | A **measurement**. Your apparatus hands back a number; this takes several and reports what they agree on. |
+| `arena` | A box to measure in — flat, empty, carved, and *verified* — so a short throw is not confused with a wall. |
+| `bisect` / `summarise` | The same two, with no Minecraft in them, for measuring in memory. |
 
 ```
 bedshock init capabilities --domain portals --bedshock ../vendor/bedshock
@@ -53,6 +60,25 @@ The distinction earns its keep on the day nothing appears to have changed. A yes
 reports when something starts or stops working. A solved row reports when the game's constants
 shift underneath a design that still runs, still passes, and is now quietly wrong by 15%. Nothing
 else in a test suite notices that, and it is the failure most likely to survive a release.
+
+### Two shapes, and picking the wrong one wastes a probe
+
+**A boundary.** Your apparatus can only tell you *whether* something worked. "Can a block get out
+of the way this late?" has no number in it — you ask it repeatedly at different values and the
+edge between yes and no is the answer. That is `solve`, and `anvilgap` is the worked example.
+
+**A measurement.** Your apparatus hands you a number every time. "How far did the item go?" is
+already the answer; the only question is whether several of them agree. That is `measure`, and
+`throw` and `knockback` are the worked examples.
+
+Nothing in a type will catch the wrong choice. Forcing a measurement through a bisection burns
+dozens of trials and throws away the number it had all along; forcing a boundary through a
+measurement asks an apparatus for a figure it cannot produce. Both compile, both run, and both
+show up only as a strange result on a real server — so `bedshock test` pins which tool each probe
+imports.
+
+Both end in the same place: one value, one tolerance, one row that reports when a constant moves.
+A report cannot tell which was used and does not need to.
 
 ```yaml
 - id: physics.falling_block.min_clearance_under_a_falling_anvil
@@ -140,6 +166,85 @@ three times the trials.
 
 ---
 
+## Writing a measurement
+
+```ts
+import { arena, measure, type Ctx, type Record } from '../vendor/bedshock/pack/scripts/harness.ts';
+
+export function run(ctx: Ctx): void {
+  const box = arena(ctx.player!.location, { length: 24, height: 4, width: 1 });
+
+  const reading = (index: number, record: Record): void => {
+    box.clear();
+    const problem = box.verify();
+    if (problem) return record(null, problem);   // the arena is missing: not a reading of zero
+    // ... do the thing, then record the number
+  };
+
+  measure(ctx, {
+    capability: 'portals.exit.boost_needed_to_clear_the_floor',
+    probe: 'portals',
+    unit: 'blocks',
+    samples: 5,
+    spread: 0.5,
+    range: { from: 0, to: 24 },
+  }, reading);
+}
+```
+
+`record(null)` is not a reading of zero. Zero is a perfectly good measurement; `null` means this
+reading did not happen, and collapsing the two puts a fabricated number in the set that the
+median then treats as data.
+
+### The value is the median, never the mean
+
+One reading down a ravine should not move the answer at all. With five samples a mean lets it
+move the answer by a fifth of the error, which is exactly enough to be wrong and not enough to be
+obvious.
+
+### `spread` is not `tolerance`, and the difference is checked
+
+**Tolerance** is how far the *answer* may move between runs before it is a finding. It belongs to
+the question, and lives in the catalog.
+
+**Spread** is how far one *reading* may scatter within a run. It belongs to the instrument, and
+lives in `content/pack.yaml`.
+
+An apparatus is allowed to be noisier than the tolerance — readings scatter, and demanding
+otherwise would rule out every physics probe. What it may not do is be noisy *and* take too few
+samples, because scatter only averages down with the square root of the count. Get that wrong and
+the recorded value moves further than the tolerance on nothing but noise: the row reports `DRIFT`
+every single run, forever, and people learn to ignore it.
+
+`bedshock test` checks `spread / sqrt(samples) <= tolerance` for every measured row. The two
+halves live in two files that cannot see each other, so nothing but a cross-check catches it.
+
+---
+
+## The box
+
+A measurement taken in a place nobody checked is a measurement of the terrain. An item that stops
+after two blocks stopped because it hit a wall; an entity that does not move is standing in a
+hole. Both produce a number, both look like physics, and neither is.
+
+```ts
+const box = arena(somewhere, { length: 24, height: 4, width: 1, behind: 2 });
+box.clear();                          // carve it, floor and all — safe to call every reading
+box.sweep('minecraft:item');          // no leftovers from the last reading
+const problem = box.verify();         // ...and is it actually there?
+```
+
+`verify()` is the point of the file, not a convenience. It catches the chunk that never loaded and
+the floor that never went down — the two failures worth telling apart from a result. A probe
+reporting *the arena is not clear* has told you something true; one reporting `2.1 blocks` from
+the same situation has not.
+
+It is deliberately crude: axis-aligned, `+x` is forward, no rotation, no decoration. A box you can
+reason about beats a room you have to model, and every feature added to it is one more thing a
+measurement could be blaming instead of the game.
+
+---
+
 ## The three ways a search lies
 
 A bisection always converges on something. Point one at a trial that is simply broken and it will
@@ -162,8 +267,8 @@ the ledger, the report or the status derivation treats it as one.
 
 ## Without Minecraft
 
-`pack/scripts/bisect.ts` imports nothing at all. If your trial is not a tick loop — an in-memory
-measurement, a replay, a test — drive the search directly:
+`pack/scripts/bisect.ts` and `pack/scripts/sample.ts` import nothing at all. If your trial is not
+a tick loop — an in-memory measurement, a replay, a test — drive them directly:
 
 ```ts
 import { bisect } from '../vendor/bedshock/pack/scripts/bisect.ts';
@@ -172,6 +277,13 @@ const search = bisect({ from: 0, to: 1000, tolerance: 0.01, direction: 'minimum'
 let move = search.begin();
 while (!move.done) move = search.record(holds(move.x));
 // move.verdict, move.value, move.bracket, move.why
+```
+
+```ts
+import { summarise } from '../vendor/bedshock/pack/scripts/sample.ts';
+
+const s = summarise(readings, { samples: 5, spread: 0.5 });
+// s.verdict, s.value, s.kept, s.observed, s.why
 ```
 
 Same refusals, same vocabulary, no game required.

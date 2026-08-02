@@ -262,16 +262,65 @@ test('the probes not yet ported are exactly the ones we know about', () => {
   const catalog = loadCatalog();
   const implemented = new Set([
     'durability', 'dynprops', 'container', 'offhand', 'menu', 'fallingblock',
-    'fallcurve', 'anvilgap', 'repair', 'ruler', 'glyphs', 'flipbook', 'formicon',
+    'fallcurve', 'anvilgap', 'throw', 'knockback', 'repair', 'ruler', 'glyphs', 'flipbook',
+    'formicon',
   ]);
   const missing = [...new Set(
     catalog.capabilities.filter((c) => c.probe && !implemented.has(c.probe)).map((c) => c.probe!),
   )].sort();
-  // `knockback` and `throw` are declared SOLVED questions with no trial written yet. Both are
-  // now a trial away rather than a harness away — `solve.ts` is the reusable part and `anvilgap`
-  // is the worked example. Listed rather than quietly omitted, because the build prints this
-  // same set on every run and a shrinking list is the only progress bar there is.
-  assert.deepEqual(missing, ['attachable', 'attachable_pose', 'knockback', 'stash', 'throw']);
+  // What is left is eyes-only apparatus, not measurement: `attachable` and `stash` need a client
+  // to look at. Listed rather than quietly omitted, because the build prints this same set on
+  // every run and a shrinking list is the only progress bar there is.
+  assert.deepEqual(missing, ['attachable', 'attachable_pose', 'stash']);
+});
+
+/**
+ * Both shapes of solved row have a runtime, and the runtime matches the shape.
+ *
+ * A measured row put through `solve` would bisect a boundary that does not exist and burn dozens
+ * of trials arriving at INCONCLUSIVE; a boundary row put through `measure` would ask an apparatus
+ * for a number it cannot produce. Neither mistake shows up in a type — both files compile, both
+ * probes run, and the failure appears only as a strange result on a real server.
+ */
+test('every solved row uses the tool that matches its shape', () => {
+  const dir = join(ROOT, 'pack', 'scripts', 'probes');
+  const sources = new Map<string, string>();
+  for (const name of readdirSync(dir).filter((f) => f.endsWith('.ts'))) {
+    sources.set(name.replace(/\.ts$/, ''), readFileSync(join(dir, name), 'utf8'));
+  }
+
+  // Read from the IMPORTS rather than from call sites, because prose mentions both tools by
+  // name and a scan of the whole file matches the paragraph explaining the choice.
+  const imports = (probe: string): string[] =>
+    [...sources.get(probe)!.matchAll(/from '\.\.\/(\w+)\.ts'/g)].map((m) => m[1]!);
+
+  // A boundary: the apparatus can only say whether something worked, so it is bisected.
+  assert.ok(imports('anvilgap').includes('solve'), 'anvilgap should search for a boundary');
+  assert.ok(!imports('anvilgap').includes('measure'), 'anvilgap measures a number it cannot produce');
+
+  // Measurements: the apparatus hands back a distance, so the readings are summarised.
+  for (const probe of ['throw', 'knockback']) {
+    assert.ok(imports(probe).includes('measure'), `${probe} should measure, not search`);
+    assert.ok(!imports(probe).includes('solve'), `${probe} bisects a boundary that does not exist`);
+  }
+});
+
+/**
+ * A measurement taken in a place nobody checked is a measurement of the terrain.
+ *
+ * An item that stops after two blocks stopped because it hit a wall; an entity that does not move
+ * is standing in a hole. Both produce a number and both look like physics. The arena's `verify()`
+ * is the only thing that tells those apart, so a probe that carves without verifying has quietly
+ * given up the distinction.
+ */
+test('every probe that carves an arena also verifies it before measuring', () => {
+  const dir = join(ROOT, 'pack', 'scripts', 'probes');
+  for (const name of readdirSync(dir).filter((f) => f.endsWith('.ts'))) {
+    const source = readFileSync(join(dir, name), 'utf8');
+    if (!source.includes('arena(')) continue;
+    assert.match(source, /\.verify\(\)/, `${name} builds an arena it never checks is there`);
+    assert.match(source, /record\(null/, `${name} has no path for reporting the arena missing`);
+  }
 });
 
 /**

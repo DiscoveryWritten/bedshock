@@ -23,7 +23,7 @@ export interface SolveSpec {
   tolerance: number;
 }
 
-export const CATALOG_REVISION = "rd912823c";
+export const CATALOG_REVISION = "rf6ebdbea";
 export const SNAPSHOT_VERSION = "1.21.120";
 export const QUESTIONS: SessionQuestion[] = [
   {
@@ -1138,12 +1138,21 @@ export const SOLVES: SolveSpec[] = [
     "tolerance": 0.1
   },
   {
+    "id": "physics.knockback.blocks_per_unit_on_an_entity",
+    "probe": "knockback",
+    "unit": "blocks_per_unit",
+    "direction": "maximum",
+    "from": 0,
+    "to": 20,
+    "tolerance": 0.1
+  },
+  {
     "id": "physics.throw.item_travel_distance",
     "probe": "throw",
     "unit": "blocks",
     "direction": "maximum",
     "from": 0,
-    "to": 32,
+    "to": 24,
     "tolerance": 0.25
   }
 ];

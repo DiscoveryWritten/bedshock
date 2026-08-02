@@ -223,6 +223,30 @@ export const PARAMS = {
     "watch_ticks": 80,
     "repeats": 2,
     "max_trials": 40
+  },
+  "throw": {
+    "item": "minecraft:stick",
+    "run_length": 24,
+    "headroom": 4,
+    "release_height": 1,
+    "impulse_forward": 0.6,
+    "impulse_up": 0.25,
+    "rest_speed": 0.003,
+    "rest_ticks": 8,
+    "watch_ticks": 200,
+    "samples": 5,
+    "spread": 0.5
+  },
+  "knockback": {
+    "subject": "minecraft:armor_stand",
+    "units": 1,
+    "run_length": 16,
+    "headroom": 4,
+    "rest_step": 0.002,
+    "rest_ticks": 8,
+    "watch_ticks": 120,
+    "samples": 5,
+    "spread": 0.2
   }
 } as const;
 export const GLYPHS = ["","","",""];

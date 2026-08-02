@@ -1,13 +1,13 @@
 {
   "schema": 1,
   "minecraft": "1.21.120",
-  "catalog_revision": "rd912823c",
-  "release": "mc-1.21.120-rd912823c",
+  "catalog_revision": "rf6ebdbea",
+  "release": "mc-1.21.120-rf6ebdbea",
   "measured_through": "2026-08-02T05:01:00Z",
   "counts": {
     "SETTLED": 22,
     "CLOSED-NEGATIVE": 4,
-    "OPEN": 22,
+    "OPEN": 23,
     "INCONCLUSIVE": 1,
     "DRIFT": 0,
     "UNDERMINED": 0,
@@ -1389,8 +1389,8 @@
     },
     {
       "id": "physics.throw.item_travel_distance",
-      "question": "How far does a thrown item travel before coming to rest on flat ground?",
-      "decides": "Whether a mechanic that throws something can predict where it lands. Recorded not because throw distance is interesting in itself, but because anything built on top of it inherits the number -- and a design tuned to the old one fails in a way that looks like a bug in the design rather than a change in the game.",
+      "question": "How far does an item given a fixed impulse travel before coming to rest on flat ground?",
+      "decides": "Whether a mechanic that throws something can predict where it lands. Recorded not because throw distance is interesting in itself, but because anything built on top of it inherits the drag, the friction and the integration underneath it -- and a design tuned to the old numbers fails in a way that looks like a bug in the design rather than a change in the game.",
       "method": "solved",
       "surface": "engine",
       "status": "OPEN",
@@ -1401,14 +1401,32 @@
         "tolerance": 0.25,
         "search": {
           "from": 0,
-          "to": 32
+          "to": 24
         }
       }
     },
     {
       "id": "physics.knockback.blocks_per_unit",
       "question": "How far does one unit of `applyKnockback` actually move a player?",
-      "decides": "Whether any momentum design can be written at all. `applyKnockback` is the only way to impose a velocity on a player and its unit is undocumented, so every use of it is a guess until this is measured.",
+      "decides": "Whether any momentum design can be written at all. `applyKnockback` is the only way to impose a velocity on a player -- `applyImpulse` refuses them outright -- and its unit is undocumented, so every use of it anywhere is a constant somebody tuned by hand until it looked right.",
+      "method": "solved",
+      "surface": "script",
+      "status": "OPEN",
+      "inherited": false,
+      "measures": {
+        "unit": "blocks_per_unit",
+        "direction": "maximum",
+        "tolerance": 0.1,
+        "search": {
+          "from": 0,
+          "to": 20
+        }
+      }
+    },
+    {
+      "id": "physics.knockback.blocks_per_unit_on_an_entity",
+      "question": "How far does one unit of `applyKnockback` move an ordinary entity?",
+      "decides": "Whether one momentum constant covers everything a mechanic might move, or whether players and everything else need separate numbers. A design that pushes both through the same call and assumes the same result is resting on a proposition nobody has checked.",
       "method": "solved",
       "surface": "script",
       "status": "OPEN",

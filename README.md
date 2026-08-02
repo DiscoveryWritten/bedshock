@@ -368,10 +368,18 @@ bedshock init capabilities --domain portals --bedshock ../vendor/bedshock
 ```
 
 The probe it writes imports from [`pack/scripts/harness.ts`](pack/scripts/harness.ts), which is
-the contract for somebody else's pack — `solve`, `bisect`, and the wire format. Write a trial,
-declare a range and a tolerance, and your numbers come out in the same shape ours do: same
-collector, same drift detection, same log-scale column, your own manifest with its own release
-tag.
+the contract for somebody else's pack:
+
+| | |
+|---|---|
+| `solve` | A **boundary**. Your trial answers yes/no at a value; this bisects it and refuses the three ways a search lies about itself. |
+| `measure` | A **measurement**. Your apparatus hands back a number; this takes several, reports the median, and refuses when they disagree. |
+| `arena` | A box to measure in — flat, empty, carved, and *verified*, so a short throw is never confused with a wall. |
+| `bisect` / `summarise` | Both again with no Minecraft in them, for measuring in memory. |
+
+Write a trial, declare a range and a tolerance, and your numbers come out in the same shape ours
+do: same collector, same drift detection, same log-scale column, your own manifest with its own
+release tag.
 
 This matters because a capability battery has two halves and only one of them generalises. Nobody
 else can ask how much upward boost your horizontal portal needs to clear the floor on exit, or

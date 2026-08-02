@@ -237,3 +237,65 @@ probes:
     # is itself the finding -- and it comes back INCONCLUSIVE rather than as a half-narrowed
     # bracket dressed up as a number.
     max_trials: 40
+
+  # --- throw ----------------------------------------------------------------
+  #
+  # A MEASUREMENT, not a search: the item lands somewhere and the somewhere is the answer. Which
+  # makes the numbers here work differently from `anvilgap` above -- there is no bracket to
+  # narrow, there is a reading taken several times and a question of whether they agree.
+  #
+  # THE DISTANCE IS RELATIVE TO THE IMPULSE. "How far does a thrown item travel" has no answer
+  # until you say how hard it was thrown, and a player's throw is not scriptable. So the probe
+  # applies the impulse below and reports what it buys. Change the impulse and the number changes
+  # for a reason that has nothing to do with Bedrock, which is exactly why it is declared here and
+  # said out loud in the row's notes rather than buried in the probe.
+  throw:
+    # Small, stackable, no special physics of its own. A boat or an egg would answer about boats
+    # and eggs.
+    item: 'minecraft:stick'
+    # Blocks of clear run to carve, and headroom above it. The arena is verified before every
+    # reading -- an item that stops early because it hit a wall reads exactly like drag.
+    run_length: 24
+    headroom: 4
+    # Where it starts, above the floor. Shoulder height rather than on the ground, so the first
+    # tick is flight rather than a scrape.
+    release_height: 1
+    # The shove. Forward is +x; a little lift so it arcs rather than skidding, because a skid
+    # measures friction and an arc measures both.
+    impulse_forward: 0.6
+    impulse_up: 0.25
+    # Below this horizontal speed for this many ticks, it has stopped. Two ticks is not enough --
+    # an item bouncing off the floor is briefly slow without being finished.
+    rest_speed: 0.003
+    rest_ticks: 8
+    watch_ticks: 200
+    # Five readings and how far they may scatter. NOT the capability's tolerance: that is how far
+    # the ANSWER may move between runs, this is how far one READING may scatter within a run. The
+    # answer is a median, so its scatter is smaller -- and `bedshock test` checks that it is
+    # smaller than the tolerance rather than leaving it to hope.
+    samples: 5
+    spread: 0.5
+
+  # --- knockback ------------------------------------------------------------
+  #
+  # `applyKnockback` is the only way a script can impose momentum on a PLAYER -- `applyImpulse`
+  # refuses them outright -- and its argument has no documented unit. Every use of it anywhere is
+  # therefore a constant somebody tuned by hand until it looked right. This is that constant,
+  # measured.
+  knockback:
+    # What gets knocked back when there is no player. An armour stand has physics and no AI, so
+    # it goes where it is pushed and does not then wander off and ruin the reading.
+    subject: 'minecraft:armor_stand'
+    # How much knockback to apply. One unit is the natural thing to measure, and the probe divides
+    # by it, so raising this only buys resolution -- it must not change the answer, and a run
+    # where it does is itself a finding.
+    units: 1
+    run_length: 16
+    headroom: 4
+    # Rest is detected by POSITION, not velocity: a player's movement is client-authoritative and
+    # their reported velocity is not reliably the thing that moved them.
+    rest_step: 0.002
+    rest_ticks: 8
+    watch_ticks: 120
+    samples: 5
+    spread: 0.2

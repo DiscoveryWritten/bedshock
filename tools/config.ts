@@ -51,6 +51,30 @@ export interface ProbeConfig {
     repeats: number;
     max_trials: number;
   };
+  throw: {
+    item: string;
+    run_length: number;
+    headroom: number;
+    release_height: number;
+    impulse_forward: number;
+    impulse_up: number;
+    rest_speed: number;
+    rest_ticks: number;
+    watch_ticks: number;
+    samples: number;
+    spread: number;
+  };
+  knockback: {
+    subject: string;
+    units: number;
+    run_length: number;
+    headroom: number;
+    rest_step: number;
+    rest_ticks: number;
+    watch_ticks: number;
+    samples: number;
+    spread: number;
+  };
 }
 
 export interface PackConfig {
@@ -159,6 +183,38 @@ export function validatePackConfig(c: PackConfig): string[] {
           `halvings cost at ${a.repeats} repeat(s); the solve would run out before it converged`,
       );
     }
+  }
+
+  // The two MEASURED rows. Their failure modes are different from a search's: a search that
+  // cannot be run says so loudly, but a measurement taken badly just produces a number.
+  for (const [name, m] of [['throw', p.throw], ['knockback', p.knockback]] as const) {
+    if (!m) continue;
+    // One reading is not a measurement -- it is an anecdote with a decimal point, and there is
+    // no scatter to check it against.
+    if (m.samples < 3) {
+      problems.push(`probes.${name}.samples below 3 gives nothing to check the readings against`);
+    }
+    if (m.spread <= 0) {
+      problems.push(
+        `probes.${name}.spread must be above zero: readings never agree exactly, and a spread of ` +
+          'zero rejects every set of them',
+      );
+    }
+    // Rest has to mean stopped, not merely slow. A thing bouncing off the floor is briefly
+    // motionless without being finished, and calling that rest measures the bounce.
+    if (m.rest_ticks < 4) {
+      problems.push(`probes.${name}.rest_ticks below 4 calls a bounce a stop`);
+    }
+    if (m.watch_ticks <= m.rest_ticks * 2) {
+      problems.push(`probes.${name}.watch_ticks leaves no room to move before the rest test could pass`);
+    }
+    if (m.run_length < 4) problems.push(`probes.${name}.run_length under 4 blocks is a wall, not an arena`);
+    if (m.headroom < 2) problems.push(`probes.${name}.headroom under 2 clips anything that leaves the ground`);
+  }
+  // Dividing by the unit count is what makes the answer per-unit, so zero is a division by zero
+  // and a negative is a knockback pointing the other way with a sign nobody reads.
+  if (p.knockback && p.knockback.units <= 0) {
+    problems.push('probes.knockback.units must be above zero — the reading is divided by it');
   }
 
   const ids = (p.menu_variants ?? []).map((v) => v.id);

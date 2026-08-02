@@ -83,6 +83,7 @@ is how you find out the day it starts working.
 | `physics.falling_block.min_clearance_under_a_falling_anvil` | · |
 | `physics.throw.item_travel_distance` | · |
 | `physics.knockback.blocks_per_unit` | · |
+| `physics.knockback.blocks_per_unit_on_an_entity` | · |
 | **render** |  |
 | `render.molang.unknown_query_resolves_to_zero` | — |
 | `render.molang.integer_precision` | — |
@@ -136,7 +137,7 @@ answer. Shown on 1.21.120.
 
 *None measured yet. The questions are written; nobody has run them.*
 
-4 solved row(s) have no value yet: `physics.falling_block.gravity_curve`, `physics.falling_block.min_clearance_under_a_falling_anvil`, `physics.throw.item_travel_distance`, `physics.knockback.blocks_per_unit`
+5 solved row(s) have no value yet: `physics.falling_block.gravity_curve`, `physics.falling_block.min_clearance_under_a_falling_anvil`, `physics.throw.item_travel_distance`, `physics.knockback.blocks_per_unit`, `physics.knockback.blocks_per_unit_on_an_entity`
 
 ## entity
 
@@ -1226,21 +1227,23 @@ The measurable constants of Bedrock's own behaviour: how fast things fall, how f
 
 ### `physics.throw.item_travel_distance`
 
-**How far does a thrown item travel before coming to rest on flat ground?**
+**How far does an item given a fixed impulse travel before coming to rest on flat ground?**
 
-*Decides:* Whether a mechanic that throws something can predict where it lands. Recorded not because throw distance is interesting in itself, but because anything built on top of it inherits the number -- and a design tuned to the old one fails in a way that looks like a bug in the design rather than a change in the game.
+*Decides:* Whether a mechanic that throws something can predict where it lands. Recorded not because throw distance is interesting in itself, but because anything built on top of it inherits the drag, the friction and the integration underneath it -- and a design tuned to the old numbers fails in a way that looks like a bug in the design rather than a change in the game.
 
 <sub>method: `solved` · surface: `engine` · probe: `throw`</sub>
 
-*Solves for the maximum* in `blocks`, tolerating ±0.25 before a move counts as a finding, searching 0…32.
+*Solves for the maximum* in `blocks`, tolerating ±0.25 before a move counts as a finding, searching 0…24.
 
 **Never measured.** This row is a guess, however confident the prose around it sounds.
+
+> THE NUMBER IS RELATIVE TO AN IMPULSE. A player's throw is not scriptable, so the probe applies the impulse declared in `content/pack.yaml` and reports what it buys. Change that impulse and this number changes for a reason that has nothing to do with Bedrock, and readings from either side of the change are not comparable -- the same trap as the anvil's vacate window, in a different costume. The tolerance is a quarter of a block: about the difference one tick of contact with the ground makes at the speed the item is still carrying when it first lands.
 
 ### `physics.knockback.blocks_per_unit`
 
 **How far does one unit of `applyKnockback` actually move a player?**
 
-*Decides:* Whether any momentum design can be written at all. `applyKnockback` is the only way to impose a velocity on a player and its unit is undocumented, so every use of it is a guess until this is measured.
+*Decides:* Whether any momentum design can be written at all. `applyKnockback` is the only way to impose a velocity on a player -- `applyImpulse` refuses them outright -- and its unit is undocumented, so every use of it anywhere is a constant somebody tuned by hand until it looked right.
 
 <sub>method: `solved` · surface: `script` · probe: `knockback`</sub>
 
@@ -1248,7 +1251,21 @@ The measurable constants of Bedrock's own behaviour: how fast things fall, how f
 
 **Never measured.** This row is a guess, however confident the prose around it sounds.
 
-> Marked `script` rather than `engine` deliberately. The distance travelled is engine behaviour, but what one UNIT means is an API contract, and that is the part that moves when the module version moves. A consumer raising their script pin should see this row as one that might change under them.
+> Marked `script` rather than `engine` deliberately. The distance travelled is engine behaviour, but what one UNIT means is an API contract, and that is the part that moves when the module version moves. A consumer raising their script pin should see this row as one that might change under them. MEASURED WITH NO VERTICAL COMPONENT. A knockback with lift travels much further, so mixing the two would make the number depend on a choice the apparatus made rather than on the engine. Anything wanting the airborne figure is asking a different question and wants its own row. Only answerable with a player present, so a server run skips it. Its sibling below is the one that runs headless, and the pair existing separately is the point.
+
+### `physics.knockback.blocks_per_unit_on_an_entity`
+
+**How far does one unit of `applyKnockback` move an ordinary entity?**
+
+*Decides:* Whether one momentum constant covers everything a mechanic might move, or whether players and everything else need separate numbers. A design that pushes both through the same call and assumes the same result is resting on a proposition nobody has checked.
+
+<sub>method: `solved` · surface: `script` · probe: `knockback`</sub>
+
+*Solves for the maximum* in `blocks_per_unit`, tolerating ±0.1 before a move counts as a finding, searching 0…20.
+
+**Never measured.** This row is a guess, however confident the prose around it sounds.
+
+> The same call, the same arena, the same rest test as the player row -- differing in the subject and in nothing else, which is what makes a difference between the two attributable to the subject. WHAT TO DO IF THESE TWO DIVERGE: treat the player row as the one your design has to respect and this one as the warning that a shared constant is wrong. They are recorded separately precisely so that divergence is visible rather than averaged away.
 
 ## render
 
@@ -1538,5 +1555,5 @@ other repositories can carry `@requires bedshock:<id>` and `bedshock check` will
 if the cited row is not settled at that pack's `min_engine_version` — so a design can never
 quietly come to rest on a guess.
 
-<sub>64 capabilities · 27 observations · 1 version(s): 1.21.120</sub>
+<sub>65 capabilities · 27 observations · 1 version(s): 1.21.120</sub>
 
