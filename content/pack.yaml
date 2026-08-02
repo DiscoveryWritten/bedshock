@@ -170,9 +170,30 @@ probes:
       size: 15
 
   # --- off-hand ------------------------------------------------------------
+  #
+  # THE SLOT A MOD AUTHOR HAS TO CONTORT AROUND. The off-hand is the only place Bedrock renders
+  # an arbitrary held item in the world with no attachable work at all, which makes it perpetually
+  # attractive -- and it does not work, and the way in which it does not work is what a design has
+  # to be built around rather than a flat no.
+  #
+  # So this is measured with a SPREAD rather than a single item, and with a control. One diamond
+  # that gets ejected proves one diamond gets ejected.
   offhand:
-    # A vanilla item the slot would never normally accept.
-    arbitrary_item: 'minecraft:diamond'
+    # A vanilla item the off-hand DOES normally accept, and the control for this whole file.
+    #
+    # If this does not stay, the apparatus is broken and every negative here means nothing -- the
+    # write failed, or the read is looking at the wrong slot, or the player was not really there.
+    # Without it, a probe that had silently stopped writing anything at all would report the same
+    # confident row of NOs as a probe that worked perfectly, and the manifest would be built on it.
+    permitted_item: 'minecraft:shield'
+    # Vanilla items the slot would never normally take. Deliberately spread across kinds -- a
+    # plain material, a tool, a block, a food -- because "arbitrary items are ejected" and "that
+    # particular item is ejected" are different claims and only the first one is worth publishing.
+    arbitrary_items:
+      - 'minecraft:diamond'
+      - 'minecraft:diamond_pickaxe'
+      - 'minecraft:stone'
+      - 'minecraft:bread'
     # Ticks to wait before reading the slot back the second time. The client's ejection is not
     # instant, so an immediate read alone would report a false persistence.
     settle_ticks: 60

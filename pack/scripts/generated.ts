@@ -206,7 +206,13 @@ export const PARAMS = {
     }
   ],
   "offhand": {
-    "arbitrary_item": "minecraft:diamond",
+    "permitted_item": "minecraft:shield",
+    "arbitrary_items": [
+      "minecraft:diamond",
+      "minecraft:diamond_pickaxe",
+      "minecraft:stone",
+      "minecraft:bread"
+    ],
     "settle_ticks": 60
   },
   "falling_block": {

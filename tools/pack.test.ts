@@ -77,6 +77,53 @@ test('the container variants form a single-variable comparison', () => {
   assert.match(validatePackConfig(mismatched).join('\n'), /share no size/);
 });
 
+/**
+ * THE OFF-HAND FILE NEEDS A CONTROL, and it is the row that is supposed to PASS.
+ *
+ * Every other row here is expected to be NO — that is the whole finding, and it is what a mod
+ * author is meant to design around. Which makes this file uniquely dangerous: a probe that had
+ * silently stopped writing anything at all would produce exactly the same confident row of NOs
+ * as one working perfectly, and nothing about reading the results would show the difference.
+ *
+ * The control is an item the off-hand is SUPPOSED to keep. It has to be answered by the same
+ * probe — a control living somewhere else controls nothing — and it must not be one of the items
+ * the negatives are measured with, or it is not a comparison.
+ */
+test('the off-hand negatives are backed by a control that is supposed to pass', () => {
+  const catalog = loadCatalog();
+  const control = catalog.byId.get('equipment.offhand.vanilla_permitted_item_persists');
+  assert.ok(control, 'the off-hand file has no control');
+  const persists = catalog.byId.get('equipment.offhand.script_placed_item_persists')!;
+  assert.equal(control!.probe, persists.probe, 'the control is answered by a different probe');
+
+  const o = config.probes.offhand;
+  assert.ok(o.permitted_item, 'no control item is declared');
+  assert.ok(!o.arbitrary_items.includes(o.permitted_item), 'the control item is also on trial');
+
+  const noControl: PackConfig = {
+    ...config,
+    probes: { ...config.probes, offhand: { ...o, permitted_item: '' } },
+  };
+  assert.match(validatePackConfig(noControl).join('\n'), /control for this whole file/);
+});
+
+/**
+ * And the negative is measured across a SPREAD. "Arbitrary items are ejected" and "a diamond is
+ * ejected" are different claims; a manifest is only worth contorting around if it makes the
+ * first one.
+ */
+test('the off-hand negative is measured across several kinds of item, not one', () => {
+  const items = config.probes.offhand.arbitrary_items;
+  assert.ok(items.length >= 3, `only ${items.length} item(s) on trial`);
+  assert.equal(new Set(items).size, items.length, 'a duplicate answers the same question twice');
+
+  const single: PackConfig = {
+    ...config,
+    probes: { ...config.probes, offhand: { ...config.probes.offhand, arbitrary_items: ['minecraft:diamond'] } },
+  };
+  assert.match(validatePackConfig(single).join('\n'), /about one item/);
+});
+
 /** The client's ejection is not instant. Reading too early reports a false persistence. */
 test('the off-hand settle delay is at least a second', () => {
   assert.ok(config.probes.offhand.settle_ticks >= 20);

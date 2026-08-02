@@ -47,8 +47,10 @@ is how you find out the day it starts working.
 | `entity.stash.holder_findable_after_world_reload` | **yes** |
 | `entity.falling_block.is_trackable_by_script` | **yes** |
 | **equipment** |  |
+| `equipment.offhand.vanilla_permitted_item_persists` | · |
 | `equipment.offhand.accepts_a_script_placed_item` | **yes** |
 | `equipment.offhand.script_placed_item_persists` | **no** |
+| `equipment.offhand.ejected_item_survives` | · |
 | `equipment.offhand.custom_item_declaring_allow_off_hand_persists` | **yes** |
 | `equipment.offhand.player_can_place_an_arbitrary_item` | — |
 | `equipment.offhand.has_a_use_input` | — |
@@ -498,6 +500,18 @@ Entities are the only container host Bedrock offers, so every design that needs 
 
 What script can put in a player's equipment slots, and whether it stays there. The gap between those two is the whole content of this file: acceptance by the API is not persistence, and the client has opinions the API does not report.
 
+### `equipment.offhand.vanilla_permitted_item_persists`
+
+**Does a vanilla item the off-hand normally accepts -- a shield -- stay there when a script puts it in?**
+
+*Decides:* Nothing on its own, and that is the point. This is the CONTROL for every other row in this file: it is the one that is SUPPOSED to work. If it does not stay, the apparatus is broken -- the write never landed, or the read is looking at the wrong slot, or there was no player there at all -- and every negative in this file is measuring the probe rather than the game. Without it, a probe that had silently stopped writing anything would report exactly the same confident row of NOs as one working perfectly, and a manifest people design around would be built on it.
+
+<sub>method: `automated` · surface: `engine` · probe: `offhand`</sub>
+
+**Never measured.** This row is a guess, however confident the prose around it sounds.
+
+> READ THIS ROW FIRST when anything else in the file changes. A negative here invalidates the whole file for that version; a negative anywhere else, with this one green, is a finding.
+
 ### `equipment.offhand.accepts_a_script_placed_item`
 
 **Does `setEquipment(Offhand, ...)` succeed for an item the slot would not normally take?**
@@ -525,7 +539,7 @@ What script can put in a player's equipment slots, and whether it stays there. T
 
 ### `equipment.offhand.script_placed_item_persists`
 
-**Is a script-placed arbitrary item still in the off-hand a few seconds later?**
+**Is a script-placed arbitrary vanilla item still in the off-hand a few seconds later?**
 
 *Decides:* Whether the off-hand is free in-world rendering of an arbitrary item -- modded ones included -- with no attachable work at all. If it is, a whole class of display problem has a shortcut. If it is not, rendering an arbitrary held item has no shortcut around attachables.
 
@@ -550,7 +564,19 @@ What script can put in a player's equipment slots, and whether it stays there. T
 
 </details>
 
-> The probe reads the slot back immediately -- confirming the write landed -- and again after a delay. Both readings are in the measurement, because "never arrived" and "arrived and was ejected" are different findings.
+> The probe reads the slot back immediately -- confirming the write landed -- and again after a delay. Both readings are in the measurement, because "never arrived" and "arrived and was ejected" are different findings. MEASURED ACROSS A SPREAD OF ITEMS, not one. A plain material, a tool, a block and a food, because "arbitrary items are ejected" and "that particular item is ejected" are different claims and only the first is worth publishing. The verdict is YES only if every one of them stays and NO if any is ejected -- and if the result is mixed, the per-item breakdown is in the measurement and the evidence names which survived, because a partial allow-list is a far more useful thing for a mod author than either flat answer. THIS IS A ROW WE EXPECT TO BE NO, and it is on the watchlist for exactly that reason. A negative here is not a closed file: it is the question that gets re-asked on every Bedrock nobody has looked at yet, so that the day it flips, the proof was written months earlier.
+
+### `equipment.offhand.ejected_item_survives`
+
+**When the client ejects a script-placed item from the off-hand, does the item still exist?**
+
+*Decides:* Whether writing to the off-hand is SAFE TO ATTEMPT AT ALL. Everything else in this file is about whether a trick works; this is about what it costs when it does not. An ejection that returns the item to the inventory or drops it on the floor is a failed effect. An ejection that destroys it is a pack eating a player's diamonds, and no amount of graceful degradation elsewhere makes that acceptable.
+
+<sub>method: `automated` · surface: `engine` · probe: `offhand` · rests on: `equipment.offhand.accepts_a_script_placed_item`</sub>
+
+**Never measured.** This row is a guess, however confident the prose around it sounds.
+
+> Only meaningful while `equipment.offhand.script_placed_item_persists` is NO -- if the item stays, nothing was ejected and there is nothing to survive. The probe reports INCONCLUSIVE rather than a verdict in that case, because "it was not destroyed" is trivially true of an item that never left. The measurement records WHERE it went -- back to the inventory, onto the floor as an entity, or nowhere -- since those are three different things to design around and only the third is a reason not to try at all.
 
 ### `equipment.offhand.custom_item_declaring_allow_off_hand_persists`
 
@@ -1555,5 +1581,5 @@ other repositories can carry `@requires bedshock:<id>` and `bedshock check` will
 if the cited row is not settled at that pack's `min_engine_version` — so a design can never
 quietly come to rest on a guess.
 
-<sub>65 capabilities · 27 observations · 1 version(s): 1.21.120</sub>
+<sub>67 capabilities · 27 observations · 1 version(s): 1.21.120</sub>
 

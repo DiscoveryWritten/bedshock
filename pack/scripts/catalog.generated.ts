@@ -23,7 +23,7 @@ export interface SolveSpec {
   tolerance: number;
 }
 
-export const CATALOG_REVISION = "rd41e0ac3";
+export const CATALOG_REVISION = "r4c88fd4f";
 export const SNAPSHOT_VERSION = "1.21.120";
 export const QUESTIONS: SessionQuestion[] = [
   {

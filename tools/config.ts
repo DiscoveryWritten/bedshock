@@ -39,7 +39,7 @@ export interface ProbeConfig {
   menu_variants: MenuVariant[];
   flipbook: { frames: number; ticks_per_frame: number };
   containers: ContainerVariant[];
-  offhand: { arbitrary_item: string; settle_ticks: number };
+  offhand: { permitted_item: string; arbitrary_items: string[]; settle_ticks: number };
   falling_block: { block: string; drop_height: number; watch_ticks: number; lane: number };
   anvilgap: {
     block: string;
@@ -140,6 +140,26 @@ export function validatePackConfig(c: PackConfig): string[] {
       'probes.containers: the chest and horse variants share no size, so any difference between ' +
         'them could be the size rather than the container type',
     );
+  }
+  if (p.offhand) {
+    // One item is one data point. "Arbitrary items are ejected" and "that particular item is
+    // ejected" are different claims, and only the first is worth putting in a manifest.
+    if ((p.offhand.arbitrary_items?.length ?? 0) < 2) {
+      problems.push(
+        'probes.offhand.arbitrary_items needs at least two, or a negative here is about one item ' +
+          'rather than about the slot',
+      );
+    }
+    // The control has to be a DIFFERENT item, or it proves nothing about the others.
+    if (!p.offhand.permitted_item) {
+      problems.push(
+        'probes.offhand.permitted_item is the control for this whole file — without it, a probe ' +
+          'that silently stopped writing anything would report the same confident row of NOs as ' +
+          'one that worked',
+      );
+    } else if (p.offhand.arbitrary_items?.includes(p.offhand.permitted_item)) {
+      problems.push('probes.offhand.permitted_item is also listed as arbitrary; it cannot be both');
+    }
   }
   if (p.offhand && p.offhand.settle_ticks < 20) {
     problems.push(
