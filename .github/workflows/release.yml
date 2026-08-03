@@ -21,7 +21,12 @@ name: release
 #
 #   bedrock-capabilities-<version>.json   what another repository reads
 #   bedrock-capabilities-<version>.md     what a person reads
-#   bedshock-<pack>.mcaddon               the probe pack that produced it
+#   bedshock-<version>.mcworld            THE ONE MOST PEOPLE WANT. A flat creative world with
+#                                         the pack already inside it -- world-local, so importing
+#                                         it never touches the content manager. Delete the old
+#                                         world, open this, join. No install, no duplicate, no
+#                                         app restart, nothing accumulating in storage.
+#   bedshock-<pack>.mcaddon               the probe pack on its own, for a world you already have
 #   watchlist-<version>.md                the rows measured NO, for the next sweep to aim at
 
 on:
@@ -31,8 +36,13 @@ on:
         description: 'Minecraft version to publish (blank = newest in the ledger)'
         required: false
         default: ''
+      measure:
+        description: 'Boot a real server and measure before publishing (also produces the .mcworld)'
+        type: boolean
+        required: false
+        default: true
       server-url:
-        description: 'Measure first, against this BDS zip. Blank publishes what is already recorded'
+        description: 'Pin an OLD Bedrock server zip. Blank uses the current one, resolved automatically'
         required: false
         default: ''
       record:
@@ -67,15 +77,21 @@ jobs:
       # IS the artifact -- hand-writing level.dat means hand-writing NBT, and a world that fails
       # to import is worse than none. The level name carries the version so somebody with three
       # of these on a tablet can tell them apart without opening them.
-      - name: Measure, if a server was named
-        if: inputs.server-url != ''
+      # MEASURING IS THE DEFAULT, because the world is only produced by a run and the world is
+      # what most people came for. `server-url` is Mojang's Bedrock Dedicated Server zip, not
+      # anything of ours -- nothing to host and nothing to keep up -- and `bds.sh` resolves the
+      # current one from their API when it is blank. Pin it only to measure an OLD Bedrock, which
+      # needs an archived server build because that API offers the newest and nothing else.
+      - name: Measure against a real server
+        if: inputs.measure
         run: |
+          set -euo pipefail
           mkdir -p dist
-          npx tsx tools/cli.ts run \
-            --server-url '${{ inputs.server-url }}' \
-            --world-out "$PWD/dist/bedshock-world.mcworld" \
-            --level-name "bedshock ${{ inputs.version }}" \
-            ${{ inputs.record && ' ' || '--dry-run' }}
+          args=(--world-out "$PWD/dist/bedshock-world.mcworld")
+          [ -n "${{ inputs.version }}" ] && args+=(--level-name "bedshock ${{ inputs.version }}")
+          [ -n "${{ inputs.server-url }}" ] && args+=(--server-url '${{ inputs.server-url }}')
+          ${{ inputs.record && 'true' || 'false' }} || args+=(--dry-run)
+          npx tsx tools/cli.ts run "${args[@]}"
 
       - name: Work out what we are publishing
         id: what
@@ -110,9 +126,9 @@ jobs:
           # what makes it two taps instead of three minutes: on Bedrock an .mcaddon whose UUID is
           # already installed is REFUSED as a duplicate, the client caches hard enough to need an
           # app restart, and only marketplace content updates in place.
-          if [ -n "${{ inputs.server-url }}" ]; then
+          if [ "${{ inputs.measure }}" = "true" ]; then
             if [ ! -f dist/bedshock-world.mcworld ]; then
-              echo "A server was measured but no .mcworld was produced." >&2
+              echo "This run measured, but no .mcworld was produced." >&2
               echo "That flag spent months being accepted and ignored; it must not start again." >&2
               exit 1
             fi
