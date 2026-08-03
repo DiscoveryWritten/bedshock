@@ -673,3 +673,194 @@ test('the battery waits for the chunk rather than only claiming it', () => {
   const waitAt = main.indexOf('whenChunkIsLive(');
   assert.ok(claimAt !== -1 && waitAt !== -1 && waitAt > claimAt, 'the wait must come after the claim');
 });
+
+// ---------------------------------------------------------------------------
+// The attachable, which is the rig this pack has broken most often
+// ---------------------------------------------------------------------------
+
+const attachables = paths.filter((p) => p.startsWith('RP/attachables/'));
+
+/**
+ * THE TWO SHAPES THAT RENDERED NOTHING, and neither of them errors.
+ *
+ * An attachable whose `textures` map has no `default` entry draws NOTHING — not the wrong colour,
+ * not a missing-texture checker, nothing — and so does a `part_visibility` list starting
+ * `{"*": false}` that never gets overridden. Both cost a session, and guessing which one it was
+ * cost the session after that. Neither is visible in a build log, in a validation pass, or in the
+ * game's own output.
+ */
+test('every attachable declares a default texture and a default geometry', () => {
+  assert.ok(attachables.length >= 4, `only ${attachables.length} attachables emitted`);
+  for (const path of attachables) {
+    const description = json(path)['minecraft:attachable'].description;
+    assert.ok(description.textures?.default, `${path} has no default texture — this renders as nothing`);
+    assert.ok(description.geometry?.default, `${path} has no default geometry — this renders as nothing`);
+    assert.ok(description.render_controllers?.length, `${path} names no render controller`);
+  }
+});
+
+test('no attachable uses part_visibility, which is the other way to render nothing', () => {
+  for (const path of attachables) {
+    assert.ok(!JSON.stringify(json(path)).includes('part_visibility'), `${path} uses part_visibility`);
+  }
+  const controllers = paths.filter((p) => p.startsWith('RP/render_controllers/'));
+  for (const path of controllers) {
+    assert.ok(!JSON.stringify(json(path)).includes('part_visibility'), `${path} uses part_visibility`);
+  }
+});
+
+/**
+ * Every geometry and controller an attachable names has to be one this pack actually emits.
+ *
+ * A typo here does not fail the build and does not fail the game. It renders nothing, which is
+ * indistinguishable from the finding the probe exists to report.
+ */
+test('every attachable points at a geometry and a controller that exist', () => {
+  const geometries = new Set<string>();
+  for (const path of paths.filter((p) => p.endsWith('.geo.json'))) {
+    for (const model of json(path)['minecraft:geometry']) geometries.add(model.description.identifier);
+  }
+  const controllers = new Set<string>();
+  for (const path of paths.filter((p) => p.includes('render_controllers/'))) {
+    for (const name of Object.keys(json(path).render_controllers)) controllers.add(name);
+  }
+  for (const path of attachables) {
+    const description = json(path)['minecraft:attachable'].description;
+    for (const identifier of Object.values(description.geometry as Record<string, string>)) {
+      assert.ok(geometries.has(identifier), `${path} names geometry "${identifier}", which is not emitted`);
+    }
+    for (const name of description.render_controllers as string[]) {
+      assert.ok(controllers.has(name), `${path} names controller "${name}", which is not emitted`);
+    }
+  }
+});
+
+/**
+ * Molang operator precedence eats array subscripts.
+ *
+ * `Array.palette[math.mod(x, 4)]` is the shape that has already gone wrong in a sibling repository:
+ * an unparenthesised expression inside a subscript binds in a way nobody predicts, and the result
+ * is a flag drawing the wrong colour rather than an error. A wrong colour IS the measurement here.
+ */
+test('every candidate expression is parenthesised inside its array subscript', () => {
+  const file = paths.find((p) => p.endsWith('probe_attach.render_controllers.json'))!;
+  const controllers = json(file).render_controllers;
+  const names = Object.keys(controllers);
+  assert.equal(names.length, config.probes.attachable.candidates.length);
+  for (const name of names) {
+    for (const expression of controllers[name].textures as string[]) {
+      assert.match(expression, /^Array\.palette\[\(.*\)\]$/, `${name}: "${expression}" is not parenthesised`);
+    }
+  }
+});
+
+/**
+ * NOTHING IS OFFSET BY ZERO. The anchor is on the BODY.
+ *
+ * A neat row of flags near the pivot renders at hip height on the third-person model, and two of
+ * the four sit inside the torso. The rig works perfectly and cannot be read — which has happened
+ * to this apparatus twice, on two different probes, for this one reason.
+ */
+test('no probe geometry sits on the attachment pivot', () => {
+  for (const path of paths.filter((p) => p.endsWith('.geo.json') && !p.includes('probe_box'))) {
+    for (const model of json(path)['minecraft:geometry']) {
+      for (const bone of model.bones) {
+        for (const cube of bone.cubes ?? []) {
+          const [, y] = cube.origin as number[];
+          // The stub is the deliberate exception: it exists AT the hand so that "controllers run,
+          // queries do not" looks different from "nothing rendered at all".
+          if (bone.name === 'stub') continue;
+          assert.ok(y! > 0, `${path}: bone "${bone.name}" sits at y=${y}, where the body occludes it`);
+        }
+      }
+    }
+  }
+});
+
+/**
+ * The pose rig's whole value is that the minimal rig is its control.
+ *
+ * If both declare animations, or neither does, there is nothing to compare and the row cannot be
+ * answered — a person would be looking at one cube and asked whether it looks posed, which is a
+ * judgement rather than a reading.
+ */
+test('the pose rig declares hold animations and its control declares none', () => {
+  const posed = json(attachables.find((p) => p.includes('att_pose'))!)['minecraft:attachable'].description;
+  const control = json(attachables.find((p) => p.includes('att_min'))!)['minecraft:attachable'].description;
+  assert.ok(posed.animations, 'the pose rig declares no animations, so it is the same as its control');
+  assert.ok(posed.scripts?.animate, 'the pose rig declares animations but never plays them');
+  assert.ok(!control.animations, 'the control declares animations, so nothing differs between the two');
+  // Same geometry, or the difference could be the model rather than the pose.
+  assert.deepEqual(posed.geometry, control.geometry, 'the two rigs draw different models');
+});
+
+/**
+ * The numbers that make the differential readable, refused when they stop being readable.
+ *
+ * The apparatus has already produced one picture nobody could grade: with `2048 % 4 == 0`, an
+ * undamaged item shows exactly what a blind query shows. The validator reproduces the arithmetic
+ * so that a changed damage cannot quietly reintroduce it.
+ */
+test('attachable damages that make the picture ungradeable are refused', () => {
+  assert.deepEqual(validatePackConfig(config), []);
+
+  const undamaged: PackConfig = {
+    ...config,
+    probes: { ...config.probes, attachable: { ...config.probes.attachable, damage: 0 } },
+  };
+  assert.match(validatePackConfig(undamaged).join('\n'), /also what a blind query returns|cannot be told apart/);
+
+  const noDifferential: PackConfig = {
+    ...config,
+    probes: {
+      ...config.probes,
+      attachable: { ...config.probes.attachable, damage_b: config.probes.attachable.damage + 4 },
+    },
+  };
+  assert.match(
+    validatePackConfig(noDifferential).join('\n'),
+    /indistinguishable from a blind one/,
+    'a damage_b four apart reads identically and was accepted',
+  );
+});
+
+// ---------------------------------------------------------------------------
+// The stash
+// ---------------------------------------------------------------------------
+
+/**
+ * A same-session fetch must NOT hand the item back.
+ *
+ * The reload row needs a stash that is still stashed when the world comes back up. A fetch that
+ * spends it the moment somebody tries it out destroys the only setup that can answer the question,
+ * and nothing about the readout would say so.
+ */
+test('the stash is not spent by a fetch in the same session', () => {
+  const source = readFileSync(join(ROOT, 'pack', 'scripts', 'probes', 'stash.ts'), 'utf8');
+  const sameSession = source.slice(source.indexOf('if (!reloaded)'), source.indexOf('if (!stored)'));
+  assert.ok(sameSession.length > 0, 'the same-session branch has gone');
+  assert.ok(!/addItem\(|spawnItem\(/.test(sameSession), 'a same-session fetch hands the item back');
+  assert.match(sameSession, /skipped\(ctx, ROWS\.reload/, 'a same-session fetch reports the reload row anyway');
+});
+
+/**
+ * The reload token cannot come from a clock.
+ *
+ * `Date.now()` at module scope makes the whole pack depend on `Date` existing in Bedrock's script
+ * engine — and a throw there takes down every probe, not this one. The counter is bumped from
+ * `worldLoad`, which fires once per load by definition.
+ */
+test('the stash session token is a load counter rather than a clock', () => {
+  const source = readFileSync(join(ROOT, 'pack', 'scripts', 'probes', 'stash.ts'), 'utf8');
+  // Comments stripped first: the file explains at length why it does not read a clock, and a check
+  // that fires on its own rationale is one somebody deletes rather than fixes.
+  const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  assert.ok(!/Date\.now\(\)|new Date\(/.test(code), 'the stash reads a clock');
+  assert.match(code, /worldLoad\.subscribe/, 'nothing increments the load counter');
+});
+
+/** The fetch has to be reachable, or the stash sets up an experiment nobody can conclude. */
+test('the stash follow-up is registered', () => {
+  const main = readFileSync(join(ROOT, 'pack', 'scripts', 'main.ts'), 'utf8');
+  assert.match(main, /'stash\.fetch'/, 'the fetch follow-up is not registered');
+});

@@ -18,6 +18,11 @@ export const IDS: {
   flipbook: string[];
   menu: MenuId[];
   containers: ContainerId[];
+  attach: string[];
+  attach_min: string;
+  attach_pose: string;
+  stash_carrier: string;
+  stash_holder: string;
 } = {
   "durability": [
     {
@@ -129,7 +134,15 @@ export const IDS: {
       "container_type": "horse",
       "size": 16
     }
-  ]
+  ],
+  "attach": [
+    "bedshock:probe_attach_a",
+    "bedshock:probe_attach_b"
+  ],
+  "attach_min": "bedshock:probe_att_min",
+  "attach_pose": "bedshock:probe_att_pose",
+  "stash_carrier": "minecraft:shulker_box",
+  "stash_holder": "bedshock:probe_box_chest5"
 };
 
 export const PARAMS = {
@@ -246,6 +259,37 @@ export const PARAMS = {
     }
   ],
   "container_marker": "minecraft:diamond",
+  "attachable": {
+    "max_durability": 2048,
+    "damage": 5,
+    "damage_b": 6,
+    "candidates": [
+      {
+        "id": "remaining",
+        "molang": "math.mod(query.remaining_durability, 4)",
+        "note": "the one we want. A: 2043 % 4 = 3 WHITE. B: 2042 % 4 = 2 BLUE. Same on both = blind."
+      },
+      {
+        "id": "damage",
+        "molang": "math.mod(query.max_durability - query.remaining_durability, 4)",
+        "note": "needs BOTH queries live. A: 5 % 4 = 1 GREEN. B: 6 % 4 = 2 BLUE. Same on both = blind."
+      },
+      {
+        "id": "use_duration",
+        "molang": "math.mod(query.item_remaining_use_duration, 4)",
+        "note": "expected 0 -> RED on both, working or not. A long shot, included because it is free."
+      },
+      {
+        "id": "control",
+        "molang": "2",
+        "note": "literal -> BLUE on both. If this is not BLUE the apparatus is broken and no flag means anything."
+      }
+    ]
+  },
+  "stash": {
+    "holder": "bedshock:probe_box_chest5",
+    "carrier": "minecraft:shulker_box"
+  },
   "offhand": {
     "permitted_item": "minecraft:shield",
     "arbitrary_items": [

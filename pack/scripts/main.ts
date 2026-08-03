@@ -35,6 +35,8 @@ import * as fallingblock from './probes/fallingblock.ts';
 import * as repair from './probes/repair.ts';
 import * as throwProbe from './probes/throw.ts';
 import * as scenes from './probes/scenes.ts';
+import * as attachable from './probes/attachable.ts';
+import * as stash from './probes/stash.ts';
 import * as session from './session.ts';
 import * as chapter from './chapter.ts';
 
@@ -65,6 +67,9 @@ const PROBES: Record<string, Probe> = {
   glyphs: scenes.glyphs,
   flipbook: scenes.flipbook,
   formicon: scenes.formIcons,
+  attachable: attachable.run,
+  attachable_pose: attachable.pose,
+  stash: stash.run,
 };
 
 /** Follow-ups: the halves of a measurement that cannot happen in one call. */
@@ -73,6 +78,9 @@ const FOLLOW_UPS: Record<string, (ctx: Ctx, player: Player) => void> = {
   'dynprops.token': dynprops.token,
   'container.read': (ctx) => container.read(ctx),
   'container.clear': (ctx) => container.clear(ctx),
+  // The half of the stash that has to happen AFTER something -- a walk, or a quit to title.
+  // See `stash.ts` for why a same-session fetch deliberately does not spend the stash.
+  'stash.fetch': (ctx) => stash.fetch(ctx),
 };
 
 /**

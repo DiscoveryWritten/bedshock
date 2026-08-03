@@ -40,6 +40,13 @@ export interface ProbeConfig {
   flipbook: { frames: number; ticks_per_frame: number };
   containers: ContainerVariant[];
   container_marker: string;
+  attachable: {
+    max_durability: number;
+    damage: number;
+    damage_b: number;
+    candidates: { id: string; molang: string; note: string }[];
+  };
+  stash: { holder: string; carrier: string };
   offhand: { permitted_item: string; arbitrary_items: string[]; settle_ticks: number };
   falling_block: { block: string; drop_height: number; watch_ticks: number; lane: number };
   anvilgap: {
@@ -151,6 +158,68 @@ export function validatePackConfig(c: PackConfig): string[] {
       'probes.containers has no horse variant at size 3, 4 or 6 — those are where the candidate ' +
         'slot-count rules disagree, and without one the discovery pass cannot separate them',
     );
+  }
+
+  // --- the attachable's readability ---------------------------------------
+  //
+  // THIS PROBE IS A DIFFERENTIAL, and the numbers are what make it one. Every rule below was
+  // learned by a session that produced a picture nobody could grade.
+  if (p.attachable) {
+    const a = p.attachable;
+    const palette = 4;
+    if (a.candidates?.length !== palette) {
+      problems.push(`probes.attachable.candidates must be exactly ${palette}, one per palette entry`);
+    }
+    // Reproduced from the candidate expressions on purpose. The molang is what runs and this is
+    // what says the run will be legible, and keeping them apart is the only way the second can
+    // fail when the first is wrong. Keyed by candidate id so an added candidate is ignored rather
+    // than silently mis-evaluated.
+    const has = (id: string) => a.candidates?.some((c) => c.id === id) ?? false;
+    const at = (damage: number) => ({
+      remaining: (a.max_durability - damage) % palette,
+      damage: damage % palette,
+      use_duration: 0,
+      control: 2,
+    });
+    if (a.max_durability && a.damage !== undefined && has('remaining') && has('damage')) {
+      const first = at(a.damage);
+      // Four identical flags answer one question four times. At the FIRST damage they must all
+      // differ, or two working queries are indistinguishable from each other.
+      if (new Set(Object.values(first)).size !== palette) {
+        problems.push(
+          `probes.attachable: at damage ${a.damage} the four candidates land on ` +
+            `[${Object.values(first).join(', ')}] — flags that share a colour cannot be told apart`,
+        );
+      }
+      // An unrecognised Molang query resolves to 0 rather than erroring, so index 0 IS the
+      // signal for "blind". Any candidate expected there is unreadable except the one that
+      // expects zero anyway.
+      for (const [id, index] of Object.entries(first)) {
+        if (index === 0 && id !== 'use_duration') {
+          problems.push(
+            `probes.attachable: candidate "${id}" lands on index 0 at damage ${a.damage}, which is ` +
+              `also what a blind query returns — a working query would be unreadable`,
+          );
+        }
+      }
+    }
+    if (a.damage_b !== undefined && a.damage !== undefined && a.max_durability) {
+      if (a.damage_b === a.damage) {
+        problems.push('probes.attachable.damage_b must differ from damage, or there is no differential');
+      }
+      const first = at(a.damage);
+      const second = at(a.damage_b);
+      // The whole point of the second item: a LIVE query must change colour between them and a
+      // blind one cannot. A candidate that reads the same on both is unfalsifiable.
+      for (const id of ['remaining', 'damage'] as const) {
+        if (has(id) && first[id] === second[id]) {
+          problems.push(
+            `probes.attachable: candidate "${id}" reads the same at damage ${a.damage} and ` +
+              `${a.damage_b}, so a working query is indistinguishable from a blind one`,
+          );
+        }
+      }
+    }
   }
 
   if (p.offhand) {
