@@ -168,6 +168,18 @@ if [ "$started" -eq 1 ]; then
   done
 fi
 
+# Coordinates on, and the clock and weather frozen, so the world that ships is one somebody can
+# work in rather than one they have to fix first. Set through the console because these live in
+# level.dat and travel with the export.
+if [ "$started" -eq 1 ]; then
+  echo "gamerule showcoordinates true" >&3 || true
+  echo "gamerule dodaylightcycle false" >&3 || true
+  echo "gamerule doweathercycle false" >&3 || true
+  echo "gamerule domobspawning false" >&3 || true
+  echo "time set noon" >&3 || true
+  sleep 1
+fi
+
 echo "stop" >&3 || true
 sleep 3
 exec 3>&- || true
@@ -176,6 +188,18 @@ wait "$BDS_PID" 2>/dev/null || true
 
 mkdir -p "$(dirname "$LOG_OUT")"
 cp "$LOG" "$LOG_OUT"
+
+# Hand the finished world to the packager rather than zipping it here.
+#
+# The archive has to CARRY the packs, not merely name them -- world-local packs are what let an
+# import bypass the pack manager entirely, which is the whole reason this exists. Assembling that
+# in bash would put the one property worth testing somewhere no test can reach it, so this only
+# copies the world out and `tools/world.ts` does the rest.
+if [ "$started" -eq 1 ] && [ -d "$WORLD" ]; then
+  rm -rf "$BUILD_DIR/world"
+  mkdir -p "$BUILD_DIR/world"
+  cp -r "$WORLD/." "$BUILD_DIR/world/"
+fi
 
 if [ "$started" -ne 1 ]; then
   echo "FAIL: the server never reported 'Server started'." >&2

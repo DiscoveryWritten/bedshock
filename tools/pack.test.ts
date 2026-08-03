@@ -365,8 +365,8 @@ test('the probes not yet ported are exactly the ones we know about', () => {
   const catalog = loadCatalog();
   const implemented = new Set([
     'durability', 'dynprops', 'container', 'offhand', 'menu', 'fallingblock',
-    'fallcurve', 'anvilgap', 'throw', 'knockback', 'repair', 'ruler', 'glyphs', 'flipbook',
-    'formicon',
+    'fallcurve', 'anvilgap', 'throw', 'knockback', 'repair', 'distribution', 'ruler', 'glyphs',
+    'flipbook', 'formicon',
   ]);
   const missing = [...new Set(
     catalog.capabilities.filter((c) => c.probe && !implemented.has(c.probe)).map((c) => c.probe!),

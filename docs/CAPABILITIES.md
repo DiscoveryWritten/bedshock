@@ -30,6 +30,9 @@ is how you find out the day it starts working.
 
 | Capability | 1.21.120 |
 |---|---|
+| **distribution** |  |
+| `distribution.mcaddon.reinstall_replaces_in_place` | — |
+| `distribution.mcworld.carries_its_own_packs` | · |
 | **entity** |  |
 | `entity.container.is_the_only_container_host` | — |
 | `entity.container.storage_via_inventory_component` | **yes** |
@@ -141,6 +144,47 @@ answer. Shown on 1.21.120.
 *None measured yet. The questions are written; nobody has run them.*
 
 5 solved row(s) have no value yet: `physics.falling_block.gravity_curve`, `physics.falling_block.min_clearance_under_a_falling_anvil`, `physics.throw.item_travel_distance`, `physics.knockback.blocks_per_unit`, `physics.knockback.blocks_per_unit_on_an_entity`
+
+## distribution
+
+Getting a pack onto a device and into a world. Every row here is a tax on iteration rather than a capability a design rests on, which is why they are worth writing down once instead of being rediscovered on every new machine by somebody with a tablet and no patience left.
+
+### `distribution.mcaddon.reinstall_replaces_in_place`
+
+**Does importing an `.mcaddon` whose UUID is already installed replace the installed copy?**
+
+*Decides:* Whether iterating on an add-on is cheap or expensive, and therefore how much a single in-game session has to accomplish. If a rebuild costs one import, a session can be casual and repeated. If it costs an uninstall, an app restart and a world rebuild, then every session has to be one-pass, resumable in place, and worth the setup -- which is a hard constraint on the guided run rather than a preference.
+
+<sub>method: `derived` · surface: `engine`</sub>
+
+*Established by:* Observed repeatedly on iPadOS across more than a hundred installs: the import is refused as a DUPLICATE rather than replacing anything. The old copy has to be uninstalled first, and the client caches the pack list hard enough that the app must be closed before the new copy is offered. Only marketplace content updates in place. Recorded as `derived` rather than measured because it is not reachable from inside a pack: no script API touches the content manager. It is a property of the client, established by somebody paying for it a hundred times.
+
+> THE CONSEQUENCE, and it is the one worth carrying: every rebuild costs a world delete and an import, so nothing may be designed on the assumption that reinstalling is a retry. A session must be re-runnable inside the world it is already in, the arena must be re-pavable on command, and a badly staged row must be fixable by re-staging rather than by rebuilding. This is also why `distribution.mcworld.carries_its_own_packs` below matters so much. It is the only route that avoids the content manager entirely.
+
+### `distribution.mcworld.carries_its_own_packs`
+
+**Does a `.mcworld` containing its own `behavior_packs/` and `resource_packs/` folders import with those packs active, without touching the global pack list?**
+
+*Decides:* Whether the whole install loop can be skipped. World-local packs are never installed globally, so there is nothing to uninstall, nothing to be refused as a duplicate, nothing cached and nothing accumulating in storage. If this holds, updating the battery is: delete the old world, open the new file, join. If it does not, every update pays the content manager and the in-world experience has to be worth the toll.
+
+<sub>method: `observed` · surface: `engine` · probe: `distribution`</sub>
+
+**Never measured.** This row is a guess, however confident the prose around it sounds.
+
+*To answer it:* Import the released `.mcworld` WITHOUT installing the `.mcaddon` first -- ideally on a device where the pack is not installed at all. Join the world, then check three things: the world exists with the name it was published under, `/scriptevent bedshock:probe` gets a response in chat, and the global pack list in Settings does NOT list a new bedshock entry.
+
+> THE ONE ROW HERE THAT IS A BET RATHER THAN A REPORT. World-local packs are how essentially every distributed Bedrock map ships an add-on, and the mechanism is not in doubt in general -- what is unverified is this client, this version, and this archive layout. It is the cheapest possible thing to check: one import, before any measuring starts, and it fails at the first tap rather than wasting a session. IF THE BATTERY IS RUNNING AT ALL FROM AN IMPORTED WORLD ON A DEVICE THAT NEVER INSTALLED THE PACK, this is already answered YES by construction. The look above is really asking the second half: whether it ALSO installed globally, which decides whether storage keeps growing.
+
+<details><summary>The answer space this probe can distinguish</summary>
+
+| Outcome | Means | |
+|---|---|---|
+| `active_and_not_installed` | The battery responds, and no bedshock pack appears in the global list | YES — World-local packs work. The install loop is dead: delete the old world, open the new file, join. Nothing to uninstall, nothing to collide, nothing to clean up. |
+| `active_but_also_installed` | The battery responds, but a bedshock pack has appeared in the global list | YES — It works, but the import registered the pack globally as well -- so storage still accumulates and a later `.mcaddon` import of the same UUID would still be refused. Worth knowing before relying on it for a hundred more versions. |
+| `world_loads_pack_inert` | The world imports and joins, but no script event gets a response | NO — The bindings resolved to nothing: the world named its packs and the client did not find them where the archive put them. The packaging layout is wrong, and the fix is in `tools/world.ts` rather than in the game. |
+| `import_refused` | The import itself failed or the world never appeared | INCONCLUSIVE — The archive is malformed rather than the mechanism being unsupported. Nothing has been learned about world-local packs; check the zip before concluding anything. |
+
+</details>
 
 ## entity
 
@@ -1594,5 +1638,5 @@ other repositories can carry `@requires bedshock:<id>` and `bedshock check` will
 if the cited row is not settled at that pack's `min_engine_version` — so a design can never
 quietly come to rest on a guess.
 
-<sub>68 capabilities · 27 observations · 1 version(s): 1.21.120</sub>
+<sub>70 capabilities · 27 observations · 1 version(s): 1.21.120</sub>
 

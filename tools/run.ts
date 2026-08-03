@@ -11,8 +11,8 @@
  */
 
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 
 import { build } from './build.ts';
 import { loadCatalog, type Catalog } from './catalog.ts';
@@ -20,6 +20,7 @@ import { loadPackConfig } from './config.ts';
 import { collect, versionFromLog, type Collected } from './collect.ts';
 import { appendObservations, assertVersion, readLedger, resolveWithDeps } from './ledger.ts';
 import { BUILD_DIR, ROOT } from './paths.ts';
+import { isSelfContained, packWorld } from './world.ts';
 import type { Observation, Status } from './types.ts';
 
 /**
@@ -239,6 +240,30 @@ export async function run(opts: RunOptions = {}): Promise<RunResult> {
           `The log is at ${logPath}`,
       );
     }
+  }
+
+  // The world, packaged so it carries its own packs. Done here rather than in `bds.sh` because
+  // the property that matters -- self-containment -- is the one a test can check without a
+  // client, and it only stayed broken this long because nothing checked it.
+  if (opts.worldOut) {
+    const worldDir = join(BUILD_DIR, 'world');
+    if (!existsSync(worldDir)) {
+      throw new Error(
+        `--world-out was given but the run left no world at ${worldDir}. Nothing has been written: ` +
+          `a .mcworld that is silently not produced is worse than one that fails loudly, and this ` +
+          `flag spent months being accepted and ignored.`,
+      );
+    }
+    const packed = packWorld({ worldDir, buildDir: BUILD_DIR });
+    if (!isSelfContained(packed.entries)) {
+      throw new Error(
+        'the packaged world does not contain its packs, only references to them. Importing it ' +
+          'would demand the pack manager, which is the entire thing this is meant to avoid.',
+      );
+    }
+    mkdirSync(dirname(opts.worldOut), { recursive: true });
+    writeFileSync(opts.worldOut, packed.bytes);
+    process.stderr.write(`\n${opts.worldOut}\n  ${packed.summary}\n`);
   }
 
   const log = readFileSync(logPath, 'utf8');

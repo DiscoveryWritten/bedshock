@@ -1,17 +1,17 @@
 {
   "schema": 1,
   "minecraft": "1.21.120",
-  "catalog_revision": "rc806593c",
-  "release": "mc-1.21.120-rc806593c",
+  "catalog_revision": "r19ee73b1",
+  "release": "mc-1.21.120-r19ee73b1",
   "measured_through": "2026-08-02T05:01:00Z",
   "counts": {
     "SETTLED": 22,
     "CLOSED-NEGATIVE": 4,
-    "OPEN": 26,
+    "OPEN": 27,
     "INCONCLUSIVE": 1,
     "DRIFT": 0,
     "UNDERMINED": 0,
-    "derived": 15
+    "derived": 16
   },
   "watchlist": [
     "entity.container.opens_with_container_type_chest",
@@ -20,6 +20,47 @@
     "render.attachable.reads_held_item_durability"
   ],
   "capabilities": [
+    {
+      "id": "distribution.mcaddon.reinstall_replaces_in_place",
+      "question": "Does importing an `.mcaddon` whose UUID is already installed replace the installed copy?",
+      "decides": "Whether iterating on an add-on is cheap or expensive, and therefore how much a single in-game session has to accomplish. If a rebuild costs one import, a session can be casual and repeated. If it costs an uninstall, an app restart and a world rebuild, then every session has to be one-pass, resumable in place, and worth the setup -- which is a hard constraint on the guided run rather than a preference.",
+      "method": "derived",
+      "surface": "engine",
+      "status": "SETTLED",
+      "inherited": false,
+      "established_by": "Observed repeatedly on iPadOS across more than a hundred installs: the import is refused as a DUPLICATE rather than replacing anything. The old copy has to be uninstalled first, and the client caches the pack list hard enough that the app must be closed before the new copy is offered. Only marketplace content updates in place.\nRecorded as `derived` rather than measured because it is not reachable from inside a pack: no script API touches the content manager. It is a property of the client, established by somebody paying for it a hundred times."
+    },
+    {
+      "id": "distribution.mcworld.carries_its_own_packs",
+      "question": "Does a `.mcworld` containing its own `behavior_packs/` and `resource_packs/` folders import with those packs active, without touching the global pack list?",
+      "decides": "Whether the whole install loop can be skipped. World-local packs are never installed globally, so there is nothing to uninstall, nothing to be refused as a duplicate, nothing cached and nothing accumulating in storage. If this holds, updating the battery is: delete the old world, open the new file, join. If it does not, every update pays the content manager and the in-world experience has to be worth the toll.",
+      "method": "observed",
+      "surface": "engine",
+      "status": "OPEN",
+      "inherited": false,
+      "outcomes": [
+        {
+          "id": "active_and_not_installed",
+          "label": "The battery responds, and no bedshock pack appears in the global list",
+          "verdict": "YES"
+        },
+        {
+          "id": "active_but_also_installed",
+          "label": "The battery responds, but a bedshock pack has appeared in the global list",
+          "verdict": "YES"
+        },
+        {
+          "id": "world_loads_pack_inert",
+          "label": "The world imports and joins, but no script event gets a response",
+          "verdict": "NO"
+        },
+        {
+          "id": "import_refused",
+          "label": "The import itself failed or the world never appeared",
+          "verdict": "INCONCLUSIVE"
+        }
+      ]
+    },
     {
       "id": "entity.container.is_the_only_container_host",
       "question": "Can a custom BLOCK carry a container, or must it be an entity?",

@@ -25,6 +25,7 @@ import { begin, claimTickingArea, done, firstLine, makeCtx, whenChunkIsLive, typ
 import * as durability from './probes/durability.ts';
 import * as dynprops from './probes/dynprops.ts';
 import * as container from './probes/container.ts';
+import * as distribution from './probes/distribution.ts';
 import * as offhand from './probes/offhand.ts';
 import * as menu from './probes/menu.ts';
 import * as anvilgap from './probes/anvilgap.ts';
@@ -58,6 +59,7 @@ const PROBES: Record<string, Probe> = {
   throw: throwProbe.run,
   knockback: knockback.run,
   repair: repair.run,
+  distribution: distribution.run,
   ruler: scenes.ruler,
   glyphs: scenes.glyphs,
   flipbook: scenes.flipbook,

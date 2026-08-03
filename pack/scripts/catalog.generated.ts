@@ -23,11 +23,46 @@ export interface SolveSpec {
   tolerance: number;
 }
 
-export const CATALOG_REVISION = "rc806593c";
+export const CATALOG_REVISION = "r19ee73b1";
 export const SNAPSHOT_VERSION = "1.21.120";
 export const QUESTIONS: SessionQuestion[] = [
   {
     "index": 0,
+    "id": "distribution.mcworld.carries_its_own_packs",
+    "probe": "distribution",
+    "question": "Does a `.mcworld` containing its own `behavior_packs/` and `resource_packs/` folders import with those packs active, without touching the global pack list?",
+    "look_at": "Import the released `.mcworld` WITHOUT installing the `.mcaddon` first -- ideally on a device where the pack is not installed at all. Join the world, then check three things: the world exists with the name it was published under, `/scriptevent bedshock:probe` gets a response in chat, and the global pack list in Settings does NOT list a new bedshock entry.",
+    "askByDefault": true,
+    "priorStatus": "OPEN",
+    "outcomes": [
+      {
+        "id": "active_and_not_installed",
+        "label": "The battery responds, and no bedshock pack appears in the global list",
+        "verdict": "YES",
+        "means": "World-local packs work. The install loop is dead: delete the old world, open the new file, join. Nothing to uninstall, nothing to collide, nothing to clean up."
+      },
+      {
+        "id": "active_but_also_installed",
+        "label": "The battery responds, but a bedshock pack has appeared in the global list",
+        "verdict": "YES",
+        "means": "It works, but the import registered the pack globally as well -- so storage still accumulates and a later `.mcaddon` import of the same UUID would still be refused. Worth knowing before relying on it for a hundred more versions."
+      },
+      {
+        "id": "world_loads_pack_inert",
+        "label": "The world imports and joins, but no script event gets a response",
+        "verdict": "NO",
+        "means": "The bindings resolved to nothing: the world named its packs and the client did not find them where the archive put them. The packaging layout is wrong, and the fix is in `tools/world.ts` rather than in the game."
+      },
+      {
+        "id": "import_refused",
+        "label": "The import itself failed or the world never appeared",
+        "verdict": "INCONCLUSIVE",
+        "means": "The archive is malformed rather than the mechanism being unsupported. Nothing has been learned about world-local packs; check the zip before concluding anything."
+      }
+    ]
+  },
+  {
+    "index": 1,
     "id": "entity.container.opens_with_container_type_chest",
     "probe": "container",
     "question": "Does the same entity declaring `container_type: chest` open for a player?",
@@ -56,7 +91,7 @@ export const QUESTIONS: SessionQuestion[] = [
     ]
   },
   {
-    "index": 1,
+    "index": 2,
     "id": "entity.container.opens_with_container_type_horse",
     "probe": "container",
     "question": "Does a custom entity declaring `container_type: horse` open for a player?",
@@ -85,7 +120,7 @@ export const QUESTIONS: SessionQuestion[] = [
     ]
   },
   {
-    "index": 2,
+    "index": 3,
     "id": "entity.container.preview_panel_renders_the_entity",
     "probe": "container",
     "question": "Does the container screen's preview panel draw the entity's own model?",
@@ -120,7 +155,7 @@ export const QUESTIONS: SessionQuestion[] = [
     ]
   },
   {
-    "index": 3,
+    "index": 4,
     "id": "entity.container.screen_draws_declared_slot_count",
     "probe": "container",
     "question": "Does the container screen draw as many slots as `inventory_size` declares?",
@@ -161,7 +196,7 @@ export const QUESTIONS: SessionQuestion[] = [
     ]
   },
   {
-    "index": 4,
+    "index": 5,
     "id": "entity.container.script_writes_appear_in_screen",
     "probe": "container",
     "question": "Do contents written by script appear in the screen the player opens?",
@@ -190,7 +225,7 @@ export const QUESTIONS: SessionQuestion[] = [
     ]
   },
   {
-    "index": 5,
+    "index": 6,
     "id": "entity.container.slots_are_untyped",
     "probe": "container",
     "question": "Are the slots freely usable, or typed the way a real saddle slot is?",
@@ -219,7 +254,7 @@ export const QUESTIONS: SessionQuestion[] = [
     ]
   },
   {
-    "index": 6,
+    "index": 7,
     "id": "entity.stash.holder_findable_after_chunk_unload",
     "probe": "stash",
     "question": "Is a holder entity still findable by `world.getEntity(id)` after its chunk has unloaded and reloaded?",
@@ -254,7 +289,7 @@ export const QUESTIONS: SessionQuestion[] = [
     ]
   },
   {
-    "index": 7,
+    "index": 8,
     "id": "entity.stash.holder_findable_after_world_reload",
     "probe": "stash",
     "question": "Is a holder entity still findable by id after a full quit to title and reload?",
@@ -283,7 +318,7 @@ export const QUESTIONS: SessionQuestion[] = [
     ]
   },
   {
-    "index": 8,
+    "index": 9,
     "id": "entity.stash.preserves_an_opaque_itemstack",
     "probe": "stash",
     "question": "Does a real ItemStack survive being moved into a holder entity's inventory and taken back out, without ever being read?",
@@ -324,7 +359,7 @@ export const QUESTIONS: SessionQuestion[] = [
     ]
   },
   {
-    "index": 9,
+    "index": 10,
     "id": "item.creative.custom_group_nests_items",
     "probe": "menu",
     "question": "Does a shared custom `group` collapse several items into one expandable pile?",
@@ -353,7 +388,7 @@ export const QUESTIONS: SessionQuestion[] = [
     ]
   },
   {
-    "index": 10,
+    "index": 11,
     "id": "item.creative.hidden_by_category_none",
     "probe": "menu",
     "question": "Does an explicit `category: none` hide an item from the creative menu?",
@@ -382,7 +417,7 @@ export const QUESTIONS: SessionQuestion[] = [
     ]
   },
   {
-    "index": 11,
+    "index": 12,
     "id": "item.creative.hidden_by_omitting_category",
     "probe": "menu",
     "question": "Does omitting `menu_category` entirely hide an item from the creative menu?",
@@ -411,7 +446,7 @@ export const QUESTIONS: SessionQuestion[] = [
     ]
   },
   {
-    "index": 12,
+    "index": 13,
     "id": "item.creative.order_follows_emission",
     "probe": "menu",
     "question": "Does the creative menu order items by the order their files are emitted?",
@@ -440,7 +475,7 @@ export const QUESTIONS: SessionQuestion[] = [
     ]
   },
   {
-    "index": 13,
+    "index": 14,
     "id": "item.durability_bar.hotbar_matches_inventory_grid",
     "probe": "ruler",
     "question": "Do the hotbar and the inventory grid draw the bar over the same rows?",
@@ -469,7 +504,7 @@ export const QUESTIONS: SessionQuestion[] = [
     ]
   },
   {
-    "index": 14,
+    "index": 15,
     "id": "item.durability_bar.rows_covered",
     "probe": "ruler",
     "question": "Which pixel rows of the 16x16 icon does the durability bar's dark track cover?",
@@ -516,7 +551,7 @@ export const QUESTIONS: SessionQuestion[] = [
     ]
   },
   {
-    "index": 15,
+    "index": 16,
     "id": "item.durability_bar.track_appears_at_damage_one",
     "probe": "ruler",
     "question": "Does the dark track appear at `damage == 1`, not just when the item is visibly worn?",
@@ -545,7 +580,7 @@ export const QUESTIONS: SessionQuestion[] = [
     ]
   },
   {
-    "index": 16,
+    "index": 17,
     "id": "item.durability.anvil_or_grindstone_can_reach_a_custom_item",
     "probe": "repair",
     "question": "Can an anvil or a grindstone alter a custom item's `damage`?",
@@ -586,7 +621,7 @@ export const QUESTIONS: SessionQuestion[] = [
     ]
   },
   {
-    "index": 17,
+    "index": 18,
     "id": "item.durability.mending_can_reach_a_custom_item",
     "probe": "repair",
     "question": "Does a Mending enchantment repair a custom item's `damage`?",
@@ -615,7 +650,7 @@ export const QUESTIONS: SessionQuestion[] = [
     ]
   },
   {
-    "index": 18,
+    "index": 19,
     "id": "item.durability.omitting_repairable_blocks_external_writes",
     "probe": "repair",
     "question": "Is omitting `minecraft:repairable` enough to keep anvils, grindstones and Mending away from an item's damage?",
@@ -644,7 +679,7 @@ export const QUESTIONS: SessionQuestion[] = [
     ]
   },
   {
-    "index": 19,
+    "index": 20,
     "id": "item.durability.ordinary_use_consumes_it",
     "probe": "repair",
     "question": "Does using a custom item consume durability the way a tool's does?",
@@ -673,7 +708,7 @@ export const QUESTIONS: SessionQuestion[] = [
     ]
   },
   {
-    "index": 20,
+    "index": 21,
     "id": "item.dynamic_properties.survive_drop_and_pickup",
     "probe": "dynprops",
     "question": "Do dynamic properties survive the stack being dropped and picked up again?",
@@ -702,7 +737,7 @@ export const QUESTIONS: SessionQuestion[] = [
     ]
   },
   {
-    "index": 21,
+    "index": 22,
     "id": "item.dynamic_properties.survive_world_reload",
     "probe": "dynprops",
     "question": "Do dynamic properties on an ItemStack survive a full quit to title and reload?",
@@ -731,7 +766,7 @@ export const QUESTIONS: SessionQuestion[] = [
     ]
   },
   {
-    "index": 22,
+    "index": 23,
     "id": "item.icon.animates_from_flipbook",
     "probe": "flipbook",
     "question": "Does an item atlas tile animate from a `flipbook_textures.json` entry?",
@@ -766,7 +801,7 @@ export const QUESTIONS: SessionQuestion[] = [
     ]
   },
   {
-    "index": 23,
+    "index": 24,
     "id": "item.name.glyph_alpha_is_honoured",
     "probe": "glyphs",
     "question": "Is a glyph's transparency preserved, or does it fill with a background?",
@@ -795,7 +830,7 @@ export const QUESTIONS: SessionQuestion[] = [
     ]
   },
   {
-    "index": 24,
+    "index": 25,
     "id": "item.name.glyph_renders_in_colour",
     "probe": "glyphs",
     "question": "Do custom font glyph pages render in full colour rather than being flattened?",
@@ -824,7 +859,7 @@ export const QUESTIONS: SessionQuestion[] = [
     ]
   },
   {
-    "index": 25,
+    "index": 26,
     "id": "item.name.glyph_renders_in_item_name",
     "probe": "glyphs",
     "question": "Does a glyph render in an ITEM's name and in the actionbar, not only in chat?",
@@ -853,7 +888,7 @@ export const QUESTIONS: SessionQuestion[] = [
     ]
   },
   {
-    "index": 26,
+    "index": 27,
     "id": "render.attachable.accepts_vanilla_hold_animations",
     "probe": "attachable_pose",
     "question": "Will a custom item's attachable accept the vanilla hold animations and be posed into the hand?",
@@ -888,7 +923,7 @@ export const QUESTIONS: SessionQuestion[] = [
     ]
   },
   {
-    "index": 27,
+    "index": 28,
     "id": "render.attachable.anchor_is_on_the_body",
     "probe": "attachable",
     "question": "Is an attachable's anchor on the player's body rather than in the hand?",
@@ -917,7 +952,7 @@ export const QUESTIONS: SessionQuestion[] = [
     ]
   },
   {
-    "index": 28,
+    "index": 29,
     "id": "render.attachable.draws_on_custom_item",
     "probe": "attachable",
     "question": "Does a custom item render an attachable at all?",
@@ -952,7 +987,7 @@ export const QUESTIONS: SessionQuestion[] = [
     ]
   },
   {
-    "index": 29,
+    "index": 30,
     "id": "render.attachable.reads_held_item_durability",
     "probe": "attachable",
     "question": "Can a render controller on an attachable read the durability of the item it draws?",
@@ -987,7 +1022,7 @@ export const QUESTIONS: SessionQuestion[] = [
     ]
   },
   {
-    "index": 30,
+    "index": 31,
     "id": "render.attachable.several_controllers_at_once",
     "probe": "attachable",
     "question": "Can several render controllers run on one attachable simultaneously?",
@@ -1022,7 +1057,7 @@ export const QUESTIONS: SessionQuestion[] = [
     ]
   },
   {
-    "index": 31,
+    "index": 32,
     "id": "ui.form.button_icon_resolves_a_bare_atlas_key",
     "probe": "formicon",
     "question": "Does a bare atlas short-name work where a path is expected?",
@@ -1051,7 +1086,7 @@ export const QUESTIONS: SessionQuestion[] = [
     ]
   },
   {
-    "index": 32,
+    "index": 33,
     "id": "ui.form.button_icon_resolves_an_unindexed_path",
     "probe": "formicon",
     "question": "Does `ActionFormData.button(text, iconPath)` draw a texture that has NO `item_texture.json` entry?",
@@ -1080,7 +1115,7 @@ export const QUESTIONS: SessionQuestion[] = [
     ]
   },
   {
-    "index": 33,
+    "index": 34,
     "id": "ui.form.missing_icon_is_visually_distinct",
     "probe": "formicon",
     "question": "Does a deliberately wrong icon path render as a broken-texture mark, or as nothing?",
