@@ -16,6 +16,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { PNG } from 'pngjs';
 
+import { CHAPTERS } from '../pack/scripts/chapters.ts';
 import { crossCheck } from './build.ts';
 import { loadCatalog } from './catalog.ts';
 import { loadPackConfig, validatePackConfig, type PackConfig } from './config.ts';
@@ -75,6 +76,32 @@ test('the container variants form a single-variable comparison', () => {
     },
   };
   assert.match(validatePackConfig(mismatched).join('\n'), /share no size/);
+});
+
+/**
+ * EVERY PROBE BELONGS TO A CHAPTER, or it never runs in a guided session.
+ *
+ * The chapters are how a person walks the battery: each builds its facility from nothing, runs
+ * what needs it, and stops so the thing can be looked at. A probe left out of every chapter still
+ * exists, still works headless, and is silently unreachable to somebody with a tablet — which is
+ * the only way half these rows can ever be answered.
+ *
+ * The registry lives in `main.ts` and the chapters in `chapters.ts`, and neither imports the
+ * other's list. Nothing but a cross-check notices when they drift.
+ */
+test('every probe is in exactly one chapter', () => {
+  const main = readFileSync(join(ROOT, 'pack', 'scripts', 'main.ts'), 'utf8');
+  const registry = main.slice(main.indexOf('const PROBES'), main.indexOf('/** Follow-ups'));
+  const declared = [...registry.matchAll(/^\s{2}(\w+):/gm)].map((m) => m[1]!);
+  assert.ok(declared.length >= 10, `only found ${declared.length} probes in the registry`);
+
+  const chaptered = CHAPTERS.flatMap((c) => c.probes);
+  for (const probe of declared) {
+    assert.ok(chaptered.includes(probe), `probe "${probe}" is in no chapter — unreachable in a session`);
+  }
+  for (const probe of chaptered) {
+    assert.ok(declared.includes(probe), `chapter names "${probe}", which is not in the registry`);
+  }
 });
 
 /**

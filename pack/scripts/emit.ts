@@ -152,6 +152,32 @@ export function willReportLater(probe: string): () => void {
 }
 
 /**
+ * Wait until nothing is still counting ticks, without announcing anything.
+ *
+ * `done()` is the end of a RUN and prints the marker the harness watches for. A chapter is not a
+ * run — it is one act inside one — so it needs the same waiting with none of the ceremony, or a
+ * facility would be demolished out from under a probe that had not finished with it.
+ */
+export function whenSettled(then: (settled: boolean) => void, timeoutTicks = 2000): void {
+  if (pending === 0) {
+    then(true);
+    return;
+  }
+  let waited = 0;
+  const handle = system.runInterval(() => {
+    waited += 2;
+    if (pending > 0 && waited < timeoutTicks) return;
+    system.clearRun(handle);
+    then(pending === 0);
+  }, 2);
+}
+
+/** What has claimed the wait and not released it, for a message that names names. */
+export function outstandingProbes(): string[] {
+  return [...outstanding];
+}
+
+/**
  * Print `DONE`, once nothing is still counting ticks.
  *
  * The timeout is a backstop rather than a schedule: if a probe never releases, waiting forever
