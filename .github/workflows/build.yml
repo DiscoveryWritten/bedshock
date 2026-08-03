@@ -87,13 +87,24 @@ jobs:
           cache: npm
       - run: npm ci
 
-      # `--world-out` is here so the world packaging RUNS, not because the smoke job needs a
-      # world. That flag spent months being accepted and doing nothing, and unit tests on
+      # `--world-out` is here so the world packaging RUNS, not only because the artifact below
+      # is useful. That flag spent months being accepted and doing nothing, and unit tests on
       # `tools/world.ts` would not have caught it: the break was in the seam, where `bds.sh`
       # leaves the world and `run.ts` picks it up. A path exercised only by a manually
       # dispatched release is a path nobody finds broken until they need it.
+      #
+      # THE LEVEL NAME CARRIES THE COMMIT, and that is not decoration. The whole point of a
+      # world-local pack is that importing another one costs nothing, so a device accumulates
+      # them -- and two worlds both called "battery" are two worlds you have to open to tell
+      # apart. The battery prints its own version and the Minecraft version on load; the name
+      # is what gets you to the right one from the world list.
       - name: Run the battery against a real server (recording nothing)
-        run: npx tsx tools/cli.ts run --dry-run --world-out "$PWD/dist/smoke.mcworld"
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          npx tsx tools/cli.ts run --dry-run \
+            --level-name "bedshock ${GITHUB_SHA::7}" \
+            --world-out "$PWD/dist/bedshock-${GITHUB_SHA::7}.mcworld"
 
       # And prove the archive carries its packs rather than merely naming them, which is the
       # whole reason it exists: a world-local pack never touches the client's content manager,
@@ -101,12 +112,40 @@ jobs:
       - name: The world must carry its packs
         run: |
           set -euo pipefail
-          world="$PWD/dist/smoke.mcworld"
+          world="$PWD/dist/bedshock-${GITHUB_SHA::7}.mcworld"
           [ -f "$world" ] || { echo "no world was produced" >&2; exit 1; }
           carried="$(unzip -Z1 "$world" | grep -c '^\(behavior\|resource\)_packs/')" || carried=0
           [ "$carried" -ge 2 ] || { echo "$world names its packs but does not carry them" >&2; exit 1; }
           unzip -Z1 "$world" | grep -q '^level.dat$' || { echo "no level.dat — that is not a world" >&2; exit 1; }
-          echo "$world: $carried pack file(s) carried, level.dat present"
+          # THE DISPLAY NAME, asserted rather than assumed. Bedrock shows `levelname.txt` in the
+          # world list, and the archive only carries what the server left behind -- so whether the
+          # name survives is a fact about BDS, not about us. Unchecked, the failure is silent and
+          # lands months later as a list of worlds all called the same thing, on the one device
+          # where telling them apart is the entire reason the name exists.
+          unzip -Z1 "$world" | grep -q '^levelname.txt$' || {
+            echo "no levelname.txt — this world would import with a default name" >&2
+            echo "and be indistinguishable from every other one on the device." >&2
+            exit 1
+          }
+          got="$(unzip -p "$world" levelname.txt)"
+          [ "$got" = "bedshock ${GITHUB_SHA::7}" ] || {
+            echo "levelname.txt says '$got', not 'bedshock ${GITHUB_SHA::7}' — --level-name did not survive" >&2
+            exit 1
+          }
+          echo "$world: $carried pack file(s) carried, level.dat present, named '$got'"
+
+      # KEEP IT. This job was building a real, verified world on every push and deleting it,
+      # which left dispatching a release as the only way to get one -- a heavyweight, tagging,
+      # ledger-touching act to obtain a file that already existed thirty seconds earlier.
+      #
+      # It is the asset that matters more than the .mcaddon: importing it touches nothing in the
+      # global pack list, so there is no old copy to uninstall, no app restart to force the cache,
+      # and no duplicate-UUID refusal. That is the difference between two taps and three minutes.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bedshock-world
+          path: dist/*.mcworld
+          if-no-files-found: error
 
   # The same thing, recording, on a schedule or on demand.
   #
