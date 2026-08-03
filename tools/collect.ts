@@ -57,6 +57,18 @@ const RESULT = /BEDSHOCK RESULT (\S+) (YES|NO|INCONCLUSIVE) (.*)$/;
  * reaches the summary rather than dying in the log.
  */
 const NEVER_REPORTED = /BEDSHOCK NOTE \d+ probe\(s\) never reported back: ([^.]+)\./;
+/**
+ * A chapter facility that could not be raised.
+ *
+ * Apparatus rather than measurement, so it never becomes an observation -- "the floor went down"
+ * is not a fact about Bedrock. But a facility that cannot be built makes every reading taken
+ * inside it a reading about the rig, so it surfaces as a problem with the whole run rather than
+ * being left in the log for somebody to notice.
+ */
+// `m` is load-bearing: without it `$` means end of the whole log rather than end of a line, so
+// only a failure that happened to be the very last thing printed would ever be seen — and a run
+// that failed to build three facilities would report one, or none.
+const BUILD_FAILED = /BEDSHOCK BUILD-FAILED (\S+) (.*)$/gm;
 const LOOK = /BEDSHOCK LOOK (\S+) /;
 const SKIP = /BEDSHOCK SKIP (\S+) (.*)$/;
 const ERROR = /BEDSHOCK ERROR (\S+) (.*)$/;
@@ -78,6 +90,14 @@ export function collect(log: string, catalog: Catalog, opts: CollectOptions): Co
       `${absent[1]!.trim()} registered for the completion wait and never reported. Those rows are ` +
         `ABSENT from this run — not negative, not inconclusive, missing. Nothing is recorded for ` +
         `them, and the likeliest cause is a probe that takes longer than the battery waits.`,
+    );
+  }
+
+  BUILD_FAILED.lastIndex = 0;
+  for (const failure of log.matchAll(BUILD_FAILED)) {
+    problems.push(
+      `the "${failure[1]}" facility could not be built: ${failure[2]!.trim()}. Nothing measured ` +
+        `inside it would be about Bedrock.`,
     );
   }
 

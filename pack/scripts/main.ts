@@ -36,6 +36,7 @@ import * as repair from './probes/repair.ts';
 import * as throwProbe from './probes/throw.ts';
 import * as scenes from './probes/scenes.ts';
 import * as session from './session.ts';
+import * as chapter from './chapter.ts';
 
 type Probe = (ctx: Ctx) => void;
 
@@ -126,6 +127,33 @@ system.afterEvents.scriptEventReceive.subscribe(
         return;
       }
       whenChunkIsLive(ctx, () => which(ctx, player));
+      return;
+    }
+
+    // The guided build: one facility at a time, raised from nothing, left standing to be looked
+    // at. See `chapter.ts` for why it is not one tall building and not shipped pre-built.
+    if (event.id === `${NAMESPACE}:chapter`) {
+      const player = playerOf(event);
+      if (!player) {
+        makeCtx().say('chapters are for a person to walk through — a server has nobody to show them to.');
+        return;
+      }
+      const ctx = makeCtx(player);
+      chapter.dispatch(ctx, PROBES, event.message, player);
+      return;
+    }
+
+    // THE FACILITY BUILDER, CHECKED WITHOUT A PERSON. Raising a chapter needs no player -- only
+    // walking it does -- so the riskiest part of the guided run can be exercised on a bare server
+    // on every commit. Two hundred blocks up is somewhere nobody has ever stood, and whether a
+    // ticking area comes up there and `setType` reads back is exactly the sort of thing that has
+    // failed silently in this repository before.
+    //
+    // Apparatus rather than measurement, so it reports on its own channel and never emits a
+    // RESULT. A chapter that cannot be built is a problem with the rig, and every reading taken
+    // inside it would be a reading about the rig.
+    if (event.id === `${NAMESPACE}:sitecheck`) {
+      chapter.checkEveryBlueprint(makeCtx(playerOf(event)));
       return;
     }
 

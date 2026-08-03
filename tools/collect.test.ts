@@ -147,6 +147,41 @@ test('a probe that registered for the wait and never reported is a loud problem'
   assert.match(problem!, /not negative/);
 });
 
+/**
+ * A facility that could not be raised is not a measurement, and must not become one — but it is
+ * also not nothing. Every reading taken inside a facility that did not build is a reading about
+ * the rig, so it surfaces as a problem with the run rather than sitting in the log unread.
+ */
+test('a chapter that could not be built is a problem, never an observation', () => {
+  const catalog = loadCatalog();
+  const log = [
+    'BEDSHOCK RESULT item.max_durability.int16_ceiling YES {}',
+    'BEDSHOCK BUILD-FAILED physics step 2/4 "the edge": expected minecraft:polished_andesite at 28,-1,28 and found air',
+    'BEDSHOCK DONE 1',
+  ].join('\n');
+
+  const result = collect(log, catalog, { version: '1.26.30', run: 'test' });
+  assert.equal(result.observations.length, 1, 'the rows that did report are still recorded');
+  const problem = result.problems.find((p) => p.includes('physics'));
+  assert.ok(problem, 'a facility that failed to build is not mentioned anywhere');
+  assert.match(problem!, /could not be built/);
+  assert.match(problem!, /would be about Bedrock/);
+  // It is apparatus, not a capability: nothing about it may reach the ledger as a verdict.
+  assert.ok(!result.observations.some((o) => o.capability.includes('physics')));
+});
+
+test('several failed facilities are each named', () => {
+  const catalog = loadCatalog();
+  const log = [
+    'BEDSHOCK BUILD-FAILED items step 1/3 "the floor": could not place',
+    'BEDSHOCK BUILD-FAILED screens step 1/3 "the floor": could not place',
+    'BEDSHOCK DONE 0',
+  ].join('\n');
+  const problems = collect(log, catalog, { version: '1.26.30', run: 'test' }).problems;
+  assert.ok(problems.some((p) => p.includes('"items"')));
+  assert.ok(problems.some((p) => p.includes('"screens"')));
+});
+
 test('a clean run reports no absences', () => {
   const catalog = loadCatalog();
   const log = 'BEDSHOCK RESULT item.max_durability.int16_ceiling YES {}\nBEDSHOCK DONE 1';
