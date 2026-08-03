@@ -195,6 +195,68 @@ probes:
   # the instrument, and nobody has to count cells or remember a number.
   container_marker: 'minecraft:diamond'
 
+  # --- the attachable ------------------------------------------------------
+  #
+  # THE LARGEST SINGLE CONSEQUENCE IN THIS BATTERY. If a render controller on an attachable can
+  # read the held item's damage, ONE item type renders every configuration in the hand. If not,
+  # every distinguishable configuration costs an item type and hundreds of baked sprites.
+  #
+  # Four flags in a row, each its own bone, each drawn by its own render controller with a
+  # different candidate Molang expression indexing the same four-colour texture array. A row
+  # rather than a stack, because a row is countable in one screenshot and reads left to right in
+  # candidate order.
+  #
+  # THE READING IS DIFFERENTIAL, AND IT HAS TO BE. An absolute reading of one item cannot answer
+  # the question: with 2048 % 4 == 0, an UNDAMAGED item shows the same colours as a blind query,
+  # pixel for pixel. That is not fixable by choosing a better number -- with four candidates on
+  # four distinct indices, d + (max - d) = max is forced to 0 mod 4, so the ambiguity is
+  # structural. Two items differing only in damage removes it: a live query MUST change colour
+  # between them and a blind one cannot.
+  #
+  #   damage 5 -> remaining 2043 % 4 = 3 WHITE,  damage 5 % 4 = 1 GREEN
+  #   damage 6 -> remaining 2042 % 4 = 2 BLUE,   damage 6 % 4 = 2 BLUE
+  #
+  # `bedshock validate` reproduces that arithmetic and refuses numbers that make the picture
+  # ungradeable, which is the failure this rig has actually had rather than a hypothetical one.
+  attachable:
+    max_durability: 2048
+    damage: 5
+    damage_b: 6
+    # index = expression mod 4, against [0 RED, 1 GREEN, 2 BLUE, 3 WHITE].
+    #
+    # INDEX 0 IS THE BLIND SIGNAL. An unrecognised Molang query resolves to 0 rather than
+    # erroring, so no candidate may expect RED except the one that expects zero anyway.
+    candidates:
+      - id: remaining
+        molang: 'math.mod(query.remaining_durability, 4)'
+        note: 'the one we want. A: 2043 % 4 = 3 WHITE. B: 2042 % 4 = 2 BLUE. Same on both = blind.'
+      - id: damage
+        molang: 'math.mod(query.max_durability - query.remaining_durability, 4)'
+        note: 'needs BOTH queries live. A: 5 % 4 = 1 GREEN. B: 6 % 4 = 2 BLUE. Same on both = blind.'
+      - id: use_duration
+        molang: 'math.mod(query.item_remaining_use_duration, 4)'
+        note: 'expected 0 -> RED on both, working or not. A long shot, included because it is free.'
+      - id: control
+        molang: '2'
+        note: 'literal -> BLUE on both. If this is not BLUE the apparatus is broken and no flag means anything.'
+
+  # --- the stash -----------------------------------------------------------
+  #
+  # Storing an ItemStack by MOVING it rather than by reading it. Any codec that takes an item
+  # apart into JSON and rebuilds it must refuse shulker boxes, written books, potions, fireworks,
+  # maps and banners -- handing one back would hand back an empty one. Moving the real stack
+  # removes the problem entirely, because nothing is ever read.
+  #
+  # THE HOLDER IS A CONTAINER VARIANT ALREADY IN THIS PACK, deliberately. A second entity type
+  # built for this would make "the stash worked" and "this particular entity works" the same
+  # sentence, and the container rows above already establish that this one stores things.
+  stash:
+    holder: 'bedshock:probe_box_chest5'
+    # What a person is handed to stash, when they have nothing better. A shulker box THEY have
+    # filled is the right witness -- its contents are state the script API cannot read, which is
+    # the whole reason this route exists -- and the probe says so rather than assuming.
+    carrier: 'minecraft:shulker_box'
+
   # --- off-hand ------------------------------------------------------------
   #
   # THE SLOT A MOD AUTHOR HAS TO CONTORT AROUND. The off-hand is the only place Bedrock renders

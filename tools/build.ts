@@ -59,17 +59,85 @@ function reportedCapabilities(bundle: string): Set<string> {
  * question was embedded.
  *
  * What being embedded DOES buy is the guided session: an `observed` row in `QUESTIONS` is one a
- * person can genuinely be asked, and that is its runtime. So those are credited back.
+ * person can genuinely be asked — BUT ONLY IF THERE IS SOMETHING TO LOOK AT. That second half was
+ * missing, and it switched the check off a second time.
+ *
+ * Being asked "hold the attachable probe and read the four flags" is worthless when the pack emits
+ * no attachable. Crediting every embedded `observed` row hid exactly that: eight rows across three
+ * rigs — `attachable`, `attachable_pose`, `stash` — named probes this pack has never built, and the
+ * build reported a clean bill on every run. `docs/CAPABILITIES.md` in composable-portals had been
+ * telling people to rely on this list to know when its own copies were safe to delete.
+ *
+ * So an observed row is credited only when its `probe` is one the pack IMPLEMENTS, read below.
  */
 const DATA_ID = /(["']?id["']?\s*:\s*)(["'])[^"']+\2/g;
+
+/**
+ * Which probes this pack actually runs, read out of the registry in the bundle.
+ *
+ * From the BUNDLE, for the same reason the ids are: the registry in `main.ts` is what decides
+ * whether a probe has a runtime, and a probe left out of it is tree-shaken away no matter how
+ * much source sits behind it.
+ *
+ * RETURNS NULL WHEN IT CANNOT TELL, and callers must treat that as a finding rather than as an
+ * empty set. Reading a name out of compiled output is the sort of thing that stops working
+ * quietly — a renamed binding, a different emit shape — and the failure mode of a silent empty
+ * set is every capability reported unimplemented, which is noise people learn to scroll past.
+ * `tools/pack.test.ts` pins that this finds the real registry.
+ */
+export function implementedProbes(bundle: string): Set<string> | null {
+  const found = bundle.match(/\b(?:var|const|let)\s+PROBES\s*=\s*\{([\s\S]*?)\n\};/);
+  if (!found) return null;
+  const names = new Set<string>();
+  // Both spellings, because esbuild emits whichever the source used and `ruler,` is a probe
+  // exactly as much as `ruler: run` is. Missing the shorthand form reported four built probes as
+  // unbuilt, which is the same wrong answer as the bug this function exists to fix.
+  for (const m of found[1]!.matchAll(/^\s{2}([a-zA-Z_$][\w$]*)\s*(:|,\s*$)/gm)) names.add(m[1]!);
+  return names.size ? names : null;
+}
 
 export function crossCheck(bundle: string, embedded: string): string[] {
   const catalog = loadCatalog();
   const warnings: string[] = [];
   const carried = reportedCapabilities(embedded);
   const reported = reportedCapabilities(bundle.replace(DATA_ID, '$1$2$2'));
+
+  const implemented = implementedProbes(bundle);
+  if (!implemented) {
+    warnings.push(
+      `the probe registry could not be read out of the bundle, so nothing below can distinguish ` +
+        `a question this pack can ask from one it merely carries the text of. Fix ` +
+        `\`implementedProbes\` before trusting this build's clean bill.`,
+    );
+  }
+
+  // An observed row needs BOTH halves: a question the session can put to somebody, and apparatus
+  // for them to look at. Either one alone is a person being asked about nothing.
   for (const cap of catalog.capabilities) {
-    if (cap.method === 'observed' && carried.has(cap.id)) reported.add(cap.id);
+    if (cap.method !== 'observed' || !carried.has(cap.id)) continue;
+    if (implemented && cap.probe && !implemented.has(cap.probe)) continue;
+    reported.add(cap.id);
+  }
+
+  // The list composable-portals is waiting on: every rig named by the catalog and built by
+  // nobody. Reported separately from the ids, because one missing rig silences several rows and
+  // the thing to go and build is the rig.
+  if (implemented) {
+    const unbuilt = new Map<string, string[]>();
+    for (const cap of catalog.capabilities) {
+      if (cap.method === 'derived' || !cap.probe || implemented.has(cap.probe)) continue;
+      unbuilt.set(cap.probe, [...(unbuilt.get(cap.probe) ?? []), cap.id]);
+    }
+    if (unbuilt.size) {
+      warnings.push(
+        `${unbuilt.size} probe(s) are named by the catalog and built by nothing. Until they ` +
+          `exist, their questions can only ever be re-answered by hand — and on a NEW Minecraft ` +
+          `version, not at all:\n` +
+          [...unbuilt]
+            .map(([probe, ids]) => `    ${probe}\n${ids.map((id) => `      ${id}`).join('\n')}`)
+            .join('\n'),
+      );
+    }
   }
 
   const measurable = catalog.capabilities.filter((c) => c.method !== 'derived');

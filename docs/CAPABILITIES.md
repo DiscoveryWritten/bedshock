@@ -64,7 +64,7 @@ is how you find out the day it starts working.
 | `item.max_durability.damage_writable_across_range` | **yes** |
 | `item.durability_bar.rows_covered` | · |
 | `item.durability_bar.track_appears_at_damage_one` | · |
-| `item.durability_bar.hotbar_matches_inventory_grid` | · |
+| `item.durability_bar.hotbar_matches_inventory_grid` | **no** |
 | `item.icon.varies_per_stack` | — |
 | `item.icon.runtime_tint_or_overlay` | — |
 | `item.icon.animates_from_flipbook` | ? |
@@ -134,6 +134,7 @@ bedshock amend --negative        --version <new>
 | `entity.container.opens_with_container_type_chest` | Which `container_type` to use. The two probe entities are otherwise identical -- same components, same `private: false`, same `is_chested`, same size, generated from one template with only `container_type` substituted -- |
 | `entity.container.screen_draws_declared_slot_count` | Whether `container.size` and what the player sees are one number or two. If two, slots above the drawn count are script-writable and player-unreachable -- which is a HAZARD if you assumed the screen shows what you stored |
 | `equipment.offhand.script_placed_item_persists` | Whether the off-hand is free in-world rendering of an arbitrary item -- modded ones included -- with no attachable work at all. If it is, a whole class of display problem has a shortcut. If it is not, rendering an arbitr |
+| `item.durability_bar.hotbar_matches_inventory_grid` | Whether one measurement covers both surfaces, or artwork has to satisfy two different occlusion footprints. |
 | `render.attachable.reads_held_item_durability` | The largest single consequence in this battery. If yes, ONE item type renders every configuration in the hand and hundreds of baked sprites go away. If no, the item looks identical in every configuration and its state ha |
 
 ## Measured quantities
@@ -878,9 +879,25 @@ What an item definition is allowed to declare, what the client does with it, and
 
 <sub>method: `observed` · surface: `content` · probe: `ruler` · formerly: P2</sub>
 
-**Never measured.** This row is a guess, however confident the prose around it sounds.
+| Version | Answer | How | Evidence |
+|---|---|---|---|
+| 1.21.120 | `CLOSED-NEGATIVE` | observed, imported | the same stack in the same slot draws two ways: nothing in the hotbar HUD, an empty bar with a shadow in the inventory screen including that screen's own hotbar row — *Imported from composable-portals docs/CAPABILITIES.md, reported from play against a packed-durability item. The exact client build was not recorded; attributed to the pack's declared floor. TWO CANDIDATE CAUSES, not distinguished by this reading and worth separating before it is trusted: (a) a HUD threshold below which no track is drawn that the inventory screen does not share, which would make item.durability_bar.track_appears_at_damage_one two rows keyed to where you are looking; (b) a broken-state stack -- item.max_durability.overflow_wraps_rather_than_clamps is YES, so a packed value above 32767 lands negative, a state vanilla never produces, with damage == max nearby. Re-run the ruler probe to replace this with a measurement that tells them apart.* |
 
-*To answer it:* The same ruler item in the hotbar and then in the inventory grid, at both damages.
+<details><summary>What the probe actually saw</summary>
+
+```json
+// 1.21.120 · run import-cportals-2026-08-03
+{
+  "max_durability": 2048,
+  "damage": 5,
+  "worn_fraction": 0.0024,
+  "hotbar_hud": "nothing at all -- no bar, no shadow",
+  "inventory_screen": "an empty bar with a shadow",
+  "inventory_screen_hotbar_row": "an empty bar with a shadow"
+}
+```
+
+</details>
 
 <details><summary>The answer space this probe can distinguish</summary>
 
@@ -1638,5 +1655,5 @@ other repositories can carry `@requires bedshock:<id>` and `bedshock check` will
 if the cited row is not settled at that pack's `min_engine_version` — so a design can never
 quietly come to rest on a guess.
 
-<sub>70 capabilities · 27 observations · 1 version(s): 1.21.120</sub>
+<sub>70 capabilities · 28 observations · 1 version(s): 1.21.120</sub>
 

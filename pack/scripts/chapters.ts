@@ -89,9 +89,32 @@ export const CHAPTERS: Chapter[] = [
     viewFrom: { f: 0, u: 0, s: 0 },
   },
   {
+    name: 'hands',
+    about: 'What a custom item looks like held: whether an attachable draws at all, where it sits, and whether it can read the item.',
+    probes: ['attachable', 'attachable_pose'],
+    blueprint: {
+      name: 'hands',
+      steps: [
+        ...pad(8),
+        {
+          // A DARK BACKDROP, and it is apparatus rather than decoration. Every flag in the
+          // candidate rig is a saturated primary, and reading four of them off a screenshot means
+          // telling RED from WHITE against whatever happens to be behind the player. Two hundred
+          // blocks up that is sky, which is neither.
+          name: 'the backdrop',
+          places: fill({ f: [-8, 8], u: [0, 5], s: [8, 8] }, 'minecraft:black_concrete'),
+        },
+      ],
+    },
+    // Standing well back from the backdrop, facing it. The whole rig hangs off the player, so what
+    // has to be in shot is the PLAYER — this is the one chapter where the thing to look at is you.
+    viewFrom: { f: 0, u: 0, s: -2 },
+    lookAt: { f: 0, u: 1, s: 8 },
+  },
+  {
     name: 'containers',
-    about: 'Custom entities carrying containers, and how many of their slots you can actually reach.',
-    probes: ['container'],
+    about: 'Custom entities carrying containers, how many of their slots you can reach, and whether one can be used as a stash.',
+    probes: ['container', 'stash'],
     blueprint: {
       name: 'containers',
       steps: [

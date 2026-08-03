@@ -58,7 +58,276 @@ export function probeIds(c: PackConfig) {
     flipbook: [`${ns}:${PREFIX}_flip_a`, `${ns}:${PREFIX}_flip_b`],
     menu: p.menu_variants.map((v) => ({ ...v, id: `${ns}:${PREFIX}_menu_${v.id}` })),
     containers: p.containers.map((v) => ({ ...v, id: `${ns}:${PREFIX}_box_${v.id}` })),
+    // Two items for the candidate rig, differing only in damage. See the note in pack.yaml for
+    // why one item cannot answer this.
+    attach: [`${ns}:${PREFIX}_attach_a`, `${ns}:${PREFIX}_attach_b`],
+    attach_min: `${ns}:${PREFIX}_att_min`,
+    attach_pose: `${ns}:${PREFIX}_att_pose`,
+    stash_carrier: p.stash.carrier,
+    stash_holder: p.stash.holder,
   };
+}
+
+// ---------------------------------------------------------------------------
+// The attachable
+// ---------------------------------------------------------------------------
+
+/** The four colours the candidate expressions index into. Order is the array order. */
+const FLAG_COLOURS = ['#ff0000', '#00ff00', '#0000ff', '#ffffff'];
+export const FLAG_COLOUR_NAMES = ['RED', 'GREEN', 'BLUE', 'WHITE'];
+
+/**
+ * ONE GEOMETRY PER CANDIDATE, rather than one shared geometry with `part_visibility`.
+ *
+ * The first version of this rig shared a geometry and had each controller hide every bone but its
+ * own. In play the whole attachable was invisible — not the wrong colour, NOTHING, including the
+ * stub cube that exists so "nothing drew" and "no attachable at all" look different. A
+ * `part_visibility` list starting `{"*": false}` that never gets overridden produces exactly that,
+ * and so does a `textures` map with no `default` entry, and guessing which cost a session.
+ *
+ * So both risks are gone rather than narrowed: no `part_visibility` anywhere, and each controller
+ * selects its own geometry. Geometry 0 carries the stub, so a lone cube at the hand means
+ * "controllers run, queries do not" — which is a different finding from "nothing rendered".
+ */
+function flagGeometries(count: number): unknown {
+  const models: unknown[] = [];
+  for (let i = 0; i < count; i++) {
+    const bones: unknown[] = [
+      {
+        name: `flag${i}`,
+        pivot: [0, 0, 0],
+        cubes: [
+          {
+            // Wide, tall, and pushed UP AND OUT so the player's own body cannot hide half of it.
+            //
+            // NOTHING HERE IS OFFSET BY ZERO. An attachable's anchor is on the BODY, so a neat
+            // row of small flags near the pivot renders at roughly hip height on the third-person
+            // model and two of the four sit inside the torso. The rig worked perfectly and could
+            // not be read — the same failure the minimal probe had, for the same reason.
+            //
+            // Offset on two axes at once rather than one, deliberately: which way an attachable's
+            // model space points relative to the player is part of what is being measured here,
+            // so a fix that assumes which axis is "forward" could bury the rig again.
+            origin: [-10 + i * 6, 14, 10],
+            size: [5, 10, 1],
+            uv: [0, 0],
+          },
+        ],
+      },
+    ];
+    if (i === 0) {
+      // The stub, on the first geometry only. One copy, so it cannot z-fight with itself.
+      bones.push({
+        name: 'stub',
+        parent: 'flag0',
+        pivot: [0, 0, 0],
+        cubes: [{ origin: [-1, 0, -1], size: [2, 2, 2], uv: [0, 0] }],
+      });
+    }
+    models.push({
+      description: {
+        identifier: `geometry.${PREFIX}_flag${i}`,
+        texture_width: 16,
+        texture_height: 16,
+        visible_bounds_width: 3,
+        visible_bounds_height: 3,
+        visible_bounds_offset: [0, 1, 0],
+      },
+      bones,
+    });
+  }
+  return { format_version: '1.12.0', 'minecraft:geometry': models };
+}
+
+/**
+ * The floor: the simplest attachable Bedrock could possibly accept.
+ *
+ * One geometry, one texture, one material, one render controller. No texture arrays, no Molang,
+ * no `part_visibility`, nothing conditional. Its only question is whether a custom item renders a
+ * 3D attachable in the hand AT ALL — and until that is YES, every result from the candidate rig
+ * above is unreadable, because a dark rig cannot say whether the queries are blind or whether
+ * attachables simply do not work on custom items.
+ *
+ * Magenta because nothing else in this pack is #ff00ff and Bedrock's own missing-texture mark is
+ * a magenta-and-black checker: a flat magenta cube and a checkered one are different findings.
+ */
+function minimalAttachableFiles(c: PackConfig): OutFile[] {
+  const texture = `textures/entity/${PREFIX}_att_min`;
+  return [
+    { path: `RP/${texture}.png`, data: solid(16, '#ff00ff') },
+    {
+      path: `RP/models/entity/${PREFIX}_att_min.geo.json`,
+      data: j({
+        format_version: '1.12.0',
+        'minecraft:geometry': [
+          {
+            description: {
+              identifier: `geometry.${PREFIX}_att_min`,
+              texture_width: 16,
+              texture_height: 16,
+              visible_bounds_width: 3,
+              visible_bounds_height: 3,
+              visible_bounds_offset: [0, 1, 0],
+            },
+            // Fat enough to be unmissable, and RAISED OFF THE PIVOT so it can be looked at. The
+            // first version sat on the pivot itself, reasoning that a probe failing because the
+            // shape was too small answers the wrong question. That was right and it overshot: in
+            // first person the hand pivot is essentially at the camera, and the cube swallowed
+            // the whole screen. It rendered perfectly and was unreadable, which is its own kind
+            // of wrong answer.
+            bones: [{ name: 'body', pivot: [0, 0, 0], cubes: [{ origin: [-2, 4, -2], size: [4, 4, 4], uv: [0, 0] }] }],
+          },
+        ],
+      }),
+    },
+    {
+      path: `RP/render_controllers/${PREFIX}_att_min.render_controllers.json`,
+      data: j({
+        format_version: '1.10.0',
+        render_controllers: {
+          [`controller.render.${PREFIX}_att_min`]: {
+            geometry: 'Geometry.default',
+            materials: [{ '*': 'Material.default' }],
+            textures: ['Texture.default'],
+          },
+        },
+      }),
+    },
+    {
+      path: `RP/attachables/${PREFIX}_att_min.json`,
+      data: j({
+        format_version: '1.10.0',
+        'minecraft:attachable': {
+          description: {
+            identifier: `${c.namespace}:${PREFIX}_att_min`,
+            materials: { default: 'entity_alphatest' },
+            textures: { default: texture },
+            geometry: { default: `geometry.${PREFIX}_att_min` },
+            render_controllers: [`controller.render.${PREFIX}_att_min`],
+          },
+        },
+      }),
+    },
+  ];
+}
+
+/**
+ * The pose rig: the same cube, declared with the vanilla hold animations.
+ *
+ * Separate from the minimal probe rather than a flag on it, because "it renders" and "it renders
+ * IN THE HAND" are different answers and one rig cannot report both. The minimal probe deliberately
+ * declares no `animations` and no `scripts.animate`, which is what makes it the control for this
+ * one: whatever moves between them is the animation binding and nothing else.
+ */
+function posedAttachableFiles(c: PackConfig): OutFile[] {
+  const texture = `textures/entity/${PREFIX}_att_pose`;
+  return [
+    { path: `RP/${texture}.png`, data: solid(16, '#00ffff') },
+    {
+      path: `RP/attachables/${PREFIX}_att_pose.json`,
+      data: j({
+        format_version: '1.10.0',
+        'minecraft:attachable': {
+          description: {
+            identifier: `${c.namespace}:${PREFIX}_att_pose`,
+            materials: { default: 'entity_alphatest' },
+            textures: { default: texture },
+            geometry: { default: `geometry.${PREFIX}_att_min` },
+            render_controllers: [`controller.render.${PREFIX}_att_min`],
+            // The only difference from the minimal rig. Vanilla's own names, because a custom
+            // animation would answer whether OUR animation works, which nobody asked.
+            animations: {
+              hold_first_person: 'animation.humanoid.hold_first_person',
+              hold_third_person: 'animation.humanoid.hold_third_person',
+            },
+            scripts: {
+              animate: [
+                { hold_first_person: 'c.is_first_person' },
+                { hold_third_person: '!c.is_first_person' },
+              ],
+            },
+          },
+        },
+      }),
+    },
+  ];
+}
+
+function attachableFiles(c: PackConfig): OutFile[] {
+  const p = c.probes.attachable;
+  const out: OutFile[] = [];
+
+  for (let i = 0; i < FLAG_COLOURS.length; i++) {
+    out.push({ path: `RP/textures/entity/${PREFIX}_flag_${i}.png`, data: solid(16, FLAG_COLOURS[i]!) });
+  }
+
+  const textures: Record<string, string> = {};
+  for (let i = 0; i < FLAG_COLOURS.length; i++) {
+    textures[`c${i}`] = `textures/entity/${PREFIX}_flag_${i}`;
+  }
+
+  const controllers: Record<string, unknown> = {};
+  const controllerRefs: string[] = [];
+  p.candidates.forEach((candidate, i) => {
+    const name = `controller.render.${PREFIX}_${candidate.id}`;
+    controllers[name] = {
+      geometry: `Geometry.flag${i}`,
+      materials: [{ '*': 'Material.default' }],
+      // PARENTHESISED ON PURPOSE. Molang operator precedence eats array subscripts, and an
+      // unparenthesised `mod` inside one is exactly that shape.
+      textures: [`Array.palette[(${candidate.molang})]`],
+      arrays: { textures: { 'Array.palette': FLAG_COLOURS.map((_, k) => `Texture.c${k}`) } },
+    };
+    controllerRefs.push(name);
+  });
+
+  out.push({
+    path: `RP/render_controllers/${PREFIX}_attach.render_controllers.json`,
+    data: j({ format_version: '1.10.0', render_controllers: controllers }),
+  });
+
+  const geometry: Record<string, string> = {};
+  p.candidates.forEach((_, i) => {
+    geometry[`flag${i}`] = `geometry.${PREFIX}_flag${i}`;
+  });
+
+  // BOTH ITEMS SHARE ONE ATTACHABLE. They differ only in damage, which is the whole design: two
+  // attachables would make "the two items drew differently" ambiguous between the damage and the
+  // rig, and that ambiguity is the one this probe exists to remove.
+  for (const id of probeIds(c).attach) {
+    out.push({
+      path: `RP/attachables/${id.split(':')[1]}.json`,
+      data: j({
+        format_version: '1.10.0',
+        'minecraft:attachable': {
+          description: {
+            identifier: id,
+            materials: { default: 'entity_alphatest', enchanted: 'entity_alphatest_glint' },
+            textures: {
+              // `default` is not optional even though no controller names it. An attachable whose
+              // texture map lacks it is one of the two shapes that rendered NOTHING in play, and
+              // it costs one line to remove from the suspects forever.
+              default: `textures/entity/${PREFIX}_flag_0`,
+              ...textures,
+              enchanted: 'textures/misc/enchanted_item_glint',
+            },
+            geometry: { default: `geometry.${PREFIX}_flag0`, ...geometry },
+            render_controllers: controllerRefs,
+          },
+        },
+      }),
+    });
+  }
+
+  out.push({
+    path: `RP/models/entity/${PREFIX}_flags.geo.json`,
+    data: j(flagGeometries(p.candidates.length)),
+  });
+
+  out.push(...minimalAttachableFiles(c));
+  out.push(...posedAttachableFiles(c));
+
+  return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -216,6 +485,22 @@ function itemSpecs(c: PackConfig): ItemSpec[] {
       ...(variant.group ? { group: variant.group } : {}),
     });
   }
+
+  // P3/P4 — the attachable. TWO ITEMS DIFFERING ONLY IN DAMAGE, and the damages are in the name
+  // so a screenshot of two flags in a row says which is which without anyone remembering.
+  ids.attach.forEach((id, i) => {
+    const damage = i === 0 ? p.attachable.damage : p.attachable.damage_b;
+    specs.push({
+      id,
+      texture: `${PREFIX}_dur`,
+      name: `P3b attachable · damage ${damage}`,
+      category: 'items',
+      maxDurability: p.attachable.max_durability,
+    });
+  });
+
+  specs.push({ id: ids.attach_min, texture: `${PREFIX}_dur`, name: 'P3a minimal attachable', category: 'items' });
+  specs.push({ id: ids.attach_pose, texture: `${PREFIX}_dur`, name: 'P3c hold-pose attachable', category: 'items' });
 
   return specs;
 }
@@ -434,6 +719,11 @@ export function generatedModule(c: PackConfig): string {
     '  flipbook: string[];',
     '  menu: MenuId[];',
     '  containers: ContainerId[];',
+    '  attach: string[];',
+    '  attach_min: string;',
+    '  attach_pose: string;',
+    '  stash_carrier: string;',
+    '  stash_holder: string;',
     `} = ${JSON.stringify(ids, null, 2)};`,
     '',
     `export const PARAMS = ${JSON.stringify(p, null, 2)} as const;`,
@@ -451,6 +741,7 @@ export function packFiles(c: PackConfig): OutFile[] {
     ...itemSpecs(c).map((spec) => itemFile(c, spec)),
     ...ids.containers.map((v) => containerEntity(c, v)),
     ...entityClientFiles(c),
+    ...attachableFiles(c),
     ...textureFiles(c),
     ...languageFiles(c),
   ];
