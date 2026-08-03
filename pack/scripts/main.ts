@@ -143,6 +143,20 @@ system.afterEvents.scriptEventReceive.subscribe(
       return;
     }
 
+    // THE FACILITY BUILDER, CHECKED WITHOUT A PERSON. Raising a chapter needs no player -- only
+    // walking it does -- so the riskiest part of the guided run can be exercised on a bare server
+    // on every commit. Two hundred blocks up is somewhere nobody has ever stood, and whether a
+    // ticking area comes up there and `setType` reads back is exactly the sort of thing that has
+    // failed silently in this repository before.
+    //
+    // Apparatus rather than measurement, so it reports on its own channel and never emits a
+    // RESULT. A chapter that cannot be built is a problem with the rig, and every reading taken
+    // inside it would be a reading about the rig.
+    if (event.id === `${NAMESPACE}:sitecheck`) {
+      chapter.checkEveryBlueprint(makeCtx(playerOf(event)));
+      return;
+    }
+
     if (event.id === `${NAMESPACE}:code`) {
       session.showLastCode(makeCtx(playerOf(event)));
       return;

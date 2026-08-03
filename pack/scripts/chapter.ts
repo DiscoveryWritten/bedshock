@@ -163,3 +163,52 @@ export function dispatch(ctx: Ctx, probes: ProbeRegistry, argument: string, _pla
   }
   runChapter(ctx, probes, found);
 }
+
+/**
+ * Build every chapter's facility in turn, prove it stood up, and take it down again.
+ *
+ * NEEDS NOBODY, which is the entire point: the guided run is the least testable thing in this
+ * repository and this is the half of it that does not require hands. It runs on the bare server
+ * in CI, two hundred blocks above a spawn nobody has visited, and answers the questions that
+ * would otherwise wait for somebody with a tablet -- does a ticking area come up out there, does
+ * `setType` read back, does a fifty-six block pad place without timing out.
+ *
+ * IT REPORTS ON ITS OWN CHANNEL AND NEVER EMITS A RESULT. A facility is apparatus, not a
+ * capability: "the floor went down" is not a fact about Bedrock worth recording in a ledger, and
+ * filing it as one would put an instrument reading in with the measurements. But a chapter that
+ * cannot be built makes every reading taken inside it suspect, so the collector treats a failure
+ * here as a problem with the run.
+ */
+export function checkEveryBlueprint(ctx: Ctx): void {
+  whenSiteIsLive((live) => {
+    if (!live) {
+      console.warn(
+        `BEDSHOCK BUILD-FAILED site the ticking area at ${SITE.x},${SITE.y},${SITE.z} never came up, ` +
+          `so no chapter could be built`,
+      );
+      return;
+    }
+    const plot = site();
+    for (const chapter of CHAPTERS) {
+      const problems = validate(chapter.blueprint);
+      if (problems.length) {
+        console.warn(`BEDSHOCK BUILD-FAILED ${chapter.name} invalid blueprint: ${problems[0]}`);
+        continue;
+      }
+      const built = plot.build(chapter.blueprint);
+      if (built.built) {
+        console.warn(`BEDSHOCK NOTE built "${chapter.name}": ${built.done.join(' -> ')}`);
+      } else {
+        console.warn(
+          `BEDSHOCK BUILD-FAILED ${chapter.name} step ${built.done.length + 1}/` +
+            `${chapter.blueprint.steps.length} "${built.failed}": ${built.why}`,
+        );
+      }
+      // Down again either way. A check that left its scaffolding standing would change what the
+      // next thing to run sees, which is the failure the lanes were about.
+      plot.demolish(chapter.blueprint);
+    }
+    ctx.say(`§7site check done over ${CHAPTERS.length} chapter(s).§r`);
+    console.warn(`BEDSHOCK NOTE site check complete over ${CHAPTERS.length} chapter(s)`);
+  });
+}

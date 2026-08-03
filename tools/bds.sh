@@ -134,6 +134,22 @@ if [ "$started" -eq 1 ]; then
   # ticking area and waits for the chunk before asserting anything.
   sleep 3
 
+  # THE FACILITY BUILDER FIRST, and it is not part of the battery.
+  #
+  # Raising a chapter needs no player -- only walking it does -- so the riskiest half of the
+  # guided run gets exercised on every commit rather than waiting for somebody with a tablet.
+  # Two hundred blocks up is somewhere nobody has ever stood; whether a ticking area comes up
+  # there at all is exactly the class of thing that has failed silently here before.
+  #
+  # It reports on its own channel and emits no RESULT, so nothing it does reaches the ledger.
+  # A failure surfaces through `collect` as a problem with the run.
+  echo "scriptevent bedshock:sitecheck" >&3
+  for _ in $(seq 1 "${SITECHECK_TIMEOUT:-40}"); do
+    grep -q "BEDSHOCK NOTE site check complete" "$LOG" 2>/dev/null && break
+    grep -q "BEDSHOCK BUILD-FAILED site " "$LOG" 2>/dev/null && break
+    sleep 1
+  done
+
   # BEDSHOCK_PROBES narrows the run to named probes. Empty means the whole battery.
   #
   # This is what makes a version sweep cheap: once a capability is settled, re-asking it is a
