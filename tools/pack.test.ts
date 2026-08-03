@@ -864,3 +864,55 @@ test('the stash follow-up is registered', () => {
   const main = readFileSync(join(ROOT, 'pack', 'scripts', 'main.ts'), 'utf8');
   assert.match(main, /'stash\.fetch'/, 'the fetch follow-up is not registered');
 });
+
+/**
+ * A LOOK ON A HEADLESS RUN IS A ROW NOBODY COULD HAVE ANSWERED.
+ *
+ * `look()` means "the answer is on your screen". Emitted with nobody connected it produces a row
+ * that goes into the eyes-only pile from a run where there were no eyes — and worse, it can put a
+ * question there whose apparatus was never exercised at all.
+ *
+ * That is not hypothetical. The distribution probe asked the reader to check `Settings > Storage`
+ * on every server run, arguing that the battery responding at all proved world-local packs work.
+ * On a dedicated server that argument is empty: `bds.sh` copies the pack into `behavior_packs/`
+ * and the server loads it from disk whatever the answer is. Evidence that cannot come out the
+ * other way, on the row that decides whether updating this pack costs three minutes of tapping
+ * or none.
+ *
+ * So: every probe that can put something on a screen must reach a headless path FIRST.
+ */
+test('no probe can emit a LOOK before it has checked whether anyone is there', () => {
+  const dir = join(ROOT, 'pack', 'scripts', 'probes');
+  const offenders: string[] = [];
+  for (const name of readdirSync(dir).filter((f) => f.endsWith('.ts'))) {
+    const source = readFileSync(join(dir, name), 'utf8');
+    const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    const firstLook = code.search(/\blook\(/);
+    if (firstLook === -1) continue;
+    // Any of the shapes a probe uses to notice it is alone. `getAllPlayers` counts because the
+    // distinguishing fact is sometimes the absence of a CLIENT rather than of a caller.
+    const guard = code.search(/!ctx\.player|!player\b|getAllPlayers\(\)/);
+    if (guard === -1 || guard > firstLook) offenders.push(name);
+  }
+  assert.deepEqual(
+    offenders,
+    [],
+    `these emit a LOOK with nobody necessarily there to look: ${offenders.join(', ')}`,
+  );
+});
+
+/**
+ * And the row underneath the whole no-more-tapping workflow gets its own check.
+ *
+ * If `distribution` can be answered by a headless run, the one question that most needs a real
+ * device is the one most likely to get a bogus answer — and it would look like a measurement.
+ */
+test('the distribution row cannot be answered by a server that never imported anything', () => {
+  const source = readFileSync(join(ROOT, 'pack', 'scripts', 'probes', 'distribution.ts'), 'utf8');
+  const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  assert.match(code, /skipped\(/, 'the distribution probe has no headless path at all');
+  assert.ok(
+    code.search(/skipped\(/) < code.search(/\blook\(/),
+    'the distribution probe asks its question before checking whether a content manager exists',
+  );
+});
