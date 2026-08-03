@@ -3,11 +3,11 @@
   "minecraft": "1.21.120",
   "catalog_revision": "r19ee73b1",
   "release": "mc-1.21.120-r19ee73b1",
-  "measured_through": "2026-08-02T05:01:00Z",
+  "measured_through": "2026-08-03T00:00:00Z",
   "counts": {
     "SETTLED": 22,
-    "CLOSED-NEGATIVE": 4,
-    "OPEN": 27,
+    "CLOSED-NEGATIVE": 5,
+    "OPEN": 26,
     "INCONCLUSIVE": 1,
     "DRIFT": 0,
     "UNDERMINED": 0,
@@ -17,6 +17,7 @@
     "entity.container.opens_with_container_type_chest",
     "entity.container.screen_draws_declared_slot_count",
     "equipment.offhand.script_placed_item_persists",
+    "item.durability_bar.hotbar_matches_inventory_grid",
     "render.attachable.reads_held_item_durability"
   ],
   "capabilities": [
@@ -885,8 +886,23 @@
       "decides": "Whether one measurement covers both surfaces, or artwork has to satisfy two different occlusion footprints.",
       "method": "observed",
       "surface": "content",
-      "status": "OPEN",
+      "status": "CLOSED-NEGATIVE",
       "inherited": false,
+      "measured_on": "1.21.120",
+      "platform": "imported",
+      "api": "@minecraft/server 2.3.0",
+      "at": "2026-08-03T00:00:00Z",
+      "evidence": "the same stack in the same slot draws two ways: nothing in the hotbar HUD, an empty bar with a shadow in the inventory screen including that screen's own hotbar row",
+      "note": "Imported from composable-portals docs/CAPABILITIES.md, reported from play against a packed-durability item. The exact client build was not recorded; attributed to the pack's declared floor. TWO CANDIDATE CAUSES, not distinguished by this reading and worth separating before it is trusted: (a) a HUD threshold below which no track is drawn that the inventory screen does not share, which would make item.durability_bar.track_appears_at_damage_one two rows keyed to where you are looking; (b) a broken-state stack -- item.max_durability.overflow_wraps_rather_than_clamps is YES, so a packed value above 32767 lands negative, a state vanilla never produces, with damage == max nearby. Re-run the ruler probe to replace this with a measurement that tells them apart.",
+      "measurement": {
+        "max_durability": 2048,
+        "damage": 5,
+        "worn_fraction": 0.0024,
+        "hotbar_hud": "nothing at all -- no bar, no shadow",
+        "inventory_screen": "an empty bar with a shadow",
+        "inventory_screen_hotbar_row": "an empty bar with a shadow"
+      },
+      "outcome": "differ",
       "outcomes": [
         {
           "id": "agree",
