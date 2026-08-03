@@ -12,17 +12,17 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { PNG } from 'pngjs';
 
 import { CHAPTERS } from '../pack/scripts/chapters.ts';
-import { crossCheck } from './build.ts';
+import { crossCheck, implementedProbes } from './build.ts';
 import { loadCatalog } from './catalog.ts';
 import { loadPackConfig, validatePackConfig, type PackConfig } from './config.ts';
 import { minimumRowSeparation, RULER_ROWS, glyphPage, rulerSprite, flipbookStrip } from './gen/assets.ts';
 import { generatedModule, packFiles, probeIds } from './gen/pack.ts';
-import { ROOT } from './paths.ts';
+import { BUILD_DIR, ROOT } from './paths.ts';
 
 const config = loadPackConfig();
 const files = packFiles(config);
@@ -531,6 +531,57 @@ test('a capability carried only as embedded data is not credited with a runtime'
   // And code naming the capability still counts, even though the same id is in the data.
   const withCode = crossCheck(`${embedded}\nvar CAPABILITY = ${JSON.stringify(solved.id)};`, embedded);
   assert.ok(!withCode.join('\n').includes(solved.id), 'a probe that names its capability was not credited');
+
+  // A bundle with no readable registry cannot tell an askable question from an unaskable one, and
+  // has to say so rather than quietly crediting everything the way it used to.
+  assert.match(blind, /probe registry could not be read/, 'an unreadable registry passed silently');
+});
+
+/**
+ * The SECOND way the same check went quiet, and the one somebody else was relying on.
+ *
+ * Crediting an `observed` row for being in the embedded questions is only right when there is
+ * something to look at. Three rigs — `attachable`, `attachable_pose`, `stash` — are named by eight
+ * capabilities and built by nothing, and for as long as the credit was unconditional the build
+ * reported a clean bill on every run. composable-portals' `docs/CAPABILITIES.md` was pointing at
+ * that list to decide when its own copies were safe to delete.
+ */
+test('an eyes-only row whose rig this pack does not build is not credited with a runtime', () => {
+  const catalog = loadCatalog();
+  const observed = catalog.capabilities.find((c) => c.method === 'observed' && c.probe)!;
+  const embedded = catalog.capabilities.map((c) => `  { "id": ${JSON.stringify(c.id)} },`).join('\n');
+
+  const withoutRig = crossCheck(`${embedded}\nvar PROBES = {\n  somethingElse: run\n};`, embedded);
+  assert.ok(
+    withoutRig.join('\n').includes(observed.id),
+    `"${observed.id}" was credited a runtime by a pack that builds no "${observed.probe}"`,
+  );
+  assert.match(withoutRig.join('\n'), /built by nothing/, 'the unbuilt rigs were not named');
+
+  const withRig = crossCheck(`${embedded}\nvar PROBES = {\n  ${observed.probe}: run\n};`, embedded);
+  assert.ok(
+    !withRig.join('\n').includes(observed.id),
+    'a question the session can ask, with apparatus to look at, was called unimplemented',
+  );
+});
+
+/**
+ * The registry is read out of compiled output, which is a thing that stops working quietly.
+ *
+ * A renamed binding or a different emit shape would make `implementedProbes` return nothing, and
+ * an empty set reads as "this pack implements no probes" — every capability reported unimplemented,
+ * which is noise people scroll past. It returns null instead, and this pins that the real bundle
+ * is parsed rather than merely not crashing.
+ */
+test('the probe registry is readable out of the real bundle, in both property spellings', () => {
+  const bundlePath = join(BUILD_DIR, 'BP', 'scripts', 'main.js');
+  if (!existsSync(bundlePath)) return; // `npm run build` has not run; other tests cover the parser
+  const names = implementedProbes(readFileSync(bundlePath, 'utf8'));
+  assert.ok(names, 'the probe registry could not be found in the built bundle');
+  // `durability: run` is the long form and `ruler,` is shorthand. Missing the shorthand reported
+  // four built probes as unbuilt, which is the same wrong answer as the bug being fixed.
+  assert.ok(names.has('durability'), 'a `name: value` probe was missed');
+  assert.ok(names.has('ruler'), 'a shorthand probe was missed');
 });
 
 /**

@@ -481,7 +481,7 @@ export const QUESTIONS: SessionQuestion[] = [
     "question": "Do the hotbar and the inventory grid draw the bar over the same rows?",
     "look_at": "The same ruler item in the hotbar and then in the inventory grid, at both damages.",
     "askByDefault": true,
-    "priorStatus": "OPEN",
+    "priorStatus": "CLOSED-NEGATIVE",
     "outcomes": [
       {
         "id": "agree",
