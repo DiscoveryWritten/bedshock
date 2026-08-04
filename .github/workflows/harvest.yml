@@ -1,0 +1,144 @@
+name: harvest
+
+# Reported sessions, turned into a pull request.
+#
+# Somebody ran the battery on their own device, scanned the QR it built, and opened an issue
+# carrying their answer code. This picks those up in batches and proposes them.
+#
+# IT OPENS A PULL REQUEST AND NEVER PUSHES. An observation is history, and history should not
+# arrive by merge from a person nobody has met. The scheduled sweep already follows that rule for
+# measurements this repository takes itself; it matters more here, not less, because these come
+# from devices we do not control running builds we may not have.
+#
+# WEEKLY RATHER THAN PER-ISSUE, and the batching is the point rather than a saving. One pull
+# request per report would make disagreement invisible: two people answering the same row
+# differently is the most interesting thing this pipeline can find, and it is only visible when
+# they are looked at together. `bedshock harvest` puts conflicts at the top of the body for exactly
+# that reason.
+
+on:
+  schedule:
+    # Sunday, an hour after the capability sweep, so a week's reports land against a ledger that
+    # has already had its own drift check.
+    - cron: '17 7 * * 0'
+  workflow_dispatch:
+    inputs:
+      record:
+        description: 'Open a pull request. Off runs the numbers and writes nothing.'
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  harvest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+
+      # Open issues only. A closed one has been dealt with by a person, and reopening that decision
+      # automatically would undo it every Sunday.
+      - name: Collect the reports
+        id: collect
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh issue list --label answers --state open --limit 200 \
+            --json number,body,author > reports.json
+          count="$(jq 'length' reports.json)"
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          echo "$count open report(s)"
+
+      - name: Redeem them
+        if: steps.collect.outputs.count != '0'
+        run: |
+          set -euo pipefail
+          npx tsx tools/cli.ts harvest --issues reports.json --record \
+            --out-json harvest.json | tee harvest.md
+
+      # A run that accepted nothing must not open an empty pull request, and must not go quiet
+      # either -- the issues still need their replies below.
+      - name: What came of it
+        id: what
+        if: steps.collect.outputs.count != '0'
+        run: |
+          set -euo pipefail
+          accepted="$(jq '[.accepted[].observations[]] | length' harvest.json)"
+          sessions="$(jq '.accepted | length' harvest.json)"
+          conflicts="$(jq '.conflicts | length' harvest.json)"
+          echo "accepted=$accepted" >> "$GITHUB_OUTPUT"
+          echo "sessions=$sessions" >> "$GITHUB_OUTPUT"
+          echo "conflicts=$conflicts" >> "$GITHUB_OUTPUT"
+          echo "$sessions session(s), $accepted observation(s), $conflicts conflict(s)"
+
+      - name: Propose them
+        if: steps.what.outputs.accepted != '0' && steps.what.outputs.accepted != ''
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: harvest/reported-sessions
+          # THE TITLE CARRIES THE CONFLICT COUNT, because that is the number that decides whether
+          # this is a rubber stamp or something to sit down with.
+          title: >-
+            ${{ steps.what.outputs.sessions }} reported session(s),
+            ${{ steps.what.outputs.conflicts }} disagreement(s)
+          body-path: harvest.md
+          commit-message: |
+            Record ${{ steps.what.outputs.accepted }} observation(s) from reported sessions
+
+            Redeemed from open issues labelled `answers`. Every one carries the issue it
+            came from in its `run` field, and `platform: client` -- these were measured on
+            somebody else's device, on a build we may not have, and the ledger has to be
+            able to say so later.
+          labels: answers
+          delete-branch: true
+
+      # EVERY ISSUE GETS AN ANSWER, including the ones that could not be used. A report that
+      # disappears into silence is a person who does not report again -- and the commonest refusal
+      # is a missing Minecraft version, which they can fix in one comment.
+      - name: Reply to each report
+        if: steps.collect.outputs.count != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          jq -r '.accepted[] | "\(.issue)\t\(.observations | length)\t\(.version)"' harvest.json |
+          while IFS=$'\t' read -r issue rows version; do
+            gh issue comment "$issue" --body \
+              "Recorded $rows observation(s) against Bedrock $version. Thank you — this is now in the ledger's history, pending review of the pull request this run opened.
+
+          ---
+          _Generated by [Claude Code](https://claude.ai/code)_"
+            gh issue close "$issue" --reason completed || true
+          done
+
+          jq -r '.rejected[] | "\(.issue)\t\(.why)"' harvest.json |
+          while IFS=$'\t' read -r issue why; do
+            gh issue comment "$issue" --body \
+              "This could not be recorded automatically:
+
+          > $why
+
+          Nothing is lost — edit the issue and it will be picked up on the next run.
+
+          ---
+          _Generated by [Claude Code](https://claude.ai/code)_"
+          done
+
+          jq -r '.duplicates[]' harvest.json |
+          while read -r issue; do
+            gh issue comment "$issue" --body \
+              "This code was already reported, so it has been counted once. Two reports of one session are not two sessions agreeing.
+
+          ---
+          _Generated by [Claude Code](https://claude.ai/code)_"
+            gh issue close "$issue" --reason "not planned" || true
+          done
