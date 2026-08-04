@@ -189,6 +189,18 @@ async function ask(player: Player, question: SessionQuestion, at: number, of: nu
   return response.selection;
 }
 
+/**
+ * Whether a session is on, so a stray tap cannot restart one halfway through.
+ *
+ * Module scope rather than a dynamic property: a session does not survive a reload anyway, and a
+ * flag that outlived the run would lock the pack out of ever starting another.
+ */
+let running = false;
+
+export function isRunning(): boolean {
+  return running;
+}
+
 async function runSession(player: Player, ctx: Ctx, all: boolean): Promise<void> {
   const questions = chosen(all);
   if (questions.length === 0) {
@@ -304,11 +316,23 @@ function finish(player: Player, ctx: Ctx, answers: Answer[]): void {
 // ---------------------------------------------------------------------------
 
 export function start(ctx: Ctx, player: Player, all: boolean): void {
-  runSession(player, ctx, all).catch((err: unknown) => {
-    release(player);
-    console.warn(`BEDSHOCK ERROR session ${firstLine(err)}`);
-    ctx.say(`§cthe session stopped:§r ${firstLine(err)}`);
-  });
+  if (running) {
+    ctx.say('§7a session is already running.§r');
+    return;
+  }
+  running = true;
+  runSession(player, ctx, all)
+    .catch((err: unknown) => {
+      release(player);
+      console.warn(`BEDSHOCK ERROR session ${firstLine(err)}`);
+      ctx.say(`§cthe session stopped:§r ${firstLine(err)}`);
+    })
+    // ALWAYS cleared, including on the error path above. A flag left set by a throw would make
+    // every later attempt say "already running" with nothing running, and the only cure would be
+    // a world reload -- which is exactly the sort of dead end this pack is supposed to remove.
+    .finally(() => {
+      running = false;
+    });
 }
 
 /** `/scriptevent bedshock:code` — show the last code again, for a session that got interrupted. */

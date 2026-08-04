@@ -39,6 +39,7 @@ import * as attachable from './probes/attachable.ts';
 import * as stash from './probes/stash.ts';
 import * as session from './session.ts';
 import * as chapter from './chapter.ts';
+import * as kiosk from './kiosk.ts';
 
 type Probe = (ctx: Ctx) => void;
 
@@ -238,6 +239,10 @@ system.afterEvents.scriptEventReceive.subscribe(
   // Only our own namespace reaches the handler. Anything else is somebody else's event.
   { namespaces: [NAMESPACE] },
 );
+
+// THE WAY IN THAT IS NOT A CHAT COMMAND. A button, or the item you spawn holding. See kiosk.ts
+// for why neither is matched against a remembered coordinate.
+kiosk.install();
 
 world.afterEvents.worldLoad.subscribe(() => {
   console.warn(

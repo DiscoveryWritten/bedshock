@@ -62,6 +62,9 @@ export function probeIds(c: PackConfig) {
     // why one item cannot answer this.
     attach: [`${ns}:${PREFIX}_attach_a`, `${ns}:${PREFIX}_attach_b`],
     attach_min: `${ns}:${PREFIX}_att_min`,
+    // THE WAY IN. Handed over on first join, in the first slot, so the first reflex anybody has
+    // in Minecraft -- tap with what is in your hand -- starts the battery. See `kiosk.ts`.
+    start: `${ns}:${PREFIX}_start`,
     attach_pose: `${ns}:${PREFIX}_att_pose`,
     stash_carrier: p.stash.carrier,
     stash_holder: p.stash.holder,
@@ -500,6 +503,7 @@ function itemSpecs(c: PackConfig): ItemSpec[] {
   });
 
   specs.push({ id: ids.attach_min, texture: `${PREFIX}_dur`, name: 'P3a minimal attachable', category: 'items' });
+  specs.push({ id: ids.start, texture: `${PREFIX}_start`, name: 'TAP TO START the battery', category: 'items' });
   specs.push({ id: ids.attach_pose, texture: `${PREFIX}_dur`, name: 'P3c hold-pose attachable', category: 'items' });
 
   return specs;
@@ -612,6 +616,9 @@ function textureFiles(c: PackConfig): OutFile[] {
   const p = c.probes;
   const files: OutFile[] = [
     { path: `RP/textures/items/${PREFIX}_dur.png`, data: solid(16, '#4477aa') },
+    // Bright green and unlike anything else in the pack, because it is the one item somebody has
+    // to find and every other one is deliberately drab.
+    { path: `RP/textures/items/${PREFIX}_start.png`, data: solid(16, '#22cc44') },
     { path: `RP/textures/items/${PREFIX}_ruler.png`, data: rulerSprite() },
     { path: `RP/textures/items/${PREFIX}_glyph.png`, data: ringSprite(16, '#ffffff') },
     { path: `RP/textures/items/${PREFIX}_dynprop.png`, data: solid(16, '#aa7744') },
@@ -628,6 +635,7 @@ function textureFiles(c: PackConfig): OutFile[] {
   const keys = [
     `${PREFIX}_dur`, `${PREFIX}_ruler`, `${PREFIX}_glyph`, `${PREFIX}_dynprop`,
     `${PREFIX}_offhand`, `${PREFIX}_menu`, `${PREFIX}_flip_a`, `${PREFIX}_flip_b`,
+    `${PREFIX}_start`,
   ];
   files.push({
     path: 'RP/textures/item_texture.json',
@@ -721,6 +729,7 @@ export function generatedModule(c: PackConfig): string {
     '  containers: ContainerId[];',
     '  attach: string[];',
     '  attach_min: string;',
+    '  start: string;',
     '  attach_pose: string;',
     '  stash_carrier: string;',
     '  stash_holder: string;',
