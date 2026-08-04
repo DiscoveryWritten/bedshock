@@ -45,8 +45,18 @@ import * as container from './probes/container.ts';
 import * as dynprops from './probes/dynprops.ts';
 import * as menu from './probes/menu.ts';
 import * as repair from './probes/repair.ts';
+import * as qrsite from './qrsite.ts';
 
 const LAST_CODE = 'bedshock:last_code';
+
+/**
+ * Where a scanned code goes.
+ *
+ * A URL rather than the bare code, because "scan this and text appears" leaves a stranger holding
+ * twenty-five characters and no idea what to do with them. A link is a thing people already know
+ * how to follow.
+ */
+const REPORT_URL = 'HTTPS://TILIV.GITHUB.IO/BEDSHOCK/R/';
 
 /**
  * Which probe sets the scene for a question.
@@ -307,6 +317,19 @@ function finish(player: Player, ctx: Ctx, answers: Answer[]): void {
     .catch(() => {
       /* the chat copy below is the one that matters */
     });
+
+  // AND THE SAME CODE AS A QR, because a string on a screen still needs somebody to type it and
+  // this pack is meant to work for people who will never speak to us. See `qrsite.ts`.
+  //
+  // Uppercase throughout: QR's alphanumeric mode has no lowercase, a scheme and host are
+  // case-insensitive by specification, and the code's own alphabet is uppercase Crockford base32
+  // already. The receiving page has to accept an uppercase path, which is a constraint on it
+  // rather than a compromise here.
+  // DASHES STRIPPED. They exist so a person can read the code back off a screen without losing
+  // their place; a camera needs no such help, and at roughly one dash in five characters they are
+  // a fifth of the symbol's payload spent on an affordance nothing is using. `decodeAnswers`
+  // already accepts either form, so nothing downstream changes.
+  qrsite.show(ctx, player, `${REPORT_URL}${code.replace(/-/g, '')}`);
 
   ctx.say(`§l--- answer code ---§r`);
   ctx.say(`§a§l${code}§r`);

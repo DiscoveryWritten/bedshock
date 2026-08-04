@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>bedshock — report your answers</title>
+<!--
+  Where a scanned QR lands.
+
+  A phone camera can read a code off a Minecraft screen; what it cannot do is know what the code
+  MEANS or where to send it. This page is the difference between "scan this and some text appears"
+  and a stranger actually reporting a measurement.
+
+  STATIC ON PURPOSE. No build step, no framework, no analytics, no network call. GitHub Pages
+  serves it, the code arrives in the URL, and everything below happens in the browser. A page that
+  needed a server is a page that can be down on the day somebody finally runs the battery.
+
+  THE CODE IS NEVER DECODED HERE. Doing that would mean shipping the catalog, keeping it in step
+  with the pack, and inventing a second place where a capability id can go stale. The code is
+  self-describing to `bedshock redeem` and opaque to everybody else, which is exactly right: this
+  page's whole job is to carry it somewhere a person will see it.
+-->
+<style>
+  :root { color-scheme: light dark; --fg: #16181d; --bg: #fbfbfa; --dim: #5c6370; --line: #d8d8d4; --accent: #2f6f4f; }
+  @media (prefers-color-scheme: dark) { :root { --fg: #e8e8e6; --bg: #16181d; --dim: #9aa1ad; --line: #2c3038; --accent: #7fd1a5; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 2rem 1.25rem 4rem; background: var(--bg); color: var(--fg);
+         font: 16px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 34rem; margin: 0 auto; }
+  h1 { font-size: 1.35rem; margin: 0 0 .35rem; letter-spacing: -.01em; }
+  p.lede { color: var(--dim); margin: 0 0 1.75rem; }
+  .code { font: 600 clamp(.95rem, 4.2vw, 1.4rem)/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+          word-break: break-all; padding: 1rem; border: 1px solid var(--line); border-radius: .6rem;
+          background: color-mix(in srgb, var(--fg) 4%, transparent); margin: 0 0 1rem; }
+  .row { display: flex; gap: .6rem; flex-wrap: wrap; margin-bottom: 2rem; }
+  a.button, button { font: inherit; font-weight: 600; padding: .7rem 1.1rem; border-radius: .55rem;
+          border: 1px solid var(--line); background: transparent; color: var(--fg); cursor: pointer;
+          text-decoration: none; display: inline-block; }
+  a.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+  h2 { font-size: .95rem; text-transform: uppercase; letter-spacing: .06em; color: var(--dim);
+       margin: 2rem 0 .5rem; }
+  ol { padding-left: 1.2rem; } li { margin: .4rem 0; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .92em;
+         background: color-mix(in srgb, var(--fg) 7%, transparent); padding: .1em .35em; border-radius: .25em; }
+  .missing { border-left: 3px solid #c2622f; padding-left: .9rem; }
+  footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--line); color: var(--dim); font-size: .9rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Your answers</h1>
+  <p class="lede" id="lede">Read out of the link you scanned.</p>
+
+  <div class="code" id="code">—</div>
+
+  <div class="row">
+    <button id="copy">Copy</button>
+    <a class="button primary" id="report" href="#">Send it in</a>
+  </div>
+
+  <h2>What this is</h2>
+  <p>
+    You ran <a href="https://github.com/tiliv/bedshock">bedshock</a>, a battery that measures what
+    Minecraft Bedrock can actually do. That string carries every answer you gave, checksummed — it
+    decodes to exactly what you picked, and refuses to decode at all if a character is wrong.
+  </p>
+  <p>
+    Nothing was sent anywhere automatically. A Minecraft client has no network access of any kind,
+    which is the reason this is a QR code and not a button in the game.
+  </p>
+
+  <h2>If the link did not work</h2>
+  <ol>
+    <li>Tap <strong>Copy</strong> above.</li>
+    <li>Open an issue on <a href="https://github.com/tiliv/bedshock/issues/new">the repository</a>.</li>
+    <li>Paste. That is the whole report.</li>
+  </ol>
+
+  <footer>
+    No cookies, no analytics, no server. This page is a few hundred bytes of static HTML and does
+    nothing but show you the string you already have.
+  </footer>
+</main>
+
+<script>
+  // The code arrives as a path segment (/r/CODE) or a hash (/r/#CODE). Both are supported because
+  // a static host may or may not rewrite unknown paths, and a QR that resolves to a 404 is a QR
+  // that wasted somebody's session.
+  const raw = decodeURIComponent(
+    (location.pathname.split('/r/')[1] || '').replace(/\/+$/, '') || location.hash.replace(/^#/, '')
+  ).trim().toUpperCase();
+
+  const el = document.getElementById('code');
+  const report = document.getElementById('report');
+  const copy = document.getElementById('copy');
+
+  // Re-grouped in fours for reading. The pack strips the dashes before building the QR — a camera
+  // does not need them — and the redeemer accepts either form, so putting them back is purely so
+  // a person can check the string against their screen.
+  const grouped = raw.replace(/[^0-9A-Z]/g, '').replace(/(.{4})(?=.)/g, '$1-');
+
+  if (!grouped) {
+    document.getElementById('lede').textContent = 'No code in this link.';
+    el.textContent = 'nothing to report';
+    el.className = 'code missing';
+    copy.disabled = true;
+    report.setAttribute('href', 'https://github.com/tiliv/bedshock/issues/new');
+  } else {
+    el.textContent = grouped;
+    const title = encodeURIComponent('session answers');
+    const body = encodeURIComponent(
+      'Answer code from a guided session:\n\n```\n' + grouped + '\n```\n\n' +
+      'Minecraft version (if you know it): \nDevice: \n'
+    );
+    report.setAttribute('href',
+      'https://github.com/tiliv/bedshock/issues/new?title=' + title + '&labels=answers&body=' + body);
+  }
+
+  copy.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(grouped);
+      copy.textContent = 'Copied';
+      setTimeout(() => { copy.textContent = 'Copy'; }, 1600);
+    } catch {
+      // Clipboard access is refused in plenty of ordinary situations — an insecure context, a
+      // browser that wants a user gesture it did not see. Selecting the text is the fallback that
+      // always works, so offer that rather than reporting a failure nobody can act on.
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const selection = getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      copy.textContent = 'Select and copy';
+    }
+  });
+</script>
+</body>
+</html>
