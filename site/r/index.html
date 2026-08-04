@@ -43,6 +43,11 @@
   code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .92em;
          background: color-mix(in srgb, var(--fg) 7%, transparent); padding: .1em .35em; border-radius: .25em; }
   .missing { border-left: 3px solid #c2622f; padding-left: .9rem; }
+  label { display: block; margin-bottom: .2rem; }
+  .hint { color: var(--dim); font-size: .9rem; margin: .2rem 0 .5rem; }
+  input { font: inherit; width: 100%; padding: .7rem .8rem; border-radius: .55rem;
+          border: 1px solid var(--line); background: var(--bg); color: var(--fg); margin-bottom: .4rem; }
+  a[aria-disabled="true"] { opacity: .45; pointer-events: none; }
   footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--line); color: var(--dim); font-size: .9rem; }
 </style>
 </head>
@@ -53,9 +58,23 @@
 
   <div class="code" id="code">—</div>
 
+  <!--
+    THE VERSION IS ASKED FOR HERE AND NOWHERE ELSE, and it is not laziness that it has to be asked.
+    `@minecraft/server` exposes no way to read the game's build, so the pack genuinely cannot stamp
+    it, and an answer filed against the wrong version is worse than no answer. This page is the one
+    moment the person has a real keyboard and is already paying attention.
+
+    "Send it in" stays disabled until it is filled, because a report without it is one a human then
+    has to chase, and nobody chases a stranger.
+  -->
+  <label for="version"><strong>Which Minecraft?</strong></label>
+  <p class="hint">Bottom corner of the game's main menu, e.g. <code>1.21.120</code>. Nothing can work this out for you &mdash; the script API cannot read it.</p>
+  <input id="version" inputmode="decimal" autocomplete="off" spellcheck="false" placeholder="1.21.120">
+  <p class="hint" id="versionNote"></p>
+
   <div class="row">
     <button id="copy">Copy</button>
-    <a class="button primary" id="report" href="#">Send it in</a>
+    <a class="button primary" id="report" href="#" aria-disabled="true">Send it in</a>
   </div>
 
   <h2>What this is</h2>
@@ -73,7 +92,7 @@
   <ol>
     <li>Tap <strong>Copy</strong> above.</li>
     <li>Open an issue on <a href="https://github.com/tiliv/bedshock/issues/new">the repository</a>.</li>
-    <li>Paste. That is the whole report.</li>
+    <li>Paste it, and add a line reading <code>version: 1.21.120</code> with whichever build you are on.</li>
   </ol>
 
   <footer>
@@ -93,6 +112,8 @@
   const el = document.getElementById('code');
   const report = document.getElementById('report');
   const copy = document.getElementById('copy');
+  const versionInput = document.getElementById('version');
+  const versionNote = document.getElementById('versionNote');
 
   // Re-grouped in fours for reading. The pack strips the dashes before building the QR — a camera
   // does not need them — and the redeemer accepts either form, so putting them back is purely so
@@ -104,16 +125,32 @@
     el.textContent = 'nothing to report';
     el.className = 'code missing';
     copy.disabled = true;
+    versionInput.disabled = true;
     report.setAttribute('href', 'https://github.com/tiliv/bedshock/issues/new');
+    report.setAttribute('aria-disabled', 'false');
   } else {
     el.textContent = grouped;
-    const title = encodeURIComponent('session answers');
-    const body = encodeURIComponent(
-      'Answer code from a guided session:\n\n```\n' + grouped + '\n```\n\n' +
-      'Minecraft version (if you know it): \nDevice: \n'
-    );
-    report.setAttribute('href',
-      'https://github.com/tiliv/bedshock/issues/new?title=' + title + '&labels=answers&body=' + body);
+    // The body is MACHINE-READABLE FIRST. `bedshock harvest` reads two labelled lines out of it
+    // and nothing else — parsing prose would mean guessing, and a guess that lands becomes a filed
+    // measurement. Everything after those lines is for the human reading the issue.
+    const build = () => {
+      const version = versionInput.value.trim();
+      const ok = /^\d+\.\d+\.\d+(\.\d+)?$/.test(version);
+      report.setAttribute('aria-disabled', ok ? 'false' : 'true');
+      versionNote.textContent = version && !ok ? 'Needs to look like 1.21.120.' : '';
+      if (!ok) return;
+      const title = encodeURIComponent('session answers — ' + version);
+      const body = encodeURIComponent(
+        'code: ' + grouped + '\n' +
+        'version: ' + version + '\n\n' +
+        '---\n\nFrom a guided bedshock session. The two lines above are read automatically; ' +
+        'anything you add below is for a person.\n\nDevice: \nNotes: \n'
+      );
+      report.setAttribute('href',
+        'https://github.com/tiliv/bedshock/issues/new?title=' + title + '&labels=answers&body=' + body);
+    };
+    versionInput.addEventListener('input', build);
+    build();
   }
 
   copy.addEventListener('click', async () => {

@@ -30,6 +30,7 @@ import { writeReports } from './report.ts';
 import { buildManifest, catalogRevision, diffManifests, type Manifest } from './manifest.ts';
 import { ROOT } from './paths.ts';
 import { formatRedeem, redeem } from './redeem.ts';
+import { formatHarvest, harvest, type Report } from './harvest.ts';
 import { ALL_ASKS, formatRunResult, run, watchlist, type Ask } from './run.ts';
 import { scaffold } from './scaffold.ts';
 import type { Platform } from './types.ts';
@@ -315,6 +316,49 @@ async function main(): Promise<void> {
       break;
     }
 
+    /**
+     * `bedshock harvest --issues <file>` — reported sessions into observations.
+     *
+     * Reads the issue tracker's JSON, redeems what it can, and prints a pull-request body. Writes
+     * the ledger only when asked, because this runs unattended and an observation arriving without
+     * anybody looking is the one thing this repository will not do.
+     */
+    case 'harvest': {
+      const file = str(args.issues) ?? fail('usage: bedshock harvest --issues <file.json> [--record]');
+      const raw = file === '-' ? readFileSync(0, 'utf8') : readFileSync(file!, 'utf8');
+      let reports: Report[];
+      try {
+        // `gh issue list --json number,body,author` shape, mapped to ours.
+        reports = (JSON.parse(raw) as { number: number; body: string; author?: { login?: string } }[]).map((i) => ({
+          issue: i.number,
+          author: i.author?.login ?? 'unknown',
+          body: i.body ?? '',
+        }));
+      } catch (err) {
+        fail(`could not read the issue list: ${String(err).split('\n')[0]}`);
+        return;
+      }
+
+      const catalog = loadCatalog();
+      const existing = readLedger();
+      // Stamped once for the whole batch rather than per observation, so a run is one moment in
+      // the ledger's history and not a spread of them.
+      const at = new Date().toISOString();
+      const result = harvest(reports, catalog, existing, at);
+      process.stdout.write(`${formatHarvest(result)}\n`);
+
+      const observations = result.accepted.flatMap((a) => a.observations);
+      if (args.record && observations.length) {
+        appendObservations(observations);
+        writeReports(catalog, readLedger());
+      }
+      // The issues it could and could not use, for the workflow to comment with.
+      if (str(args['out-json'])) {
+        writeFileSync(str(args['out-json'])!, JSON.stringify(result, null, 2));
+      }
+      break;
+    }
+
     // -----------------------------------------------------------------------
     case 'watchlist': {
       const catalog = loadCatalog();
@@ -391,6 +435,7 @@ async function main(): Promise<void> {
           '  collect <log> --version v         record from a log captured elsewhere',
           '  amend [--version v] [--probe p]   answer the eyes-only rows from what you saw in play',
           '  redeem <code> --version v         record a guided session\'s answer code',
+          '  harvest --issues f.json           reported sessions -> observations + a PR body',
           '  report                            regenerate docs/ from the ledger',
           '  check --requires-from <glob> --version v',
           '                                    fail a build that rests on an unsettled capability',
