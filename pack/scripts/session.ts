@@ -34,7 +34,7 @@
  */
 
 import { InputPermissionCategory, system, world, type Player, type Vector3 } from '@minecraft/server';
-import { ActionFormData, MessageFormData } from '@minecraft/server-ui';
+import { ActionFormData } from '@minecraft/server-ui';
 
 import { CATALOG_REVISION, QUESTIONS, SNAPSHOT_VERSION, type SessionQuestion } from './catalog.generated.ts';
 import { NAMESPACE } from './generated.ts';
@@ -189,6 +189,18 @@ async function ask(player: Player, question: SessionQuestion, at: number, of: nu
   return response.selection;
 }
 
+/**
+ * Whether a session is on, so a stray tap cannot restart one halfway through.
+ *
+ * Module scope rather than a dynamic property: a session does not survive a reload anyway, and a
+ * flag that outlived the run would lock the pack out of ever starting another.
+ */
+let running = false;
+
+export function isRunning(): boolean {
+  return running;
+}
+
 async function runSession(player: Player, ctx: Ctx, all: boolean): Promise<void> {
   const questions = chosen(all);
   if (questions.length === 0) {
@@ -197,7 +209,18 @@ async function runSession(player: Player, ctx: Ctx, all: boolean): Promise<void>
     return;
   }
 
-  const intro = new MessageFormData()
+  // AN ActionFormData, NOT A MessageFormData, AND THAT IS THE WHOLE FIX.
+  //
+  // `MessageFormData` has exactly two buttons and returns a `selection` whose mapping to
+  // `button1`/`button2` is not what the names suggest. This code guessed it — the comment here
+  // used to assert "`selection` 1 is button1" — and guessed WRONG, so tapping **Start** took the
+  // same branch as tapping "Not now". The session could not be started at all, by anyone, ever.
+  // Reported from a phone: "I pushed to begin, and it didn't do anything else."
+  //
+  // Every question below already uses `ActionFormData`, where `selection` is the index of the
+  // button in the order they were added and there is nothing to get backwards. Using it here too
+  // means the intro cannot disagree with the questions about what a tap means.
+  const intro = new ActionFormData()
     .title('bedshock — guided run')
     .body(
       `§l${questions.length} question(s)§r need your eyes.\n\n` +
@@ -208,14 +231,19 @@ async function runSession(player: Player, ctx: Ctx, all: boolean): Promise<void>
         'At the end you get one short code. That code IS the result — read it off the screen ' +
         'and hand it over.',
     )
-    .button1('Start')
-    .button2('Not now');
+    .button('Start')
+    .button('Not now');
 
   const start = await showWhenFree(() => intro.show(player));
-  // MessageFormData numbers its buttons backwards from what the names suggest: `selection` 1 is
-  // button1. Cancelled or "Not now" both mean stop.
-  if (!start || start.canceled || start.selection !== 1) {
-    ctx.say('§7Nothing recorded.§r');
+  // THREE OUTCOMES, AND THEY USED TO PRINT THE SAME SENTENCE. "Nothing recorded." was said when
+  // the form never opened, when it was declined, and when the button mapping was wrong — so the
+  // one line a person had to go on could not tell a bug from a decision.
+  if (!start) {
+    ctx.say('§ethe form never opened§r — the client refused it 40 times running. Try again.');
+    return;
+  }
+  if (start.canceled || start.selection !== 0) {
+    ctx.say('§7Nothing recorded.§r Run it again when you have a few minutes.');
     return;
   }
 
@@ -288,11 +316,23 @@ function finish(player: Player, ctx: Ctx, answers: Answer[]): void {
 // ---------------------------------------------------------------------------
 
 export function start(ctx: Ctx, player: Player, all: boolean): void {
-  runSession(player, ctx, all).catch((err: unknown) => {
-    release(player);
-    console.warn(`BEDSHOCK ERROR session ${firstLine(err)}`);
-    ctx.say(`§cthe session stopped:§r ${firstLine(err)}`);
-  });
+  if (running) {
+    ctx.say('§7a session is already running.§r');
+    return;
+  }
+  running = true;
+  runSession(player, ctx, all)
+    .catch((err: unknown) => {
+      release(player);
+      console.warn(`BEDSHOCK ERROR session ${firstLine(err)}`);
+      ctx.say(`§cthe session stopped:§r ${firstLine(err)}`);
+    })
+    // ALWAYS cleared, including on the error path above. A flag left set by a throw would make
+    // every later attempt say "already running" with nothing running, and the only cure would be
+    // a world reload -- which is exactly the sort of dead end this pack is supposed to remove.
+    .finally(() => {
+      running = false;
+    });
 }
 
 /** `/scriptevent bedshock:code` — show the last code again, for a session that got interrupted. */

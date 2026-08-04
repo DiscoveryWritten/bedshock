@@ -39,6 +39,7 @@ import * as attachable from './probes/attachable.ts';
 import * as stash from './probes/stash.ts';
 import * as session from './session.ts';
 import * as chapter from './chapter.ts';
+import * as kiosk from './kiosk.ts';
 
 type Probe = (ctx: Ctx) => void;
 
@@ -170,6 +171,29 @@ system.afterEvents.scriptEventReceive.subscribe(
       return;
     }
 
+    // THE WORLD THAT SHIPS MUST BE ONE NOBODY HAS RUN ANYTHING IN.
+    //
+    // `bds.sh` exports the world AFTER the battery has run in it, so every entity a probe spawned
+    // travelled inside the `.mcworld` and greeted whoever imported it. Reported from a phone on
+    // the first real run: a row of white boxes at spawn, in what was supposed to be a clean
+    // environment. They were CI's container probes, eight of them, left where a headless run
+    // dropped them.
+    //
+    // That is not untidiness. Those entities are apparatus, and a person could have opened one
+    // and answered `entity.container.*` about a container this session never created — a reading
+    // taken against somebody else's rig, which is the same failure as two probes sweeping each
+    // other's arenas, one level up and shipped to a stranger.
+    if (event.id === `${NAMESPACE}:teardown`) {
+      const ctx = makeCtx(playerOf(event));
+      const removed = container.clear(ctx);
+      chapter.demolishEverything(ctx);
+      // THE COUNT, not just the fact that it ran. A teardown that swept nothing and a teardown
+      // that was never reached print the same line otherwise, and the battery always spawns
+      // containers -- so zero here is a sweep that missed, which is the failure being fixed.
+      console.warn(`BEDSHOCK NOTE teardown complete, removed ${removed} entit${removed === 1 ? 'y' : 'ies'}`);
+      return;
+    }
+
     if (event.id !== `${NAMESPACE}:probe`) return;
 
     const player = playerOf(event);
@@ -215,6 +239,10 @@ system.afterEvents.scriptEventReceive.subscribe(
   // Only our own namespace reaches the handler. Anything else is somebody else's event.
   { namespaces: [NAMESPACE] },
 );
+
+// THE WAY IN THAT IS NOT A CHAT COMMAND. A button, or the item you spawn holding. See kiosk.ts
+// for why neither is matched against a remembered coordinate.
+kiosk.install();
 
 world.afterEvents.worldLoad.subscribe(() => {
   console.warn(

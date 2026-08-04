@@ -20,6 +20,7 @@ export const IDS: {
   containers: ContainerId[];
   attach: string[];
   attach_min: string;
+  start: string;
   attach_pose: string;
   stash_carrier: string;
   stash_holder: string;
@@ -140,6 +141,7 @@ export const IDS: {
     "bedshock:probe_attach_b"
   ],
   "attach_min": "bedshock:probe_att_min",
+  "start": "bedshock:probe_start",
   "attach_pose": "bedshock:probe_att_pose",
   "stash_carrier": "minecraft:shulker_box",
   "stash_holder": "bedshock:probe_box_chest5"

@@ -916,3 +916,71 @@ test('the distribution row cannot be answered by a server that never imported an
     'the distribution probe asks its question before checking whether a content manager exists',
   );
 });
+
+// ---------------------------------------------------------------------------
+// Getting in without typing
+// ---------------------------------------------------------------------------
+
+/**
+ * THERE HAS TO BE A WAY IN THAT IS NOT A CHAT COMMAND.
+ *
+ * The premise of this pack is that somebody can import a world and get answers. Typing
+ * `/scriptevent bedshock:session` on a phone is a slash command on a touch keyboard, with a colon
+ * in it, that autocorrects, and that does nothing visible when you get it wrong. On the first real
+ * run the pack worked perfectly and the person had no way in.
+ *
+ * Two ways, and neither may quietly disappear: a button, and the item you spawn holding.
+ */
+test('the battery can be started without typing anything', () => {
+  const kiosk = readFileSync(join(ROOT, 'pack', 'scripts', 'kiosk.ts'), 'utf8');
+  assert.match(kiosk, /buttonPush\.subscribe/, 'no button starts the battery');
+  assert.match(kiosk, /itemUse\.subscribe/, 'no held item starts the battery');
+  assert.match(kiosk, /playerSpawn\.subscribe/, 'nothing hands the start item over on arrival');
+
+  const main = readFileSync(join(ROOT, 'pack', 'scripts', 'main.ts'), 'utf8');
+  assert.match(main, /kiosk\.install\(\)/, 'the kiosk is written but never installed');
+});
+
+/**
+ * The start item has to EXIST, and be findable among fifty deliberately-similar ones.
+ *
+ * Every other item in this pack is drab on purpose. This is the one somebody has to spot, so it
+ * gets its own texture rather than borrowing a probe's.
+ */
+test('the start item is emitted, in the creative menu, and looks like nothing else', () => {
+  const ids = probeIds(config);
+  assert.ok(ids.start, 'no start item id');
+  const item = json(`BP/items/${ids.start.split(':')[1]}.json`);
+  const menu = item['minecraft:item'].description.menu_category;
+  assert.ok(menu?.category, 'the start item is hidden from the creative menu');
+
+  const texture = paths.find((p) => p.endsWith('probe_start.png'));
+  assert.ok(texture, 'the start item has no texture');
+  const atlas = json('RP/textures/item_texture.json').texture_data;
+  assert.ok(atlas['probe_start'], 'the start item is not in the item atlas, so it draws as nothing');
+
+  // Its own colour, not a borrowed one. Two identical sprites is a search problem.
+  const png = PNG.sync.read(files.find((f) => f.path === texture)!.data as Buffer);
+  const [r, g, b] = [png.data[0], png.data[1], png.data[2]];
+  const others = paths.filter((p) => p.startsWith('RP/textures/items/') && !p.endsWith('probe_start.png'));
+  for (const other of others) {
+    const o = PNG.sync.read(files.find((f) => f.path === other)!.data as Buffer);
+    assert.ok(
+      !(o.data[0] === r && o.data[1] === g && o.data[2] === b),
+      `the start item is the same colour as ${other}`,
+    );
+  }
+});
+
+/**
+ * A stray tap must not restart a session that is already running, and a session that THREW must
+ * not lock the pack out of ever starting another. The second is the nastier one: the only cure
+ * for a flag left set by an exception is a world reload.
+ */
+test('a session guards against being started twice, and always clears the guard', () => {
+  const source = readFileSync(join(ROOT, 'pack', 'scripts', 'session.ts'), 'utf8');
+  assert.match(source, /export function isRunning/, 'nothing can ask whether a session is running');
+  assert.match(source, /\.finally\(/, 'the running flag is not cleared on the error path');
+  const kiosk = readFileSync(join(ROOT, 'pack', 'scripts', 'kiosk.ts'), 'utf8');
+  assert.match(kiosk, /isRunning\(\)/, 'the kiosk can restart a running session');
+});
