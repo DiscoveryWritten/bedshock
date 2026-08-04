@@ -127,6 +127,18 @@ jobs:
             echo "and be indistinguishable from every other one on the device." >&2
             exit 1
           }
+          # THE WORLD MUST BE ONE NOBODY HAS RUN ANYTHING IN. The export happens after the battery,
+          # so without a sweep the archive carries CI's own container entities -- which a person
+          # could then open and answer `entity.container.*` about. The COUNT is what is checked,
+          # not merely that a teardown line appeared: the battery always spawns containers, so
+          # zero removed is a sweep that ran and missed.
+          log="$(ls -t build/logs/*.log 2>/dev/null | head -1)"
+          [ -n "$log" ] || { echo "no server log to check the teardown against" >&2; exit 1; }
+          removed="$(sed -n 's/.*teardown complete, removed \([0-9]*\) entit.*/\1/p' "$log" | tail -1)"
+          [ -n "$removed" ] || { echo "the teardown never reported back — the world may carry CI's apparatus" >&2; exit 1; }
+          [ "$removed" -gt 0 ] || { echo "the teardown removed nothing, but the battery always spawns containers" >&2; exit 1; }
+          echo "teardown removed $removed entit(y|ies) before export"
+
           got="$(unzip -p "$world" levelname.txt)"
           [ "$got" = "bedshock ${GITHUB_SHA::7}" ] || {
             echo "levelname.txt says '$got', not 'bedshock ${GITHUB_SHA::7}' — --level-name did not survive" >&2

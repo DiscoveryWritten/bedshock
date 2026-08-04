@@ -260,7 +260,7 @@ export function read(ctx: Ctx): void {
 }
 
 /** `/scriptevent bedshock:probe container.clear` */
-export function clear(ctx: Ctx): void {
+export function clear(ctx: Ctx): number {
   const raw = world.getDynamicProperty(SPAWNED);
   const ids = typeof raw === 'string' ? (JSON.parse(raw) as string[]) : [];
   let removed = 0;
@@ -273,4 +273,5 @@ export function clear(ctx: Ctx): void {
   }
   world.setDynamicProperty(SPAWNED, undefined);
   ctx.say(`removed ${removed} container probe entit${removed === 1 ? 'y' : 'ies'}.`);
+  return removed;
 }

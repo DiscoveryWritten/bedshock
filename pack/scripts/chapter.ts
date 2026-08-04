@@ -122,21 +122,32 @@ export function runChapter(ctx: Ctx, probes: ProbeRegistry, index: number, opts:
   });
 }
 
+/**
+ * Take every chapter's facility down, wherever the site is.
+ *
+ * Shared with `chapter down` rather than duplicated, because the teardown before a world export
+ * has to clear exactly what a person clearing the site would — a facility left standing in a
+ * shipped world is a facility somebody measures in without having built it.
+ */
+export function demolishEverything(ctx: Ctx): void {
+  whenSiteIsLive((live) => {
+    if (!live) {
+      ctx.say('§ethe site never loaded, so nothing was cleared.§r');
+      return;
+    }
+    const plot = site();
+    for (const chapter of CHAPTERS) plot.demolish(chapter.blueprint);
+    setIndex(0);
+    ctx.say('§7site cleared, back to the first chapter.§r');
+  });
+}
+
 /** `/scriptevent bedshock:chapter [next|all|down|<name>]` */
 export function dispatch(ctx: Ctx, probes: ProbeRegistry, argument: string, _player: Player): void {
   const what = argument.trim();
 
   if (what === 'down') {
-    whenSiteIsLive((live) => {
-      if (!live) {
-        ctx.say('§ethe site never loaded, so nothing was cleared.§r');
-        return;
-      }
-      const plot = site();
-      for (const chapter of CHAPTERS) plot.demolish(chapter.blueprint);
-      setIndex(0);
-      ctx.say('§7site cleared, back to the first chapter.§r');
-    });
+    demolishEverything(ctx);
     return;
   }
 

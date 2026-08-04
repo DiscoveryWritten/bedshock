@@ -197,6 +197,29 @@ if [ "$started" -eq 1 ]; then
   done
 fi
 
+# SWEEP BEFORE THE WORLD IS CAPTURED, because it is captured after the battery has run in it.
+#
+# Every entity a probe spawned was still standing when the export happened, so the `.mcworld`
+# handed to a person arrived carrying CI's apparatus. Reported from a phone on the first real
+# run: a row of white boxes at spawn in what was supposed to be a clean environment. They were
+# the container probe's eight entities, left where a headless run dropped them.
+#
+# Not untidiness. Somebody could open one of those and answer `entity.container.*` about a
+# container this session never created -- a reading taken against another run's rig, which is the
+# same fault as two probes sweeping each other's arenas, one level up and shipped to a stranger.
+if [ "$started" -eq 1 ]; then
+  echo "scriptevent bedshock:teardown" >&3 || true
+  for _ in $(seq 1 "${TEARDOWN_TIMEOUT:-15}"); do
+    if grep -q "BEDSHOCK NOTE teardown complete" "$LOG" 2>/dev/null; then break; fi
+    if ! kill -0 "$BDS_PID" 2>/dev/null; then break; fi
+    sleep 1
+  done
+  # Anything the pack could not reach itself. A dropped item is not apparatus, but it is still
+  # somebody else's litter in a world that is supposed to be new.
+  echo "kill @e[type=item]" >&3 || true
+  sleep 1
+fi
+
 # Coordinates on, and the clock and weather frozen, so the world that ships is one somebody can
 # work in rather than one they have to fix first. Set through the console because these live in
 # level.dat and travel with the export.
