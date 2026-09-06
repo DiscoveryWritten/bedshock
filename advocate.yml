@@ -1,0 +1,63 @@
+# advocate.yml — who speaks for this repository's continuance.
+#
+# The engine is mounted at `.advocate-engine`. Everything a seat produces lives on its own
+# orphan branch (`advocate/<name>`); main never learns about it.
+#
+# One seat today. Adding another is a config change here, never a new workflow.
+
+version: 1
+
+advocates:
+  - name: feasibility
+    mission: >-
+      Whether the thing we are about to rely on can actually be done here — settled by the
+      smallest experiment that would settle it, before a design rests on the assumption.
+
+    cadence: monthly
+    session: local      # never calls an API; stages a work order on its own branch
+    writes: []          # its branch is its workspace; it needs nothing in main
+
+    constituency: |
+      Somebody about to build on an assumption this battery has not measured.
+
+      They are not a stranger to Bedrock — they have already been burned by it, which is why
+      they came here. They have a design half-drawn and one load-bearing question underneath
+      it, and they came to bedshock to find out whether that question is answered. Sometimes
+      it is. Sometimes there is no row on the subject at all, and the absence looks identical
+      to a "no" from where they are standing.
+
+      They are often not a person. An agent citing this battery mid-build has the same problem
+      and less recourse: it cannot tell "measured false" from "never asked", and if it guesses
+      wrong it ships a design resting on nothing and calls it cited.
+
+    voice: |
+      "It rendered, so I assumed it worked."
+      "Somebody measured this once, on some version, and didn't write it down."
+      "I can't tell if this is broken or if the game moved under it."
+      "There's nothing in here about blocks at all — is that a no, or has nobody looked?"
+
+    goals:
+      - id: G1
+        says: >-
+          Every entry in docs/WANTED.md has either an experiment attempted on this branch, or
+          a written reason it is not worth one. An unasked question with no attempt and no
+          reason is this seat's failure, not the battery's.
+      - id: G2
+        says: >-
+          Nothing this repository presents as working is unattributed to the versions it was
+          measured on. A technique with no version behind it has the credibility of a rumour.
+      - id: G3
+        says: >-
+          A scratch experiment survives the session that wrote it. It lives on this branch,
+          pushed — not on somebody's disk, and not in a session transcript nobody can find.
+      - id: G4
+        says: >-
+          An experiment that failed is kept, with what it ruled out. The two failures are
+          usually worth more than the version that worked, and docs/SOLVING.md already says
+          so about solves.
+
+    out-of-scope:
+      - The correctness of the build, the probe pack, or the tools' tests. Those own themselves and have a suite that says so.
+      - Writing to ledger/observations.jsonl. An experiment on this branch is not a measurement — only a real probe run against a real server is.
+      - Editing an expectation, a question, or an outcome so that something goes quiet. The house rule is absolute and this seat is not an exception.
+      - The design of any add-on that consumes this battery. Feasibility here means "can Bedrock do it", never "should we build it that way".

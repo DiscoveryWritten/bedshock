@@ -1,0 +1,81 @@
+# .github/workflows/council.yml — copy this into the repository being cared for, after
+# mounting the engine as a submodule:
+#
+#   git submodule add https://github.com/FCCN-ANTIBODY/advocate.anecdote.channel .advocate-engine
+#
+# One job per advocate in advocate.yml, from one matrix. Adding an advocate is a config
+# change, never a new workflow.
+#
+# TRIGGERS ARE schedule AND workflow_dispatch ONLY, on purpose. Never add
+# `pull_request_target`: an outside advocate's branch is READ, never RUN. Their credibility
+# comes from you reading their reasoning, not from your CI executing their tree with your
+# secrets.
+
+name: council
+
+on:
+  schedule:
+    - cron: "0 13 1 * *"   # First of the month. One seat, long cadence — see the budget note above.
+  workflow_dispatch:
+    inputs:
+      advocate:
+        description: "Run just this one (blank = all of them)"
+        required: false
+
+permissions:
+  contents: write          # advocates push their own branch, and nothing else
+
+concurrency:
+  group: council-${{ github.ref }}
+  cancel-in-progress: false
+
+# WHICH PROVIDER a hosted seat calls is `backend:` in advocate.yml, not anything in here —
+# declared in the repository, reviewed in a pull request, and not decided by which secret
+# happens to exist at the org. See BACKEND.md.
+#
+# A LOCAL BACKEND NEEDS NO SECRET AND NO EGRESS. On a self-hosted runner with
+# `backend: {kind: openai, url: http://127.0.0.1:11434/..., key-env: ""}` this workflow holds
+# no credential at all — and a job holding no secret cannot leak one. Swap `runs-on` for
+# `[self-hosted, advocate]` and delete the `agent-key` line; nothing else changes.
+#
+# THE MATRIX IS A BUDGET PROBLEM. This fans out over EVERY seat, so a five-seat repo makes five
+# calls every time the schedule fires, forever. That is the lesson the local runner already
+# learned — a round is a budget, not a sweep. Until the matrix step can emit a capped, stalest-
+# first list, keep the cadence long and the councils small.
+
+jobs:
+  seats:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.read.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true      # .advocate-engine, mounted like every other engine here
+      - id: read
+        run: echo "matrix=$(node .advocate-engine/bin/seats.mjs --matrix)" >> "$GITHUB_OUTPUT"
+
+  session:
+    needs: seats
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.seats.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # the range is the input; shallow hides it
+          submodules: true
+
+      - if: ${{ github.event.inputs.advocate == '' || github.event.inputs.advocate == matrix.name }}
+        uses: ./.advocate-engine
+        with:
+          advocate: ${{ matrix.name }}
+          # A ROLE, not a vendor: "the credential that summons a session". What it opens is
+          # `backend:` in advocate.yml. Blank => the session stages for a human, never faked —
+          # and a local backend wants it blank.
+          agent-key: ${{ secrets.ADVOCATE_AGENT_KEY || secrets.ANTHROPIC_API_KEY }}
+          # The Anthropic workspace id (`wrkspc_01...`, from the Anthropic Console) — not a
+          # GitHub org or repo name. Only needed when the key is identity-linked. Not a
+          # secret, so a variable is fine.
+          workspace-id: ${{ vars.ADVOCATE_WORKSPACE_ID }}

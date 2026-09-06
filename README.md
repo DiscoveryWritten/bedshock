@@ -410,6 +410,8 @@ and get the same collection rules applied to it.
 | [`pack/scripts/`](pack/scripts/) | The in-game runtime |
 | [`pack/scripts/harness.ts`](pack/scripts/harness.ts) | The entry point for somebody else's pack |
 | [`tools/`](tools/) | Everything else, and its tests |
+| [`advocate.yml`](advocate.yml) | The seats. What each advocate was told to want |
+| [`.advocate-engine/`](.advocate-engine/) | The caretaking framework, mounted. Work lives on `advocate/<name>` branches, never in main |
 
 ## Commands
 
