@@ -402,6 +402,7 @@ and get the same collection rules applied to it.
 | [`docs/versions/`](docs/versions/) | One report per Minecraft version. **Generated** |
 | [`docs/DESIGN.md`](docs/DESIGN.md) | Why it is shaped this way, and which failures each rule is for |
 | [`docs/PORTING.md`](docs/PORTING.md) | Moving a messy in-repo test battery onto this |
+| [`docs/TECHNIQUES.md`](docs/TECHNIQUES.md) | **Proposal.** Reference implementations that carry the version they last stood up on |
 | [`docs/SOLVING.md`](docs/SOLVING.md) | Measuring a number instead of a yes — and doing it with your own questions |
 | [`content/capabilities/`](content/capabilities/) | The questions |
 | [`content/pack.yaml`](content/pack.yaml) | The probe pack's identity and every apparatus parameter |
