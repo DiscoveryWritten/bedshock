@@ -403,6 +403,7 @@ and get the same collection rules applied to it.
 | [`docs/DESIGN.md`](docs/DESIGN.md) | Why it is shaped this way, and which failures each rule is for |
 | [`docs/PORTING.md`](docs/PORTING.md) | Moving a messy in-repo test battery onto this |
 | [`docs/SOLVING.md`](docs/SOLVING.md) | Measuring a number instead of a yes — and doing it with your own questions |
+| [`docs/WANTED.md`](docs/WANTED.md) | Questions with no row yet, and the decision each blocks |
 | [`content/capabilities/`](content/capabilities/) | The questions |
 | [`content/pack.yaml`](content/pack.yaml) | The probe pack's identity and every apparatus parameter |
 | [`ledger/`](ledger/) | The answers |
