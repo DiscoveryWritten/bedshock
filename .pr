@@ -1,0 +1,17 @@
+Seat an advocate: mount .advocate-engine and open the feasibility chair
+
+WIP. Mounts FCCN-ANTIBODY/advocate.anecdote.channel at `.advocate-engine` and adds
+`advocate.yml` with one seat, `feasibility`.
+
+The seat: run the smallest experiment that would settle whether a thing is possible here,
+before a design rests on the assumption. Scratch implementations live on the advocate's
+own orphan branch, so they survive the session that wrote them.
+
+Pairs with docs/WANTED.md (#15) — that file is the queue, this seat is what works it.
+
+TODO before raising:
+- constituency and voice are drafted from Autumn's own framing, but the framework refuses
+  to default them on purpose. Flag loudly that they are hers to overwrite.
+- decide whether council.yml ships now or waits. With session: local and no agent key it
+  stages for a human and never fakes a session, so it is safe — but it is a scheduled
+  workflow on a public repo and she should get to say no.
