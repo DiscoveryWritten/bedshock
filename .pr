@@ -1,0 +1,16 @@
+Proposal: techniques — reference implementations with a version behind them
+
+WIP, and a proposal rather than an implementation. Adding docs/TECHNIQUES.md.
+
+A capability answers "can Bedrock do X". A technique is a thing we composed out of
+several — an oddball accomplishment — and the question it needs answered is different:
+does it STILL stand, on which versions, and how would we know without re-running it.
+
+The mechanism worth having: a technique cites the capability ids it rests on, so when a
+cited answer moves in the ledger, the technique goes SUSPECT automatically. That is a
+free signal from data the repo already keeps. Running the reference implementation is
+the expensive confirmation, not the detector.
+
+TODO before raising:
+- naming: "technique" vs something in the repo's existing vocabulary
+- decide whether the portfolio/showcase is generated or curated
