@@ -28,85 +28,85 @@ is how you find out the day it starts working.
 
 ## Status at a glance
 
-| Capability | 1.21.120 |
-|---|---|
-| **distribution** |  |
-| `distribution.mcaddon.reinstall_replaces_in_place` | — |
-| `distribution.mcworld.carries_its_own_packs` | · |
-| **entity** |  |
-| `entity.container.is_the_only_container_host` | — |
-| `entity.container.storage_via_inventory_component` | **yes** |
-| `entity.container.api_honours_declared_inventory_size` | **yes** |
-| `entity.container.opens_with_container_type_horse` | **yes** |
-| `entity.container.opens_with_container_type_chest` | **no** |
-| `entity.container.reachable_slots_match_declared_size` | · |
-| `entity.container.screen_draws_declared_slot_count` | **no** |
-| `entity.container.slots_are_untyped` | **yes** |
-| `entity.container.script_writes_appear_in_screen` | **yes** |
-| `entity.container.preview_panel_renders_the_entity` | **yes** |
-| `entity.collision.blocks_a_player` | — |
-| `entity.collision.is_a_standing_surface` | — |
-| `entity.stash.preserves_an_opaque_itemstack` | **yes** |
-| `entity.stash.holder_findable_after_chunk_unload` | **yes** |
-| `entity.stash.holder_findable_after_world_reload` | **yes** |
-| `entity.falling_block.is_trackable_by_script` | **yes** |
-| **equipment** |  |
-| `equipment.offhand.vanilla_permitted_item_persists` | · |
-| `equipment.offhand.accepts_a_script_placed_item` | **yes** |
-| `equipment.offhand.script_placed_item_persists` | **no** |
-| `equipment.offhand.ejected_item_survives` | · |
-| `equipment.offhand.custom_item_declaring_allow_off_hand_persists` | **yes** |
-| `equipment.offhand.player_can_place_an_arbitrary_item` | — |
-| `equipment.offhand.has_a_use_input` | — |
-| **item** |  |
-| `item.max_durability.int16_ceiling` | **yes** |
-| `item.max_durability.overflow_wraps_rather_than_clamps` | **yes** |
-| `item.max_durability.damage_writable_across_range` | **yes** |
-| `item.durability_bar.rows_covered` | · |
-| `item.durability_bar.track_appears_at_damage_one` | · |
-| `item.durability_bar.hotbar_matches_inventory_grid` | **no** |
-| `item.icon.varies_per_stack` | — |
-| `item.icon.runtime_tint_or_overlay` | — |
-| `item.icon.animates_from_flipbook` | ? |
-| `item.name.glyph_renders_in_colour` | **yes** |
-| `item.name.glyph_alpha_is_honoured` | **yes** |
-| `item.name.glyph_renders_in_item_name` | · |
-| `item.creative.custom_group_is_accepted` | **yes** |
-| `item.creative.hidden_by_omitting_category` | · |
-| `item.creative.hidden_by_category_none` | · |
-| `item.creative.custom_group_nests_items` | · |
-| `item.creative.order_follows_emission` | · |
-| `item.dynamic_properties.survive_get_set_round_trip` | **yes** |
-| `item.dynamic_properties.survive_drop_and_pickup` | **yes** |
-| `item.dynamic_properties.survive_world_reload` | · |
-| `item.dynamic_properties.require_unstackable_items` | — |
-| `item.durability.mending_can_reach_a_custom_item` | · |
-| `item.durability.anvil_or_grindstone_can_reach_a_custom_item` | · |
-| `item.durability.omitting_repairable_blocks_external_writes` | · |
-| `item.durability.ordinary_use_consumes_it` | · |
-| **physics** |  |
-| `physics.falling_block.gravity_curve` | · |
-| `physics.falling_block.min_clearance_under_a_falling_anvil` | · |
-| `physics.throw.item_travel_distance` | · |
-| `physics.knockback.blocks_per_unit` | · |
-| `physics.knockback.blocks_per_unit_on_an_entity` | · |
-| **render** |  |
-| `render.molang.unknown_query_resolves_to_zero` | — |
-| `render.molang.integer_precision` | — |
-| `render.attachable.draws_on_custom_item` | **yes** |
-| `render.attachable.anchor_is_on_the_body` | **yes** |
-| `render.attachable.reads_held_item_durability` | **no** |
-| `render.attachable.several_controllers_at_once` | · |
-| `render.attachable.sits_at_model_origin_without_animation` | — |
-| `render.attachable.accepts_vanilla_hold_animations` | · |
-| **ui** |  |
-| `ui.form.button_icon_resolves_an_unindexed_path` | · |
-| `ui.form.button_icon_resolves_a_bare_atlas_key` | · |
-| `ui.form.missing_icon_is_visually_distinct` | · |
-| `ui.container.can_be_opened_on_demand_by_script` | — |
-| `ui.container.emits_a_change_event` | — |
-| `ui.enchanting.custom_enchantments_or_interception` | — |
-| `ui.item_texture.resolvable_from_an_item_id_at_runtime` | — |
+| Capability | 1.21.120 | 1.26.45.1 |
+|---|---|---|
+| **distribution** |  |  |
+| `distribution.mcaddon.reinstall_replaces_in_place` | — | — |
+| `distribution.mcworld.carries_its_own_packs` | · | · |
+| **entity** |  |  |
+| `entity.container.is_the_only_container_host` | — | — |
+| `entity.container.storage_via_inventory_component` | **yes** | **yes** |
+| `entity.container.api_honours_declared_inventory_size` | **yes** | **yes** |
+| `entity.container.opens_with_container_type_horse` | **yes** |  |
+| `entity.container.opens_with_container_type_chest` | **no** |  |
+| `entity.container.reachable_slots_match_declared_size` | · | · |
+| `entity.container.screen_draws_declared_slot_count` | **no** |  |
+| `entity.container.slots_are_untyped` | **yes** |  |
+| `entity.container.script_writes_appear_in_screen` | **yes** |  |
+| `entity.container.preview_panel_renders_the_entity` | **yes** |  |
+| `entity.collision.blocks_a_player` | — | — |
+| `entity.collision.is_a_standing_surface` | — | — |
+| `entity.stash.preserves_an_opaque_itemstack` | **yes** |  |
+| `entity.stash.holder_findable_after_chunk_unload` | **yes** |  |
+| `entity.stash.holder_findable_after_world_reload` | **yes** |  |
+| `entity.falling_block.is_trackable_by_script` | **yes** | **yes** |
+| **equipment** |  |  |
+| `equipment.offhand.vanilla_permitted_item_persists` | · | · |
+| `equipment.offhand.accepts_a_script_placed_item` | **yes** |  |
+| `equipment.offhand.script_placed_item_persists` | **no** |  |
+| `equipment.offhand.ejected_item_survives` | · | · |
+| `equipment.offhand.custom_item_declaring_allow_off_hand_persists` | **yes** |  |
+| `equipment.offhand.player_can_place_an_arbitrary_item` | — | — |
+| `equipment.offhand.has_a_use_input` | — | — |
+| **item** |  |  |
+| `item.max_durability.int16_ceiling` | **yes** | **yes** |
+| `item.max_durability.overflow_wraps_rather_than_clamps` | **yes** | **yes** |
+| `item.max_durability.damage_writable_across_range` | **yes** | **yes** |
+| `item.durability_bar.rows_covered` | · | · |
+| `item.durability_bar.track_appears_at_damage_one` | · | · |
+| `item.durability_bar.hotbar_matches_inventory_grid` | **no** |  |
+| `item.icon.varies_per_stack` | — | — |
+| `item.icon.runtime_tint_or_overlay` | — | — |
+| `item.icon.animates_from_flipbook` | ? |  |
+| `item.name.glyph_renders_in_colour` | **yes** |  |
+| `item.name.glyph_alpha_is_honoured` | **yes** |  |
+| `item.name.glyph_renders_in_item_name` | · | · |
+| `item.creative.custom_group_is_accepted` | **yes** | **yes** |
+| `item.creative.hidden_by_omitting_category` | · | · |
+| `item.creative.hidden_by_category_none` | · | · |
+| `item.creative.custom_group_nests_items` | · | · |
+| `item.creative.order_follows_emission` | · | · |
+| `item.dynamic_properties.survive_get_set_round_trip` | **yes** | **yes** |
+| `item.dynamic_properties.survive_drop_and_pickup` | **yes** |  |
+| `item.dynamic_properties.survive_world_reload` | · | · |
+| `item.dynamic_properties.require_unstackable_items` | — | — |
+| `item.durability.mending_can_reach_a_custom_item` | · | · |
+| `item.durability.anvil_or_grindstone_can_reach_a_custom_item` | · | · |
+| `item.durability.omitting_repairable_blocks_external_writes` | · | · |
+| `item.durability.ordinary_use_consumes_it` | · | · |
+| **physics** |  |  |
+| `physics.falling_block.gravity_curve` | · | **yes** |
+| `physics.falling_block.min_clearance_under_a_falling_anvil` | · | **yes** |
+| `physics.throw.item_travel_distance` | · | **yes** |
+| `physics.knockback.blocks_per_unit` | · | · |
+| `physics.knockback.blocks_per_unit_on_an_entity` | · | **yes** |
+| **render** |  |  |
+| `render.molang.unknown_query_resolves_to_zero` | — | — |
+| `render.molang.integer_precision` | — | — |
+| `render.attachable.draws_on_custom_item` | **yes** |  |
+| `render.attachable.anchor_is_on_the_body` | **yes** |  |
+| `render.attachable.reads_held_item_durability` | **no** |  |
+| `render.attachable.several_controllers_at_once` | · | · |
+| `render.attachable.sits_at_model_origin_without_animation` | — | — |
+| `render.attachable.accepts_vanilla_hold_animations` | · | · |
+| **ui** |  |  |
+| `ui.form.button_icon_resolves_an_unindexed_path` | · | · |
+| `ui.form.button_icon_resolves_a_bare_atlas_key` | · | · |
+| `ui.form.missing_icon_is_visually_distinct` | · | · |
+| `ui.container.can_be_opened_on_demand_by_script` | — | — |
+| `ui.container.emits_a_change_event` | — | — |
+| `ui.enchanting.custom_enchantments_or_interception` | — | — |
+| `ui.item_texture.resolvable_from_an_item_id_at_runtime` | — | — |
 
 `—` is a **derived** row: established by reading what the engine or our own emitted files do,
 rather than by a probe. Those do not vary per version in any way this battery could detect,
@@ -140,11 +140,29 @@ bedshock amend --negative        --version <new>
 ## Measured quantities
 
 Solved rather than answered: each of these is a search for a boundary, and the value is the
-answer. Shown on 1.21.120.
+answer. Shown on 1.26.45.1.
 
-*None measured yet. The questions are written; nobody has run them.*
+```
+physics.falling_block.gravity_curve                        ├────────●───────────  0.678 blocks_per_tick
+physics.falling_block.min_clearance_under_a_falling_anvil  ├──────────────●─────  3 blocks
+physics.throw.item_travel_distance                         ├──────────────────●─  8.49 blocks
+physics.knockback.blocks_per_unit_on_an_entity             ├──────────●─────────  1.21 blocks_per_unit
 
-5 solved row(s) have no value yet: `physics.falling_block.gravity_curve`, `physics.falling_block.min_clearance_under_a_falling_anvil`, `physics.throw.item_travel_distance`, `physics.knockback.blocks_per_unit`, `physics.knockback.blocks_per_unit_on_an_entity`
+                                                           ├────────────────────  log scale, 0.1 to 10
+```
+
+The bar is **logarithmic** — every decade is the same width, so a tenfold change is always
+the same visible jump and a small value is still a readable length. It is for the eye; the
+number beside it is the record. A `▸` cap means the value is above the top of the scale.
+
+| Capability | Value | Tolerance | Measured |
+|---|---|---|---|
+| `physics.falling_block.gravity_curve` | 0.678 blocks_per_tick | ±0.01 | 1.26.45.1 |
+| `physics.falling_block.min_clearance_under_a_falling_anvil` | 3 blocks | ±0.6 | 1.26.45.1 |
+| `physics.throw.item_travel_distance` | 8.49 blocks | ±0.25 | 1.26.45.1 |
+| `physics.knockback.blocks_per_unit_on_an_entity` | 1.21 blocks_per_unit | ±0.1 | 1.26.45.1 |
+
+1 solved row(s) have no value yet: `physics.knockback.blocks_per_unit`
 
 ## distribution
 
@@ -212,6 +230,7 @@ Entities are the only container host Bedrock offers, so every design that needs 
 | Version | Answer | How | Evidence |
 |---|---|---|---|
 | 1.21.120 | `SETTLED` | automated, imported | both variants spawn, carry a container, and script can read and write their slots — *Imported from composable-portals docs/CAPABILITIES.md (P11), from a headless smoke job. The first run of this probe reported LocationInUnloadedChunkError for both variants — that was a defect in the probe, not a finding, and the fix was claiming a ticking area first.* |
+| 1.26.45.1 | `SETTLED` | automated, bds | 8/8 variants carry a container script can read and write |
 
 <details><summary>What the probe actually saw</summary>
 
@@ -239,6 +258,86 @@ Entities are the only container host Bedrock offers, so every design that needs 
 }
 ```
 
+```json
+// 1.26.45.1 · run bds-20260907T124307Z
+{
+  "samples": [
+    {
+      "id": "bedshock:probe_box_chest5",
+      "container_type": "chest",
+      "declared": 5,
+      "spawned": true,
+      "reported": 5,
+      "writable": true,
+      "filled": 5
+    },
+    {
+      "id": "bedshock:probe_box_chest16",
+      "container_type": "chest",
+      "declared": 16,
+      "spawned": true,
+      "reported": 16,
+      "writable": true,
+      "filled": 16
+    },
+    {
+      "id": "bedshock:probe_box_horse1",
+      "container_type": "horse",
+      "declared": 1,
+      "spawned": true,
+      "reported": 1,
+      "writable": true,
+      "filled": 1
+    },
+    {
+      "id": "bedshock:probe_box_horse3",
+      "container_type": "horse",
+      "declared": 3,
+      "spawned": true,
+      "reported": 3,
+      "writable": true,
+      "filled": 3
+    },
+    {
+      "id": "bedshock:probe_box_horse4",
+      "container_type": "horse",
+      "declared": 4,
+      "spawned": true,
+      "reported": 4,
+      "writable": true,
+      "filled": 4
+    },
+    {
+      "id": "bedshock:probe_box_horse5",
+      "container_type": "horse",
+      "declared": 5,
+      "spawned": true,
+      "reported": 5,
+      "writable": true,
+      "filled": 5
+    },
+    {
+      "id": "bedshock:probe_box_horse6",
+      "container_type": "horse",
+      "declared": 6,
+      "spawned": true,
+      "reported": 6,
+      "writable": true,
+      "filled": 6
+    },
+    {
+      "id": "bedshock:probe_box_horse16",
+      "container_type": "horse",
+      "declared": 16,
+      "spawned": true,
+      "reported": 16,
+      "writable": true,
+      "filled": 16
+    }
+  ]
+}
+```
+
 </details>
 
 > The first headless run of this reported failure with `LocationInUnloadedChunkError` for both variants. THAT WAS A DEFECT IN THE PROBE, NOT A FINDING -- with no players connected nothing is loaded or ticking, so the spawn had nowhere to go. The probe now claims a ticking area first. Recorded because it is the exact failure this battery exists to prevent: a confident-looking FAIL that was measuring the instrument.
@@ -254,6 +353,7 @@ Entities are the only container host Bedrock offers, so every design that needs 
 | Version | Answer | How | Evidence |
 |---|---|---|---|
 | 1.21.120 | `SETTLED` | automated, imported | both variants report the size they declared, as the API sees it — *Imported from composable-portals docs/CAPABILITIES.md (P11). The exact client build was not recorded at the time; attributed to the pack's declared floor. Re-run to replace with a real measurement.* |
+| 1.26.45.1 | `SETTLED` | automated, bds | 8/8 report the size they declared — note this is what the API sees, and says nothing about what the screen draws |
 
 <details><summary>What the probe actually saw</summary>
 
@@ -272,6 +372,86 @@ Entities are the only container host Bedrock offers, so every design that needs 
       "declared": 5,
       "reported": 5,
       "writable": true
+    }
+  ]
+}
+```
+
+```json
+// 1.26.45.1 · run bds-20260907T124307Z
+{
+  "samples": [
+    {
+      "id": "bedshock:probe_box_chest5",
+      "container_type": "chest",
+      "declared": 5,
+      "spawned": true,
+      "reported": 5,
+      "writable": true,
+      "filled": 5
+    },
+    {
+      "id": "bedshock:probe_box_chest16",
+      "container_type": "chest",
+      "declared": 16,
+      "spawned": true,
+      "reported": 16,
+      "writable": true,
+      "filled": 16
+    },
+    {
+      "id": "bedshock:probe_box_horse1",
+      "container_type": "horse",
+      "declared": 1,
+      "spawned": true,
+      "reported": 1,
+      "writable": true,
+      "filled": 1
+    },
+    {
+      "id": "bedshock:probe_box_horse3",
+      "container_type": "horse",
+      "declared": 3,
+      "spawned": true,
+      "reported": 3,
+      "writable": true,
+      "filled": 3
+    },
+    {
+      "id": "bedshock:probe_box_horse4",
+      "container_type": "horse",
+      "declared": 4,
+      "spawned": true,
+      "reported": 4,
+      "writable": true,
+      "filled": 4
+    },
+    {
+      "id": "bedshock:probe_box_horse5",
+      "container_type": "horse",
+      "declared": 5,
+      "spawned": true,
+      "reported": 5,
+      "writable": true,
+      "filled": 5
+    },
+    {
+      "id": "bedshock:probe_box_horse6",
+      "container_type": "horse",
+      "declared": 6,
+      "spawned": true,
+      "reported": 6,
+      "writable": true,
+      "filled": 6
+    },
+    {
+      "id": "bedshock:probe_box_horse16",
+      "container_type": "horse",
+      "declared": 16,
+      "spawned": true,
+      "reported": 16,
+      "writable": true,
+      "filled": 16
     }
   ]
 }
@@ -526,6 +706,7 @@ Entities are the only container host Bedrock offers, so every design that needs 
 | Version | Answer | How | Evidence |
 |---|---|---|---|
 | 1.21.120 | `SETTLED` | automated, imported | 6 sightings across one 12-tick fall, with position AND velocity readable every tick — *Imported from composable-portals (cportals:ritual drop). The velocities are vanilla falling-block gravity, which confirms the entity being watched is the real one rather than a look-alike, and that getVelocity() on it is not zeroed the way a collided entity's is.* |
+| 1.26.45.1 | `SETTLED` | automated, bds | 55 sightings with non-zero velocity — position and velocity are both readable in flight |
 
 <details><summary>What the probe actually saw</summary>
 
@@ -547,6 +728,76 @@ Entities are the only container host Bedrock offers, so every design that needs 
     8,
     10
   ]
+}
+```
+
+```json
+// 1.26.45.1 · run bds-20260907T124307Z
+{
+  "sightings": 55,
+  "samples": [
+    {
+      "tick": 2,
+      "y": 19.97,
+      "vy": -0.039
+    },
+    {
+      "tick": 2,
+      "y": 18.97,
+      "vy": -0.039
+    },
+    {
+      "tick": 3,
+      "y": 19.891,
+      "vy": -0.078
+    },
+    {
+      "tick": 3,
+      "y": 18.891,
+      "vy": -0.078
+    },
+    {
+      "tick": 4,
+      "y": 19.773,
+      "vy": -0.115
+    },
+    {
+      "tick": 4,
+      "y": 18.773,
+      "vy": -0.115
+    },
+    {
+      "tick": 5,
+      "y": 19.618,
+      "vy": -0.152
+    },
+    {
+      "tick": 5,
+      "y": 18.618,
+      "vy": -0.152
+    },
+    {
+      "tick": 6,
+      "y": 19.426,
+      "vy": -0.188
+    },
+    {
+      "tick": 6,
+      "y": 18.426,
+      "vy": -0.188
+    },
+    {
+      "tick": 7,
+      "y": 19.197,
+      "vy": -0.224
+    },
+    {
+      "tick": 7,
+      "y": 18.197,
+      "vy": -0.224
+    }
+  ],
+  "watched_ticks": 40
 }
 ```
 
@@ -695,11 +946,54 @@ What an item definition is allowed to declare, what the client does with it, and
 | Version | Answer | How | Evidence |
 |---|---|---|---|
 | 1.21.120 | `SETTLED` | automated, imported | everything up to and including 32767 reports back exactly what was declared — *Imported from composable-portals docs/CAPABILITIES.md (P1), headless smoke job, PR #36 run 30516360479. Vanilla's own ceiling is 2031 (netherite), so everything above that was undocumented territory. 15 usable bits.* |
+| 1.26.45.1 | `SETTLED` | automated, bds | 4/4 declared values at or below 32767 report back exactly |
 
 <details><summary>What the probe actually saw</summary>
 
 ```json
 // 1.21.120 · run import-cportals-2026-07-30
+{
+  "samples": [
+    {
+      "declared": 2031,
+      "exists": true,
+      "reports": 2031,
+      "writable": true
+    },
+    {
+      "declared": 4096,
+      "exists": true,
+      "reports": 4096,
+      "writable": true
+    },
+    {
+      "declared": 16384,
+      "exists": true,
+      "reports": 16384,
+      "writable": true
+    },
+    {
+      "declared": 32767,
+      "exists": true,
+      "reports": 32767,
+      "writable": true
+    },
+    {
+      "declared": 32768,
+      "exists": true,
+      "reports": -32768
+    },
+    {
+      "declared": 65535,
+      "exists": true,
+      "reports": -1
+    }
+  ]
+}
+```
+
+```json
+// 1.26.45.1 · run bds-20260907T124307Z
 {
   "samples": [
     {
@@ -755,11 +1049,30 @@ What an item definition is allowed to declare, what the client does with it, and
 | Version | Answer | How | Evidence |
 |---|---|---|---|
 | 1.21.120 | `SETTLED` | automated, imported | two's-complement int16 wraparound, and the item still loads — *Imported from composable-portals docs/CAPABILITIES.md (P1). A clamp has a safe failure mode and a wrap does not: an over-large value does not degrade to the maximum, it becomes negative and nonsensical, and the item still loads. Whatever computes a packed code must assert its own range.* |
+| 1.26.45.1 | `SETTLED` | automated, bds | two’s-complement int16 wraparound, and the item still loads — an over-large value has no safe failure mode |
 
 <details><summary>What the probe actually saw</summary>
 
 ```json
 // 1.21.120 · run import-cportals-2026-07-30
+{
+  "samples": [
+    {
+      "declared": 32768,
+      "exists": true,
+      "reports": -32768
+    },
+    {
+      "declared": 65535,
+      "exists": true,
+      "reports": -1
+    }
+  ]
+}
+```
+
+```json
+// 1.26.45.1 · run bds-20260907T124307Z
 {
   "samples": [
     {
@@ -791,6 +1104,7 @@ What an item definition is allowed to declare, what the client does with it, and
 | Version | Answer | How | Evidence |
 |---|---|---|---|
 | 1.21.120 | `SETTLED` | automated, imported | damage reached max-1 on every in-range ceiling — *Imported from composable-portals docs/CAPABILITIES.md (P1), headless smoke job. damage == max_durability still means broken, so the usable top is max-1.* |
+| 1.26.45.1 | `SETTLED` | automated, bds | damage reached max-1 on all 4 in-range ceilings |
 
 <details><summary>What the probe actually saw</summary>
 
@@ -817,6 +1131,38 @@ What an item definition is allowed to declare, what the client does with it, and
       "declared": 32767,
       "writable": true,
       "reached": 32766
+    }
+  ]
+}
+```
+
+```json
+// 1.26.45.1 · run bds-20260907T124307Z
+{
+  "samples": [
+    {
+      "declared": 2031,
+      "exists": true,
+      "reports": 2031,
+      "writable": true
+    },
+    {
+      "declared": 4096,
+      "exists": true,
+      "reports": 4096,
+      "writable": true
+    },
+    {
+      "declared": 16384,
+      "exists": true,
+      "reports": 16384,
+      "writable": true
+    },
+    {
+      "declared": 32767,
+      "exists": true,
+      "reports": 32767,
+      "writable": true
     }
   ]
 }
@@ -1029,6 +1375,7 @@ What an item definition is allowed to declare, what the client does with it, and
 | Version | Answer | How | Evidence |
 |---|---|---|---|
 | 1.21.120 | `SETTLED` | automated, imported | all six variants exist as real items, so whatever the menu does with them is hiding or showing, never rejecting — *Imported from composable-portals docs/CAPABILITIES.md (P7), from a headless smoke job. Retires half of a standing warning: a custom group string does not cause rejection.* |
+| 1.26.45.1 | `SETTLED` | automated, bds | all 3 variants carrying a custom group string exist as real items — whatever the menu does with them is hiding or showing, never rejecting |
 
 <details><summary>What the probe actually saw</summary>
 
@@ -1041,6 +1388,44 @@ What an item definition is allowed to declare, what the client does with it, and
     "category: none",
     "category: items",
     "category: items + custom group (x3)"
+  ]
+}
+```
+
+```json
+// 1.26.45.1 · run bds-20260907T124307Z
+{
+  "samples": [
+    {
+      "id": "bedshock:probe_menu_omitted",
+      "label": "P7 omitted (no menu_category)",
+      "exists": true
+    },
+    {
+      "id": "bedshock:probe_menu_none",
+      "label": "P7 category none",
+      "exists": true
+    },
+    {
+      "id": "bedshock:probe_menu_items",
+      "label": "P7 category items",
+      "exists": true
+    },
+    {
+      "id": "bedshock:probe_menu_grouped_a",
+      "label": "P7 grouped A",
+      "exists": true
+    },
+    {
+      "id": "bedshock:probe_menu_grouped_b",
+      "label": "P7 grouped B",
+      "exists": true
+    },
+    {
+      "id": "bedshock:probe_menu_grouped_c",
+      "label": "P7 grouped C",
+      "exists": true
+    }
   ]
 }
 ```
@@ -1148,6 +1533,19 @@ What an item definition is allowed to declare, what the client does with it, and
 | Version | Answer | How | Evidence |
 |---|---|---|---|
 | 1.21.120 | `SETTLED` | automated, imported | survives setItem then getItem — mutate-in-place is safe — *Imported from composable-portals docs/CAPABILITIES.md (P8). Confirmed both on the smoke job and in-game through slot 9. The consequence is large: a state toggle need never swap item types, so the class of fault where a toggle silently drops stack data does not arise.* |
+| 1.26.45.1 | `SETTLED` | automated, bds | mutate-in-place is safe: a state toggle need never swap item types |
+
+<details><summary>What the probe actually saw</summary>
+
+```json
+// 1.26.45.1 · run bds-20260907T124307Z
+{
+  "wrote": "sgd8b5c-17059",
+  "read": "sgd8b5c-17059"
+}
+```
+
+</details>
 
 ### `item.dynamic_properties.survive_drop_and_pickup`
 
@@ -1307,7 +1705,87 @@ The measurable constants of Bedrock's own behaviour: how fast things fall, how f
 
 *Solves for the maximum* in `blocks_per_tick`, tolerating ±0.01 before a move counts as a finding, searching -4…0.
 
-**Never measured.** This row is a guess, however confident the prose around it sounds.
+| Version | Answer | Value | How | Evidence |
+|---|---|---|---|---|
+| 1.26.45.1 | `SETTLED` | 0.678 blocks_per_tick | automated, bds | peak downward velocity over 40 ticks, from 52 moving sightings |
+
+<details><summary>What the probe actually saw</summary>
+
+```json
+// 1.26.45.1 · run bds-20260907T124307Z
+{
+  "samples": [
+    {
+      "tick": 2,
+      "vy": -0.0392
+    },
+    {
+      "tick": 2,
+      "vy": -0.0392
+    },
+    {
+      "tick": 3,
+      "vy": -0.0776
+    },
+    {
+      "tick": 3,
+      "vy": -0.0776
+    },
+    {
+      "tick": 4,
+      "vy": -0.1153
+    },
+    {
+      "tick": 4,
+      "vy": -0.1153
+    },
+    {
+      "tick": 5,
+      "vy": -0.1522
+    },
+    {
+      "tick": 5,
+      "vy": -0.1522
+    },
+    {
+      "tick": 6,
+      "vy": -0.1883
+    },
+    {
+      "tick": 6,
+      "vy": -0.1883
+    },
+    {
+      "tick": 7,
+      "vy": -0.2237
+    },
+    {
+      "tick": 7,
+      "vy": -0.2237
+    },
+    {
+      "tick": 8,
+      "vy": -0.2585
+    },
+    {
+      "tick": 8,
+      "vy": -0.2585
+    },
+    {
+      "tick": 9,
+      "vy": -0.2925
+    },
+    {
+      "tick": 9,
+      "vy": -0.2925
+    }
+  ],
+  "watched_ticks": 40,
+  "sightings": 55
+}
+```
+
+</details>
 
 > Recorded once already, informally, as `-0.04, -0.12, -0.19, -0.26, -0.33` at ticks 2..10. Those numbers are what confirm a watched entity is the real falling block rather than a look-alike, so this row doubles as the identity check for `entity.falling_block.is_trackable_by_script`. IT ALREADY EARNED ITS KEEP, and not in the way it was written for. On 1.26.36.1 this read 0.5697 from 31 sightings, then 0.6777 from 52 -- a move of ten times its own tolerance -- with nothing about Bedrock having changed between the two. A neighbouring probe had been carving the same column and deleting the anvil part-way down, so every earlier reading was a truncated fall. The engine's integration had not moved; the apparatus had. So read the control's warning both ways. If this number moves, either the engine changed or SOMETHING ABOUT THE RIG DID, and until you know which, nothing else measured in this file is comparable across that boundary. A number that moves for a reason nobody identified is not a finding yet.
 
@@ -1321,7 +1799,70 @@ The measurable constants of Bedrock's own behaviour: how fast things fall, how f
 
 *Solves for the maximum* in `blocks`, tolerating ±0.6 before a move counts as a finding, searching 0…8.
 
-**Never measured.** This row is a guess, however confident the prose around it sounds.
+| Version | Answer | Value | How | Evidence |
+|---|---|---|---|---|
+| 1.26.45.1 | `SETTLED` | 3 blocks | automated, bds | converged on 3 after 9 trial(s); it held at 3 and failed at 3.5, which is inside the tolerance of 0.6 |
+
+<details><summary>What the probe actually saw</summary>
+
+```json
+// 1.26.45.1 · run bds-20260907T124307Z
+{
+  "bracket": [
+    3,
+    3.5
+  ],
+  "trials": 9,
+  "direction": "maximum",
+  "tolerance": 0.6,
+  "searched": [
+    0,
+    8
+  ],
+  "unit": "blocks",
+  "repeats": 2,
+  "history": [
+    {
+      "x": 0,
+      "held": true
+    },
+    {
+      "x": 0,
+      "held": true
+    },
+    {
+      "x": 8,
+      "held": false
+    },
+    {
+      "x": 4,
+      "held": false
+    },
+    {
+      "x": 2,
+      "held": true
+    },
+    {
+      "x": 2,
+      "held": true
+    },
+    {
+      "x": 3,
+      "held": true
+    },
+    {
+      "x": 3,
+      "held": true
+    },
+    {
+      "x": 3.5,
+      "held": false
+    }
+  ]
+}
+```
+
+</details>
 
 > THE FAILURE MODE TO WATCH FOR is a solve that converges on its own search bound. A result sitting exactly at `from` or `to` usually means the trial never actually failed, or never actually passed -- so the probe reports INCONCLUSIVE at a bound rather than recording the bound as an answer. A number that is really the edge of the search is not a measurement of anything. WHAT THIS NUMBER IS PHYSICALLY. It is how far the anvil travels while the plane is empty, which is why the vacate window in `content/pack.yaml` is part of what the row MEANS rather than a tuning detail -- widen the window and the number grows, and readings taken either side of that change are not comparable. It is close kin to the tunnelling threshold: a fast enough mover crosses a whole block between two ticks and is never seen inside it at all.
 
@@ -1335,7 +1876,36 @@ The measurable constants of Bedrock's own behaviour: how fast things fall, how f
 
 *Solves for the maximum* in `blocks`, tolerating ±0.25 before a move counts as a finding, searching 0…24.
 
-**Never measured.** This row is a guess, however confident the prose around it sounds.
+| Version | Answer | Value | How | Evidence |
+|---|---|---|---|---|
+| 1.26.45.1 | `SETTLED` | 8.49 blocks | automated, bds | median of 5 reading(s), scattering 0 (allowed 0.5) |
+
+<details><summary>What the probe actually saw</summary>
+
+```json
+// 1.26.45.1 · run bds-20260907T124307Z
+{
+  "readings": [
+    8.48509407043457,
+    8.48509407043457,
+    8.48509407043457,
+    8.48509407043457,
+    8.48509407043457
+  ],
+  "attempted": 5,
+  "failed": 0,
+  "rejected": 0,
+  "observed_spread": 0,
+  "allowed_spread": 0.5,
+  "unit": "blocks",
+  "plausible": [
+    0,
+    24
+  ]
+}
+```
+
+</details>
 
 > THE NUMBER IS RELATIVE TO AN IMPULSE. A player's throw is not scriptable, so the probe applies the impulse declared in `content/pack.yaml` and reports what it buys. Change that impulse and this number changes for a reason that has nothing to do with Bedrock, and readings from either side of the change are not comparable -- the same trap as the anvil's vacate window, in a different costume. The tolerance is a quarter of a block: about the difference one tick of contact with the ground makes at the speed the item is still carrying when it first lands.
 
@@ -1363,7 +1933,36 @@ The measurable constants of Bedrock's own behaviour: how fast things fall, how f
 
 *Solves for the maximum* in `blocks_per_unit`, tolerating ±0.1 before a move counts as a finding, searching 0…20.
 
-**Never measured.** This row is a guess, however confident the prose around it sounds.
+| Version | Answer | Value | How | Evidence |
+|---|---|---|---|---|
+| 1.26.45.1 | `SETTLED` | 1.21 blocks_per_unit | automated, bds | median of 5 reading(s), scattering 0 (allowed 0.2) |
+
+<details><summary>What the probe actually saw</summary>
+
+```json
+// 1.26.45.1 · run bds-20260907T124307Z
+{
+  "readings": [
+    1.2148661613464355,
+    1.2148661613464355,
+    1.2148661613464355,
+    1.2148661613464355,
+    1.2148661613464355
+  ],
+  "attempted": 5,
+  "failed": 0,
+  "rejected": 0,
+  "observed_spread": 0,
+  "allowed_spread": 0.2,
+  "unit": "blocks_per_unit",
+  "plausible": [
+    0,
+    20
+  ]
+}
+```
+
+</details>
 
 > The same call, the same arena, the same rest test as the player row -- differing in the subject and in nothing else, which is what makes a difference between the two attributable to the subject. WHAT TO DO IF THESE TWO DIVERGE: treat the player row as the one your design has to respect and this one as the warning that a shared constant is wrong. They are recorded separately precisely so that divergence is visible rather than averaged away. THE SUBJECT IS PART OF WHAT THIS ROW MEANS, and it is a dropped item -- named in `content/pack.yaml` rather than left implicit. The first apparatus used an armour stand and Bedrock 1.26.36.1 reported `the subject never moved at all` five times out of five: vanilla armour stands resist knockback outright. Worth knowing on its own, and a reminder that "an ordinary entity" is not one thing. A reading taken against a different subject is not comparable with this one.
 
@@ -1655,5 +2254,5 @@ other repositories can carry `@requires bedshock:<id>` and `bedshock check` will
 if the cited row is not settled at that pack's `min_engine_version` — so a design can never
 quietly come to rest on a guess.
 
-<sub>70 capabilities · 28 observations · 1 version(s): 1.21.120</sub>
+<sub>70 capabilities · 40 observations · 2 version(s): 1.21.120, 1.26.45.1</sub>
 
