@@ -1,0 +1,143 @@
+# residency.yml — what this engine asks of a host that mounts it as `.bedshock-engine`.
+#
+# The resident's NAME is not declared here: it comes from the mount path, so
+# `.bedshock-engine` is the claim and nothing can disagree with it. Terms, not
+# locations — the host binds labels to paths and answers `label -> path`, and this
+# file never names a directory. See station-node `.library-engine/RESIDENCY.md`.
+#
+# THE CLAIM IS A MENU, NOT A STARTUP SCRIPT.
+#
+# Nothing here starts because the engine was mounted. A station with no Minecraft
+# device attached to it starts no gateway and is never told off about it.
+#
+# WHY THIS ENGINE WANTS A HOST AT ALL, WHICH IS NOT OBVIOUS
+#
+# Everything bedshock does today runs on a laptop with a terminal: `bedshock run`
+# boots a dedicated server, probes it, and appends what it saw. It has never needed
+# a station.
+#
+# What it cannot do on a laptop is measure a CLIENT. `Platform` in `types.ts` has
+# been `bds | client | imported` since the beginning, and every `client` row in the
+# ledger was produced by a human playing a guided session and reading a 25-character
+# answer code off a screen (`anscode.ts`). That was not a shortcut. It was forced:
+# `@minecraft/server-net` is dedicated-server-only, so a client add-on has no HTTP,
+# no socket, and no egress of any kind, and on a device with no terminal beside it
+# the screen is the only channel out of the game.
+#
+# A station changes that, because a station can have a DEVICE PHYSICALLY ATTACHED
+# to it — and the Minecraft client's own `/connect` command is an egress the add-on
+# API does not have. That is the whole reason for this file. It is asking for the
+# one thing a laptop cannot provide: a body to measure, and a cable to reach it by.
+
+resident: bedshock        # informational; the mount path is what counts
+
+# ---------------------------------------------------------------- storage --
+wants:
+  - label: ledger
+    holds: "observations.jsonl — what was measured, append-only, one line per measurement"
+    lifecycle: durable
+    disposition: public
+    # PUBLIC IS THE POINT, not a setting. Other repositories gate their builds on
+    # these rows (`bedshock check --requires-from`), so a ledger that cannot be read
+    # is a ledger nobody can cite. It is also why it is the only durable label here:
+    # everything else this engine touches is scaffolding for producing one line.
+
+  - label: work
+    holds: "server downloads, unpacked worlds, built probe packs, a run in progress"
+    lifecycle: transient
+    disposition: private
+
+  - label: captures
+    holds: "screen recordings and device logs taken while a grant was live"
+    lifecycle: transient
+    disposition: private
+    # PRIVATE AND TRANSIENT, DELIBERATELY. A capture is a picture of somebody's game
+    # on somebody's device. It is evidence for one reading of one question and it has
+    # no business outliving that reading — see `docs/HARNESS.md`, "what a capture is
+    # allowed to settle", which is less than it looks like.
+
+  - label: orders
+    holds: "work the battery wants run on hardware, and what came back"
+    lifecycle: transient
+    disposition: private
+    # Not a registry. The orders are DERIVED from the catalog and the ledger — the
+    # questions that need a client, minus the ones already answered for this version
+    # and platform — so this label holds a queue's working state and never the list
+    # itself. A second list would be a copy that can drift.
+
+# --------------------------------------------------------------- services --
+serves:
+  - service: gateway
+    for: >
+      A Minecraft client to connect to, so the battery can drive a real game on real
+      hardware and read what it says back. The client dials in with `/connect`; this
+      is the thing on the other end.
+    kind: listener
+    start: "tools/gateway --port {port} --token {token}"
+    prefers-port: 19144           # a preference, NOT a claim; the host picks
+    needs-secret: token           # admission only, never message parsing
+    required-for: [order, pilot]
+    optional: true
+    health: "tcp 127.0.0.1:{port}"
+    sample: "http 127.0.0.1:{port}/sample"
+
+    # BINDS LOOPBACK, AND THAT IS A SECURITY DECISION RATHER THAN A DEFAULT.
+    #
+    # The device is reached over the CABLE, not over the network — a forward through
+    # usbmuxd, the same transport `iproxy` uses. So the gateway has no LAN surface at
+    # all, and reachability IS proof of attachment: a Minecraft on the house wifi
+    # cannot find it, and unplugging is revocation with no policy involved.
+    #
+    # Stagecraft's relay binds an address on purpose, because its peers are other
+    # machines on the LAN and it says plainly that "trust the LAN" is wrong — LANs
+    # have guests, printers and a television. This has the same opinion and a better
+    # answer available to it, because its peer is on the end of a wire.
+    #
+    # !! UNVERIFIED !! Whether a Bedrock client on iOS can be pointed at a host
+    # reachable only over USB is an empirical question and nobody has plugged the
+    # device in yet. It is written up as a capability rather than assumed; see
+    # `docs/HARNESS.md`. If the answer is no, the fallback binds an address and the
+    # pairing code carries the weight the cable was going to carry.
+    bind: 127.0.0.1
+
+    # Mint a short, expiring, single-use code, the way Stagecraft's relay does —
+    # but for a DIFFERENT REASON, and the difference sets the expiry.
+    #
+    # Stagecraft's code exists so somebody already trusted can make a way in for
+    # somebody else, at another desk. Here the operator and the consenting human are
+    # the same person standing at the same station, so there is no consent to
+    # transfer and the code is only binding a socket to a pending grant. A
+    # consent-transfer code wants to live long enough to walk somewhere. A
+    # session-binding code should be dead in under a minute.
+    pairs: "http 127.0.0.1:{port}/pair"
+    paired: "/connect ws://127.0.0.1:{port}/{code}"
+
+    # Stateless: it holds which grants are live and nothing else. A bounce costs a
+    # reconnection, and a run that was mid-flight is re-ordered rather than lost,
+    # because an order that never comes back is already a state the queue is in.
+    survives-restart: true
+    restart-when: "tools/gateway itself changes, and not otherwise"
+
+  # --------------------------------------------------------------------------
+  # A KIND NO HOST IMPLEMENTS, DECLARED ANYWAY.
+  #
+  # `.library-engine/RESIDENCY.md` already carries `kind: periodic` on exactly these
+  # terms — a menu item nobody can order from, left legible and refusable, with the
+  # instruction that it "should be petitioned for, not built around". This is the
+  # same shape and a second instance of it, so it is written the same way.
+  #
+  # What makes it a third kind rather than a periodic one: it is not on a clock and
+  # it does not stay up. It is enqueued and waits for a GRANT MATCHING A PROFILE to
+  # exist. Waiting forever is a normal state — the device is unplugged, or Minecraft
+  # is not running, or the human is asleep — and so is being cancelled unrun. A host
+  # that treated either as a failure would page somebody about a cable.
+  - service: orderer
+    for: "draining the queue of hardware questions whenever a matching grant appears"
+    kind: attended
+    start: "tools/order --gateway {gateway} --profile-any"
+    needs-grant: true
+    holds-indefinitely: true
+    cancellable: true
+    required-for: [order]
+    optional: true
+    # Not implemented by any host today. See PETITIONS.

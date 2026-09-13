@@ -1,0 +1,117 @@
+Declare a residency, so the battery can measure a client instead of a server
+
+Design and a declaration. **Nothing is built and nothing has been plugged in.**
+
+## The premise that changed
+
+`anscode.ts` opens with a constraint it calls absolute, and it was right to:
+
+> `@minecraft/server-net` says so in its own description: *"This module can only be used on
+> Bedrock Dedicated Server."* A client add-on has no HTTP, no socket, no egress of any kind.
+> Nothing a person plays on can report anywhere. So on a device with no terminal beside it —
+> **an iPad**, a console — the only channel out of the game is the screen.
+
+That is why the answer code exists, why it is Crockford base32, why `redeem` is as paranoid as it
+is, and why every `client` row in this ledger was typed in by a person reading 25 characters off
+a screen.
+
+**The client's own `/connect` is an egress the add-on API does not have.** It is not `server-net`
+and it gives scripts nothing. It is the *client* dialling out to a WebSocket server that may
+subscribe to game events and issue commands as the player, enabled by a Creator setting on the
+device. So the sentence stays true — an add-on still cannot report anywhere — and stops being the
+end of the story, because the game around the add-on now can.
+
+`Platform` has been `bds | client | imported` since the first commit. This is the first thing
+that could make the middle value automatic.
+
+## What is in here
+
+- **`residency.yml`** — the claim, in the vocabulary `station-node/.library-engine/RESIDENCY.md`
+  already reads. Four labels (`ledger` public and durable, everything else private and transient)
+  and two services: a `gateway` listener, and an orderer carrying a `kind:` no host implements.
+- **`docs/HARNESS.md`** — what the channel actually is, where each gate goes, and what it is not
+  allowed to settle.
+
+## The three gates, and why each one moved
+
+The shape is Stagecraft's relay, deliberately — a human authorising one device to be piloted by
+another is the same act. What differs is where the human stands.
+
+**The pairing code changes job, so it changes expiry.** Stagecraft's exists so somebody already
+trusted can make a way in for somebody else at another desk. Here the operator and the consenting
+human are one person at one station, so there is no consent to transfer; the code only binds a
+socket to a pending grant. A consent-transfer code should live long enough to walk somewhere. A
+session-binding code should be dead in under a minute.
+
+**The gateway binds loopback, and that is a decision rather than a default.** `/connect` goes over
+the network stack — so if the gateway binds a LAN address, any Minecraft on the house wifi can
+redeem the code and the physical guarantee the cable seemed to buy was never spent. Binding
+loopback and reaching the device through a usbmuxd forward means reachability *is* proof of
+attachment, and unplugging is revocation with no policy involved.
+
+**App focus is the liveness gate, and it is mostly self-enforcing.** iOS suspends backgrounded
+apps, so Minecraft losing focus kills the socket by itself. Closed, backgrounded and unplugged
+reduce to one observable — so don't implement focus as a check; treat socket liveness as the grant
+and read focus over USB only to produce a *reason*, because "Minecraft went to background" beats
+"socket closed".
+
+## The one unverified thing the whole shape rests on
+
+**Can a Bedrock client on iOS `/connect` to a host reachable only over USB?** usbmuxd's
+well-trodden direction is host→device; this wants the reverse. Nobody has plugged the device in.
+
+It is written up as a capability and flagged `!! UNVERIFIED !!` in `residency.yml` rather than
+assumed — which is this repository's own discipline applied to its own harness. If it comes back
+NO the fallback is in `HARNESS.md`: bind an address, let the code carry the weight, and demote the
+cable from transport to witness.
+
+## The rule I most want reviewed
+
+> **A pilot may not reclassify a question by existing.** A row the catalog marks `observed` stays
+> eyes-only until a person reclassifies it, one question at a time, with an argument about why its
+> outcomes are now differential. Piloted rows carry their own `method`.
+
+A USB device can be screen-recorded, so this could produce a picture — and reading that as
+"rendering is measurable now" is the trap. DESIGN §5 says `LOOK` is not a result and cannot be made
+into one; §6's cautionary tale is a rig whose two candidate readings produced a **pixel-identical
+picture** and cost two sessions. A capture would not have helped there; a differential reading did.
+
+This is the discipline most likely to be eroded quietly by an exciting new capability, so it is
+written down before the capability is built rather than after it is abused.
+
+## The hazard the donated hardware brings
+
+The iPad has a broken screen that **fires phantom touch events from one corner**. Two measurement
+problems, not annoyances: grants will lapse spuriously, so a lapsed grant must be retryable and
+unremarkable; and the piloted client has a second, uninvited pilot, so any reading that depends on
+the player not having moved is contaminated. Both are written up.
+
+## Petitioned, not built around
+
+Two items filed at `tiliv/station-node#60`, because both extend somebody else's vocabulary:
+
+- **a fourth `kind:`** — a job enqueued and blocked on hardware that may never arrive. Filed mostly
+  as evidence for `a-third-kind-and-the-values-a-host-must-bind.md`, which asked whether kinds are
+  a library concern or a cross-engine one; this is a fourth engine from a different group hitting
+  the same gaps a day later.
+- **a third grant mode** — sibling to the already-filed keeperless one. Vended and chronicled, but
+  with a cable for an attestation source and a continuously-held gesture for consent.
+
+`residency.yml` carries the undeliverable declaration with a comment saying no host can order from
+it, which is what `RESIDENCY.md` instructs for exactly this shape.
+
+## Verified
+
+- `npm test` — 236 pass, 0 fail (unchanged; this PR adds no code)
+- `bedshock validate` — 70 capabilities across 7 domains, 28 observations, all consistent
+- **Nothing plugged in.** Every claim about USB, `/connect` and focus is design, and the one the
+  rest depends on is marked unverified in the file itself.
+
+## Not done, deliberately
+
+- **The transport.** Writing a usbmuxd bridge before anyone can plug the device in would be
+  guessing in code instead of in prose.
+- **The gateway and the orderer.** Both wait on the transport answer.
+- **Whether a profile is a fourth `Platform` value.** `bds | client | imported` does not
+  distinguish an iPad from a Windows box, and some of what a client rig is *for* is exactly that
+  difference. It is a ledger schema question and it is named, not answered.
