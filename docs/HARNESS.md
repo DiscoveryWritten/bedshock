@@ -43,6 +43,44 @@ arrives as an event.** `CPSELFTEST PASS …` printed to chat is a measurement le
 What it is **not**: a way to read a pack's internal state directly, a way to see a frame, or a
 way for a script to call out. Every fact still has to be *said* by something.
 
+## The residency is for the process, and asks for no shelf space
+
+Worth stating plainly, because every residency written before this one asks for a wing and an
+absent block reads the same as a forgotten one.
+
+`RESIDENCY.md` permits not asking, in one word — *"anything mounted as `.<name>-engine` **may**
+hold a wing"* — and then never discusses it, because nothing had turned up that didn't want one.
+This engine doesn't, and each of the three things a wing is normally for misses in a different
+way:
+
+| | why not a wing |
+|---|---|
+| **the output** | `ledger/observations.jsonl` is **git-tracked in this repository**, and consumers read it out of a pinned submodule — `composable-portals` runs `bedshock check` against `.bedshock/`. Git already solved distribution, and solved it better: a pin is a version, a wing is a copy. A `ledger` label would be a second home for one fact, and the worse of the two, because the one in git is the one that gets cited |
+| **the scratch** | server downloads, unpacked worlds, captures. Hundreds of megabytes, none of it durable, none of it anybody's holding. A process needs somewhere to put this; it does not need shelf space, and putting transient rubbish in a place whose whole purpose is that things are kept is a category error |
+| **the queue** | derived, not stored — the catalog says which questions need a client, the ledger says which are answered, the orders are the difference. Two files that exist. A third would be a copy that can drift |
+
+What is left is the node's half and only the node's half. `RESIDENCY.md`'s own three-party table
+says the node owns **the CPU, the clock, and the credential** and answers *does anything run at
+all?*, while the library owns what is held. **This engine wants a landlord for its process and
+none for its output.**
+
+That the two requests travel in one file turns out to be a convenience of the format rather than
+a claim that they belong together — and the scratch is the proof, because it is a real need that
+is answered by a **binding**, not a holding. `{scratch}` sits alongside `.proofing-engine`'s
+`{profile}` and `.ablative-engine`'s `{interface}`: a value the host knows and the resident
+cannot guess.
+
+### The one thing that might yet want a wing
+
+A capture is evidence for a human's reading of an eyes-only question. DESIGN §5 makes `bedshock
+amend` the only path from such a question into the ledger — and a person's pick is currently
+backed by **nothing a second person could look at.** If that evidence should outlive the session,
+it stops being scratch and becomes a holding with a disposition, and this residency grows a
+`wants:` block after all.
+
+Open, deliberately. It is treated as transient until somebody decides otherwise, because the
+cheaper mistake is throwing away a recording of a game.
+
 ## Why this belongs to bedshock and not to a pack
 
 Because the thing being measured is Bedrock, not the add-on. A pack that grew its own client
@@ -166,3 +204,6 @@ and a record that survives the session so a second person can disagree with the 
   implies is a ledger schema question and it is not answered here.
 - **Who owns the queue.** The orders derive from catalog ∖ ledger, but *which* station has a
   profile and whether two could compete for one device is a node question, not a battery one.
+- **Whether a capture is a holding.** Above. The answer decides whether this residency ever
+  acquires a `wants:` block, and it is really a question about whether an eyes-only verdict owes
+  anybody evidence.
