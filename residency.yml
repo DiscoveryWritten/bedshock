@@ -1,0 +1,171 @@
+# residency.yml — what this engine asks of a host that mounts it as `.bedshock-engine`.
+#
+# The resident's NAME is not declared here: it comes from the mount path, so
+# `.bedshock-engine` is the claim and nothing can disagree with it. See
+# station-node `.library-engine/RESIDENCY.md`.
+#
+# THE CLAIM IS A MENU, NOT A STARTUP SCRIPT.
+#
+# Nothing here starts because the engine was mounted. A station with no Minecraft
+# device attached to it starts no gateway and is never told off about it.
+
+resident: bedshock        # informational; the mount path is what counts
+
+# ===========================================================================
+# THERE IS NO `wants:` BLOCK, AND ITS ABSENCE IS THE DECLARATION
+# ===========================================================================
+#
+# Every residency written so far asks for a wing. `RESIDENCY.md` permits not
+# asking in a single word — *"anything mounted as `.<name>-engine` MAY hold a wing
+# named `<name>`"* — and then never discusses it, because nothing had yet turned up
+# that didn't want one.
+#
+# This engine doesn't. It is worth saying why at length, because an absent block
+# and a forgotten one look identical, and the reader deserves to know which.
+#
+# WHAT A RESIDENT NORMALLY WANTS A WING FOR, AND WHY EACH ONE MISSES HERE
+#
+#   The output.  bedshock's product is `ledger/observations.jsonl` — append-only,
+#                the thing other repositories gate their builds on. It is already
+#                GIT-TRACKED IN THIS REPOSITORY, and consumers read it out of a
+#                pinned submodule checkout: `composable-portals` runs
+#                `bedshock check --requires-from … ` against `.bedshock/`. Git has
+#                already solved the distribution problem a wing would solve, and
+#                solved it better — a pin is a version, and a wing is a copy.
+#
+#                So a `ledger` label would be A SECOND HOME FOR ONE FACT, which is
+#                the failure the library's own rules exist to prevent. It would also
+#                be the worse of the two homes, because the one in git is the one
+#                that gets cited.
+#
+#   The scratch. Dedicated-server downloads, unpacked worlds, built probe packs,
+#                screen captures taken while a grant is live. Hundreds of megabytes,
+#                none of it durable, none of it anybody's holding. A process needs
+#                somewhere to put this; it does not need SHELF SPACE, and calling it
+#                a wing would put transient rubbish in a place whose whole purpose is
+#                that things in it are kept.
+#
+#                Expressed as a BINDING instead, below. A station legitimately has
+#                opinions about where a repeated 500MB download goes, and answering
+#                `name -> value` is the mechanism for that — the same one that already
+#                fills `{port}` and `{token}`.
+#
+#   The queue.   Which questions are waiting on hardware is derived, not stored:
+#                the catalog says which need a client, the ledger says which are
+#                already answered for a version, and the orders are the difference.
+#                Two files that exist. A third would be a copy that can drift.
+#
+# WHAT THIS ENGINE IS ACTUALLY ASKING FOR, THEN
+#
+# The node's half, and only the node's half. `RESIDENCY.md`'s own three-party table
+# says the node owns **the CPU, the clock, and the credential** and answers *does
+# anything run at all?* — while the library owns what is held. This residency is
+# entirely a request to the first party. It wants a process run and a device
+# reached. It has nothing it wants kept.
+#
+# That the two requests travel in one file is a convenience of the format rather
+# than a claim that they belong together, and this file is the case that shows it:
+# a resident can want a landlord for its process and none for its output.
+#
+# THE ONE THING THAT MIGHT YET WANT A WING — genuinely open, see docs/HARNESS.md
+#
+# A capture is evidence for a human's reading of an eyes-only question. DESIGN §5
+# makes `bedshock amend` the only path from such a question into the ledger, and a
+# person's pick is currently backed by nothing a SECOND person could look at. If
+# that evidence should outlive the session, it becomes a holding with a disposition
+# and this file grows a `wants:` block after all. Treated as transient until
+# somebody decides otherwise, because the cheaper mistake is throwing away a
+# recording of a game.
+
+# --------------------------------------------------------------- services --
+serves:
+  - service: gateway
+    for: >
+      A Minecraft client to connect to, so the battery can drive a real game on real
+      hardware and read what it says back. The client dials in with `/connect`; this
+      is the thing on the other end.
+    kind: listener
+    start: "tools/gateway --port {port} --token {token} --scratch {scratch}"
+    prefers-port: 19144           # a preference, NOT a claim; the host picks
+    needs-secret: token           # admission only, never message parsing
+    required-for: [order, pilot]
+    optional: true
+    health: "tcp 127.0.0.1:{port}"
+    sample: "http 127.0.0.1:{port}/sample"
+
+    # `{scratch}` IS A BINDING THE HOST HAS NO WAY TO ANSWER YET, and naming it is
+    # half the point of this file. It is where a repeated several-hundred-megabyte
+    # server download lands, and a station has real opinions about that which this
+    # engine cannot guess.
+    #
+    # `.proofing-engine` asks for `{profile}` — "a browser profile on this machine,
+    # named by the operator" — and `.ablative-engine` for `{interface}`. Same
+    # sentence, third engine. It is petitioned for rather than invented, and a host
+    # that cannot bind it should refuse before starting rather than pass the literal
+    # `{scratch}` into argv and blame this engine's argument parser.
+    needs:
+      scratch: "a directory for large transient downloads, sited by the operator"
+
+    # BINDS LOOPBACK, AND THAT IS A SECURITY DECISION RATHER THAN A DEFAULT.
+    #
+    # The device is reached over the CABLE, not over the network — a forward through
+    # usbmuxd, the same transport `iproxy` uses. So the gateway has no LAN surface at
+    # all, and reachability IS proof of attachment: a Minecraft on the house wifi
+    # cannot find it, and unplugging is revocation with no policy involved.
+    #
+    # Stagecraft's relay binds an address on purpose, because its peers are other
+    # machines on the LAN and it says plainly that "trust the LAN" is wrong — LANs
+    # have guests, printers and a television. This has the same opinion and a better
+    # answer available to it, because its peer is on the end of a wire.
+    #
+    # !! UNVERIFIED !! Whether a Bedrock client on iOS can be pointed at a host
+    # reachable only over USB is an empirical question and nobody has plugged the
+    # device in yet. It is written up as a capability rather than assumed; see
+    # `docs/HARNESS.md`. If the answer is no, the fallback binds an address and the
+    # pairing code carries the weight the cable was going to carry.
+    bind: 127.0.0.1
+
+    # Mint a short, expiring, single-use code, the way Stagecraft's relay does —
+    # but for a DIFFERENT REASON, and the difference sets the expiry.
+    #
+    # Stagecraft's code exists so somebody already trusted can make a way in for
+    # somebody else, at another desk. Here the operator and the consenting human are
+    # the same person standing at the same station, so there is no consent to
+    # transfer and the code is only binding a socket to a pending grant. A
+    # consent-transfer code wants to live long enough to walk somewhere. A
+    # session-binding code should be dead in under a minute.
+    pairs: "http 127.0.0.1:{port}/pair"
+    paired: "/connect ws://127.0.0.1:{port}/{code}"
+
+    # Stateless: it holds which grants are live and nothing else. A bounce costs a
+    # reconnection, and a run that was mid-flight is re-ordered rather than lost,
+    # because an order that never comes back is already a state the queue is in.
+    survives-restart: true
+    restart-when: "tools/gateway itself changes, and not otherwise"
+
+  # --------------------------------------------------------------------------
+  # A KIND NO HOST IMPLEMENTS, DECLARED ANYWAY.
+  #
+  # `.library-engine/RESIDENCY.md` already carries `kind: periodic` on exactly these
+  # terms — a menu item nobody can order from, left legible and refusable, with the
+  # instruction that it "should be petitioned for, not built around". This is the
+  # same shape and a second instance of it, so it is written the same way.
+  #
+  # What makes it a fourth kind rather than a periodic or supervised one: it is not
+  # on a clock, it does not stay up, and it has no process. It is enqueued and waits
+  # for a GRANT MATCHING A PROFILE to exist. Waiting forever is a normal state — the
+  # device is unplugged, or Minecraft is not running, or the human is asleep — and so
+  # is being cancelled unrun. A host that treated either as a failure would page
+  # somebody about a cable.
+  - service: orderer
+    for: "draining the queue of hardware questions whenever a matching grant appears"
+    kind: attended
+    start: "tools/order --gateway {gateway} --profile-any"
+    needs:
+      gateway: "the address of this residency's own gateway service, once the host has bound it"
+    needs-grant: true
+    holds-indefinitely: true
+    cancellable: true
+    required-for: [order]
+    optional: true
+    # Not implemented by any host today. See PETITIONS.
