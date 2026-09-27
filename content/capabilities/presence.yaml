@@ -1,0 +1,56 @@
+# Presence: whether script sees the person playing, and can act on them.
+#
+# THE FLOOR OF EVERY CLIENT RUN, and it asks nothing of the player. These run by themselves a moment
+# after a player spawns and report through the log, which the bridge carries off the device. If
+# these do not hold, nothing measured on a client means anything, because the battery cannot even
+# tell who is there.
+
+domain: presence
+about: >-
+  The person at the device, as script sees them: present, located, looking somewhere, holding
+  something, playing by touch or pad or keyboard, and reachable by script. Measured with no input,
+  because a battery that needs a person before it can see one has its order backwards.
+
+capabilities:
+  - id: presence.player.visible_to_script
+    question: Does world.getPlayers() include the player once they have spawned?
+    decides: >-
+      Whether anything on a client can be about the person playing. The floor under every other row
+      a client run reports.
+    method: automated
+    surface: script
+    probe: presence
+
+  - id: presence.player.where_and_looking
+    question: >-
+      Can script read the player's position, dimension, view direction and the block they are
+      looking at?
+    decides: >-
+      Whether a harness can know where the player is and what is in front of them without asking,
+      which is what lets it place anything near them or react to where they went.
+    method: automated
+    surface: script
+    probe: presence
+    depends_on: [presence.player.visible_to_script]
+
+  - id: presence.player.input_readable
+    question: >-
+      Can script read how the player is playing -- the last input mode, the movement vector, and
+      whether jump and sneak are held?
+    decides: >-
+      Whether a harness can take a signal from the player's own inputs rather than from a command or
+      a button, and whether it can tell a touch screen from a controller.
+    method: automated
+    surface: script
+    probe: presence
+    depends_on: [presence.player.visible_to_script]
+
+  - id: presence.player.can_be_acted_on
+    question: Does an effect applied to the player by script read back as on the player?
+    decides: >-
+      Whether script's hand reaches the person, not only the world around them. The first thing a
+      harness does to a player, done here with something harmless and invisible.
+    method: automated
+    surface: script
+    probe: presence
+    depends_on: [presence.player.visible_to_script]

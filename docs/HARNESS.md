@@ -33,6 +33,24 @@ What it still cannot do is unchanged, and the rest of this document still govern
 see a frame, cannot quit or kill the app, and **a live channel does not reclassify an eyes-only
 row** (below).
 
+## Thin mode: the rules for a person at a device
+
+Set 2026-09-27, by the person at the device. They override anything below that disagrees.
+
+- **Nothing asked, first.** On spawn the pack runs `presence` by itself (`pulse.ts`): does script
+  see the player, where they are and what they look at, how they are playing, whether script can
+  act on them. Then a heartbeat keeps the log current. No command, no code, no screen to read.
+- **The log speaks for itself.** Everything leaves through the bridge. No answer codes, no
+  transcription: the device will not even copy-paste.
+- **Never ask twice.** A row already answered for this client and API version is not asked again.
+  The ledger on this machine decides that, keyed by `--platform client` and the API version the
+  bridge reads off the load lines. Asking again is an explicit retest, never a side effect of a
+  rebuild.
+- **When something does need the person, it is a lit spot and a few words.** Standing on it is
+  consent. It expires by itself and cleans up after itself, so nothing waits on the person and
+  nothing waits on the harness. Any explanation is optional help, never the gate.
+- **The version is in the pack's name**, because the pack list collapses descriptions.
+
 The `/connect` design follows as it was written, because the reasoning about what a client
 channel may settle is independent of which channel it is.
 

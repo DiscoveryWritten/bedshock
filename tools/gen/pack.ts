@@ -378,7 +378,9 @@ function manifests(c: PackConfig): OutFile[] {
   const header = (uuid: string, suffix: string) => ({
     format_version: 2,
     header: {
-      name: `${c.name}${suffix}`,
+      // THE VERSION IS IN THE NAME because the description is collapsed in the pack list, and two
+      // builds with one name cannot be told apart without deleting one to find out.
+      name: `${c.name} ${c.version.join('.')}${suffix}`,
       description: c.description,
       uuid,
       version: c.version,

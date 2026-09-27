@@ -38,6 +38,8 @@ import * as scenes from './probes/scenes.ts';
 import * as attachable from './probes/attachable.ts';
 import * as stash from './probes/stash.ts';
 import * as storage from './probes/storage.ts';
+import * as presence from './probes/presence.ts';
+import * as pulse from './pulse.ts';
 import * as session from './session.ts';
 import * as chapter from './chapter.ts';
 import * as kiosk from './kiosk.ts';
@@ -50,6 +52,7 @@ type Probe = (ctx: Ctx) => void;
  * want of hands, and a partial log is still a useful log.
  */
 const PROBES: Record<string, Probe> = {
+  presence: presence.run,
   durability: durability.run,
   menu: menu.run,
   dynprops: dynprops.run,
@@ -251,6 +254,9 @@ system.afterEvents.scriptEventReceive.subscribe(
 // THE WAY IN THAT IS NOT A CHAT COMMAND. A button, or the item you spawn holding. See kiosk.ts
 // for why neither is matched against a remembered coordinate.
 kiosk.install();
+
+// THE THIN START: a player spawning is all it takes. See probes/presence.ts.
+pulse.install();
 
 world.afterEvents.worldLoad.subscribe(() => {
   console.warn(

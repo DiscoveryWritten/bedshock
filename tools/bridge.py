@@ -29,6 +29,7 @@ accept connections, and it needs nothing installed. Python 3.9 -- no newer synta
 """
 
 import json
+import re
 import os
 import socket
 import subprocess
@@ -38,6 +39,11 @@ import urllib.error
 import urllib.request
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+# The game prints the script API it actually runs when it loads a pack ("promoted [@minecraft/server]
+# from [2.8.0] to [2.10.0]"). The protocol does not say which client this is; this is the next best
+# fingerprint, and it is what `collect --api` records against.
+PROMOTED = re.compile(r"promoted \[@minecraft/server\] from \[[\d.]+\] to \[([\d.]+)\]")
 
 PORT = 19144
 CONTROL = 19145
@@ -125,6 +131,7 @@ class Bridge:
                 f.write(line + "\n")
             self.say(line)
 
+        api = set()
         self.say("connection from %s" % addr[0])
         try:
             while True:
@@ -166,6 +173,10 @@ class Bridge:
                     for line in str(event.get("message", "")).split("\n"):
                         if line:
                             write(line)
+                        m = PROMOTED.search(line)
+                        if m and m.group(1) not in api:
+                            api.add(m.group(1))
+                            write("BEDSHOCK NOTE bridge client runs @minecraft/server %s" % m.group(1))
                 elif kind == "StoppedEvent":
                     # A log is the whole point: nothing here may leave the game paused.
                     sock.sendall(frame({"type": "resume"}))

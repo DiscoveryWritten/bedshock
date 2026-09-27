@@ -15,7 +15,7 @@ namespace: bedshock
 name: bedshock
 description: A capability battery. Measures what Bedrock can do; ships no gameplay.
 
-version: [0, 1, 1]
+version: [0, 1, 2]
 
 # !! THIS PACK PINS THE NEWEST SCRIPT API, ALWAYS. !!
 #

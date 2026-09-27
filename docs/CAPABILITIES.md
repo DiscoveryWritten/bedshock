@@ -90,6 +90,11 @@ is how you find out the day it starts working.
 | `physics.throw.item_travel_distance` | · |
 | `physics.knockback.blocks_per_unit` | · |
 | `physics.knockback.blocks_per_unit_on_an_entity` | · |
+| **presence** |  |
+| `presence.player.visible_to_script` | · |
+| `presence.player.where_and_looking` | · |
+| `presence.player.input_readable` | · |
+| `presence.player.can_be_acted_on` | · |
 | **render** |  |
 | `render.molang.unknown_query_resolves_to_zero` | — |
 | `render.molang.integer_precision` | — |
@@ -1375,6 +1380,50 @@ The measurable constants of Bedrock's own behaviour: how fast things fall, how f
 
 > The same call, the same arena, the same rest test as the player row -- differing in the subject and in nothing else, which is what makes a difference between the two attributable to the subject. WHAT TO DO IF THESE TWO DIVERGE: treat the player row as the one your design has to respect and this one as the warning that a shared constant is wrong. They are recorded separately precisely so that divergence is visible rather than averaged away. THE SUBJECT IS PART OF WHAT THIS ROW MEANS, and it is a dropped item -- named in `content/pack.yaml` rather than left implicit. The first apparatus used an armour stand and Bedrock 1.26.36.1 reported `the subject never moved at all` five times out of five: vanilla armour stands resist knockback outright. Worth knowing on its own, and a reminder that "an ordinary entity" is not one thing. A reading taken against a different subject is not comparable with this one.
 
+## presence
+
+The person at the device, as script sees them: present, located, looking somewhere, holding something, playing by touch or pad or keyboard, and reachable by script. Measured with no input, because a battery that needs a person before it can see one has its order backwards.
+
+### `presence.player.visible_to_script`
+
+**Does world.getPlayers() include the player once they have spawned?**
+
+*Decides:* Whether anything on a client can be about the person playing. The floor under every other row a client run reports.
+
+<sub>method: `automated` · surface: `script` · probe: `presence`</sub>
+
+**Never measured.** This row is a guess, however confident the prose around it sounds.
+
+### `presence.player.where_and_looking`
+
+**Can script read the player's position, dimension, view direction and the block they are looking at?**
+
+*Decides:* Whether a harness can know where the player is and what is in front of them without asking, which is what lets it place anything near them or react to where they went.
+
+<sub>method: `automated` · surface: `script` · probe: `presence` · rests on: `presence.player.visible_to_script`</sub>
+
+**Never measured.** This row is a guess, however confident the prose around it sounds.
+
+### `presence.player.input_readable`
+
+**Can script read how the player is playing -- the last input mode, the movement vector, and whether jump and sneak are held?**
+
+*Decides:* Whether a harness can take a signal from the player's own inputs rather than from a command or a button, and whether it can tell a touch screen from a controller.
+
+<sub>method: `automated` · surface: `script` · probe: `presence` · rests on: `presence.player.visible_to_script`</sub>
+
+**Never measured.** This row is a guess, however confident the prose around it sounds.
+
+### `presence.player.can_be_acted_on`
+
+**Does an effect applied to the player by script read back as on the player?**
+
+*Decides:* Whether script's hand reaches the person, not only the world around them. The first thing a harness does to a player, done here with something harmless and invisible.
+
+<sub>method: `automated` · surface: `script` · probe: `presence` · rests on: `presence.player.visible_to_script`</sub>
+
+**Never measured.** This row is a guess, however confident the prose around it sounds.
+
 ## render
 
 What can be drawn, and what the thing drawing it is allowed to know. The load-bearing question in the whole battery lives here: whether a render controller can be told which item it is drawing. If it can, one item type renders every configuration. If it cannot, every distinguishable configuration needs its own item type, and the asset count multiplies instead of layering.
@@ -1770,5 +1819,5 @@ other repositories can carry `@requires bedshock:<id>` and `bedshock check` will
 if the cited row is not settled at that pack's `min_engine_version` — so a design can never
 quietly come to rest on a guess.
 
-<sub>77 capabilities · 28 observations · 1 version(s): 1.21.120</sub>
+<sub>81 capabilities · 28 observations · 1 version(s): 1.21.120</sub>
 

@@ -160,6 +160,13 @@ export const CHAPTERS: Chapter[] = [
     lookAt: { f: 20, u: 0, s: 0 },
   },
   {
+    name: 'presence',
+    about: 'Whether script sees you and can act on you. Runs by itself when you spawn; here only to run it again.',
+    probes: ['presence'],
+    blueprint: { name: 'presence', steps: pad(3) },
+    viewFrom: { f: 0, u: 0, s: 0 },
+  },
+  {
     name: 'storage',
     about: 'Keeping state in the world: blocks as symbols, structures the save file owns, and what saving them costs.',
     probes: ['storage', 'storage_save'],
