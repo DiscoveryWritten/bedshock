@@ -15,7 +15,7 @@
  */
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, relative } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 import process from 'node:process';
 
 import { amend } from './amend.ts';
@@ -325,21 +325,11 @@ async function main(): Promise<void> {
      * anybody looking is the one thing this repository will not do.
      */
     case 'bridge': {
-      const { serve, send } = await import('./bridge.ts');
-      if (args._[1] === 'send') {
-        const line = args._.slice(2).join(' ') || fail('usage: bedshock bridge send <command...>');
-        process.stdout.write(`${await send(line).catch((e: Error) => fail(e.message))}\n`);
-        break;
-      }
-      serve({
-        ...(str(args.host) ? { host: str(args.host)! } : {}),
-        ...(str(args.port) ? { port: Number(args.port) } : {}),
-        ...(str(args.target) ? { target: str(args.target)! } : {}),
-        ...(str(args.passcode) ? { passcode: str(args.passcode)! } : {}),
-      });
-      // Runs until stopped. The log is written as lines arrive, so stopping loses nothing.
-      await new Promise(() => {});
-      break;
+      // System Python on purpose: see the header of tools/bridge.py.
+      const { spawnSync } = await import('node:child_process');
+      const python = process.platform === 'darwin' ? '/usr/bin/python3' : 'python3';
+      const r = spawnSync(python, [join(ROOT, 'tools', 'bridge.py'), ...process.argv.slice(3)], { stdio: 'inherit' });
+      process.exit(r.status ?? 1);
     }
 
     // -----------------------------------------------------------------------
