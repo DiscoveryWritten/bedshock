@@ -1,7 +1,40 @@
 # The harness: measuring a client, on hardware, from a station
 
-> `status: design` — the residency is declared, the transport is not built, and the one
-> question the whole shape rests on has not been measured. Nothing here has been plugged in.
+> `status: transport built, unmeasured on a device` — the transport is `bedshock bridge`, and
+> it is not the one this document first proposed. It has passed a fake game in `tools/bridge.test.ts`
+> and has not yet met a real client.
+
+## The transport, as built: the script debugger, not `/connect`
+
+**Updated 2026-09-27.** The `/connect` design below needed the pack to *say* every fact into chat,
+chunked and encoded so chat could not mangle it, with a handshake to find which chat channel a
+socket even hears. It works on paper and it is not elegant: the channel is chat, so everything
+else has to fight chat.
+
+The client has a better egress in the same Creator settings: **the script debugger.** With *Attach
+Debugger on Load* in *Connect* mode, the game dials out to a host and port and speaks the
+protocol of Mojang's own debugger (github.com/Mojang/minecraft-debugger). That protocol carries,
+among other things:
+
+| direction | message | what it carries |
+|---|---|---|
+| **out** | `ProtocolEvent` | the protocol version, and the script packs running |
+| **out** | `PrintEvent` | **every line the script engine prints** — `console.warn` included |
+| **in** | `minecraftCommand` | any slash command, `/scriptevent` included |
+| **in** | `resume`, `stopOnException` | how a log-only debugger makes sure it can never pause the game |
+
+So a battery running on a phone produces **exactly the lines a dedicated server's log does**, with
+nothing added to the pack. `bedshock bridge` listens on this machine's tailnet address, attaches
+to the bedshock script module, writes `bridge/<time>.log`, and `bedshock collect <log>
+--platform client` records it like any other log. `bedshock bridge send <command>` drives the game
+through a control port bound to `127.0.0.1`.
+
+What it still cannot do is unchanged, and the rest of this document still governs it: it cannot
+see a frame, cannot quit or kill the app, and **a live channel does not reclassify an eyes-only
+row** (below).
+
+The `/connect` design follows as it was written, because the reasoning about what a client
+channel may settle is independent of which channel it is.
 
 ## The premise that changed
 
@@ -193,7 +226,10 @@ and a record that survives the session so a second person can disagree with the 
 
 ## What is open
 
-- **The transport.** Unmeasured, above. Everything else is contingent on it.
+- **The transport.** Built on the script debugger (above), tested against a fake game, not yet
+  met by a real client. Unknowns a first real session answers: whether prints arrive from the
+  attached pack only or from all of them; whether *Attach on Load* holds world load until a
+  debugger answers; and which client version to record against, since the protocol does not say.
 - **`kind: attended`.** No host implements a job that waits for a grant. `.library-engine`'s
   `RESIDENCY.md` has the same shape already in `kind: periodic` and says plainly what to do
   about it — *"a declaration a host has not implemented is legible and refusable… it should be

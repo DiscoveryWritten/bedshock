@@ -6,6 +6,7 @@
  *   build                       emit the probe pack
  *   run                         build, boot a real server, record the automated answers
  *   collect <log>               record from a log captured elsewhere
+ *   bridge [send <command>]     a live game over the script debugger, logged like a server
  *   amend                       answer the eyes-only rows, from what you saw in play
  *   report                      regenerate docs/ from the ledger
  *   check                       fail a build that rests on an unsettled capability
@@ -323,6 +324,25 @@ async function main(): Promise<void> {
      * the ledger only when asked, because this runs unattended and an observation arriving without
      * anybody looking is the one thing this repository will not do.
      */
+    case 'bridge': {
+      const { serve, send } = await import('./bridge.ts');
+      if (args._[1] === 'send') {
+        const line = args._.slice(2).join(' ') || fail('usage: bedshock bridge send <command...>');
+        process.stdout.write(`${await send(line).catch((e: Error) => fail(e.message))}\n`);
+        break;
+      }
+      serve({
+        ...(str(args.host) ? { host: str(args.host)! } : {}),
+        ...(str(args.port) ? { port: Number(args.port) } : {}),
+        ...(str(args.target) ? { target: str(args.target)! } : {}),
+        ...(str(args.passcode) ? { passcode: str(args.passcode)! } : {}),
+      });
+      // Runs until stopped. The log is written as lines arrive, so stopping loses nothing.
+      await new Promise(() => {});
+      break;
+    }
+
+    // -----------------------------------------------------------------------
     case 'harvest': {
       const file = str(args.issues) ?? fail('usage: bedshock harvest --issues <file.json> [--record]');
       const raw = file === '-' ? readFileSync(0, 'utf8') : readFileSync(file!, 'utf8');
@@ -433,6 +453,8 @@ async function main(): Promise<void> {
           '                                    --negative only what is measured NO — the watchlist',
           '                                    --regress  only what is settled — a drift check',
           '  collect <log> --version v         record from a log captured elsewhere',
+          '  bridge [--host h] [--target pack] be the script debugger a game connects to; log it',
+          '  bridge send <command...>          run a command in the connected game',
           '  amend [--version v] [--probe p]   answer the eyes-only rows from what you saw in play',
           '  redeem <code> --version v         record a guided session\'s answer code',
           '  harvest --issues f.json           reported sessions -> observations + a PR body',
