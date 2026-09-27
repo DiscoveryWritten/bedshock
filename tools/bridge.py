@@ -104,8 +104,13 @@ class Bridge:
     def handle(self, sock, addr):
         first = sock.recv(9, socket.MSG_PEEK)
         if first[:4] in (b"GET ", b"HEAD", b"POST"):
-            sock.sendall(b"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nConnection: close\r\n\r\n"
-                         b"bedshock bridge reachable. This is not the game; point Minecraft here.\n")
+            # Read the request before answering: closing on unread data resets the connection, and
+            # the browser shows a failure instead of the page.
+            sock.recv(65536)
+            text = b"bedshock bridge reachable. This is not the game; point Minecraft here.\n"
+            sock.sendall(b"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n"
+                         b"Connection: close\r\n\r\n%s" % (len(text), text))
+            sock.shutdown(socket.SHUT_WR)
             sock.close()
             self.say("a browser reached the bridge from %s -- the network path works" % addr[0])
             return
@@ -148,8 +153,6 @@ class Bridge:
                     if self.passcode:
                         reply["passcode"] = self.passcode
                     sock.sendall(frame(reply))
-                    # A log is the whole point. Nothing here should ever be able to pause the game.
-                    sock.sendall(frame({"type": "stopOnException", "stopOnException": False}))
                     with self.lock:
                         self.game = (sock, version)
                     note = "BEDSHOCK NOTE bridge attached: protocol %s, target %s, packs %s" % (
@@ -163,6 +166,7 @@ class Bridge:
                         if line:
                             write(line)
                 elif kind == "StoppedEvent":
+                    # A log is the whole point: nothing here may leave the game paused.
                     sock.sendall(frame({"type": "resume"}))
         except (OSError, ValueError) as err:
             self.say("connection error: %s" % err)

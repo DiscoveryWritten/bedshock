@@ -21,7 +21,7 @@ among other things:
 | **out** | `ProtocolEvent` | the protocol version, and the script packs running |
 | **out** | `PrintEvent` | **every line the script engine prints** — `console.warn` included |
 | **in** | `minecraftCommand` | any slash command, `/scriptevent` included |
-| **in** | `resume`, `stopOnException` | how a log-only debugger makes sure it can never pause the game |
+| **in** | `resume` | how a log-only debugger makes sure it never leaves the game paused |
 
 So a battery running on a phone produces **exactly the lines a dedicated server's log does**, with
 nothing added to the pack. `bedshock bridge` listens on this machine's tailnet address, attaches
@@ -227,9 +227,11 @@ and a record that survives the session so a second person can disagree with the 
 ## What is open
 
 - **The transport.** Built on the script debugger (above), tested against a fake game, not yet
-  met by a real client. Unknowns a first real session answers: whether prints arrive from the
-  attached pack only or from all of them; whether *Attach on Load* holds world load until a
-  debugger answers; and which client version to record against, since the protocol does not say.
+  met by a real client. **First real connection, 2026-09-27: an iPhone, protocol 10, over the
+  tailnet.** Prints arrive with no pack attached -- the game's own content log included -- so the
+  log carries more than the battery, which `collect` already ignores. Protocol 10 does not know
+  `stopOnException` and says so; the bridge no longer sends it. Still open: which client version to
+  record against, since the protocol does not say.
 - **`kind: attended`.** No host implements a job that waits for a grant. `.library-engine`'s
   `RESIDENCY.md` has the same shape already in `kind: periodic` and says plainly what to do
   about it — *"a declaration a host has not implemented is legible and refusable… it should be

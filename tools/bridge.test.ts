@@ -83,10 +83,11 @@ test('a connected game becomes a log that collect records', async () => {
     await wait(200);
 
     const sent = deframe(received) as any[];
-    assert.deepEqual(sent.map((m) => m.type), ['protocol', 'stopOnException', 'resume', 'minecraftCommand']);
+    // No stopOnException: protocol 10 answers it with "unhandled packet" (seen on an iPhone).
+    assert.deepEqual(sent.map((m) => m.type), ['protocol', 'resume', 'minecraftCommand']);
     assert.equal(sent[0].target_module_uuid, BEDSHOCK_SCRIPT);
     // Protocol 8 and later take the flat command shape.
-    assert.equal(sent[3].command, 'scriptevent bedshock:probe storage');
+    assert.equal(sent[2].command, 'scriptevent bedshock:probe storage');
 
     const log = join(dir, readdirSync(dir)[0]!);
     const collected = collect(readFileSync(log, 'utf8'), loadCatalog(), { version: '1.26.30', platform: 'client', run: 'bridge-test' });
