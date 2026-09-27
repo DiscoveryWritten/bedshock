@@ -26,7 +26,7 @@ import { firstLine, look, result, skipped, willReportLater, type Ctx } from '../
 import { fillPage, readPage, writePage } from '../pages.ts';
 import { freshToken } from '../reload.ts';
 import { solve, type Settle } from '../solve.ts';
-import { acceptance, densest, fromPermutation, toPermutation, type Symbols } from '../symbols.ts';
+import { acceptance, densest, roundTrip, toPermutation, type Symbols } from '../symbols.ts';
 
 const P = PARAMS.storage;
 const ROW = {
@@ -52,46 +52,43 @@ function fresh(id: string, edge: number, mode = StructureSaveMode.Memory): Struc
 
 export function run(ctx: Ctx): void {
   const accepted = acceptance();
-  const best = densest();
 
+  // Every accepted block, not just the densest: a symbol that silently becomes another symbol is
+  // corruption with no error, and it could happen in one alphabet and not another. It has already
+  // happened: a block declared past 16 bits LOADS, with states quietly not applied.
+  const exact = accepted.filter((a) => a.accepted).map(({ block }) => roundTrip(block, P.round_trip_samples));
+
+  // BITS ARE ONLY WHAT COMES BACK. A block that exists but loses states holds fewer bits than it
+  // declares, so the answer is the densest block whose every sampled symbol round-tripped.
+  const holds = accepted.filter((a) => a.accepted && exact.find((e) => e.id === a.block.id)?.wrong === 0).map((a) => a.block);
+  const best = holds.sort((a, b) => b.bits - a.bits)[0];
   result(
     ctx,
     ROW.bits,
     best ? 'YES' : 'INCONCLUSIVE',
-    { candidates: accepted.map((a) => ({ id: a.block.id, bits: a.block.bits, accepted: a.accepted, ...(a.error ? { error: a.error } : {}) })) },
+    {
+      candidates: accepted.map((a) => ({
+        id: a.block.id,
+        bits: a.block.bits,
+        accepted: a.accepted,
+        ...(exact.find((e) => e.id === a.block.id) ?? {}),
+        ...(a.error ? { error: a.error } : {}),
+      })),
+    },
     best
-      ? `densest accepted: ${best.states} state(s) of ${best.values} = ${best.bits} bits a block`
-      : 'no state block was accepted, not even the control -- the apparatus, not the game',
+      ? `densest block that holds every symbol: ${best.states} state(s) of ${best.values} = ${best.bits} bits`
+      : 'no state block held its symbols, not even the control -- the apparatus, not the game',
     best?.bits,
   );
+
+  const allExact = exact.every((e) => e.wrong === 0);
+  result(ctx, ROW.exact, allExact ? 'YES' : 'NO', { blocks: exact },
+    allExact ? 'every sampled symbol came back as itself' : 'a declared block lost symbols -- it exists but does not hold what it declares');
   if (!best) {
-    for (const r of [ROW.exact, ROW.readBack]) result(ctx, r, 'INCONCLUSIVE', undefined, 'no symbol block to test with');
+    result(ctx, ROW.readBack, 'INCONCLUSIVE', undefined, 'no symbol block to test with');
     stampOrSkip(ctx);
     return;
   }
-
-  // Every accepted block, not just the densest: a symbol that silently becomes another symbol is
-  // corruption with no error, and it could happen in one alphabet and not another.
-  const scratch = fresh(sid('exact'), 1);
-  const exact = accepted.filter((a) => a.accepted).map(({ block }) => {
-    const n = Math.min(P.round_trip_samples, size(block));
-    const step = size(block) / n;
-    let wrong = 0;
-    let firstWrong: number | undefined;
-    for (let i = 0; i < n; i++) {
-      const symbol = Math.floor(i * step);
-      scratch.setBlockPermutation({ x: 0, y: 0, z: 0 }, toPermutation(block, symbol));
-      if (fromPermutation(block, scratch.getBlockPermutation({ x: 0, y: 0, z: 0 })) !== symbol) {
-        wrong++;
-        firstWrong ??= symbol;
-      }
-    }
-    return { id: block.id, sampled: n, wrong, ...(firstWrong === undefined ? {} : { firstWrong }) };
-  });
-  world.structureManager.delete(scratch);
-  const allExact = exact.every((e) => e.wrong === 0);
-  result(ctx, ROW.exact, allExact ? 'YES' : 'NO', { blocks: exact },
-    allExact ? 'every sampled symbol came back as itself' : 'a symbol came back as a different one');
 
   try {
     const s = fresh(sid('readback'), P.page_edge, StructureSaveMode.World);

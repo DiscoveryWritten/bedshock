@@ -68,7 +68,7 @@ test('a connected game becomes a log that collect records', async () => {
     game.on('data', (c) => (received = Buffer.concat([received, c])));
     const event = (e: unknown) => game.write(frame({ type: 'event', event: e }));
 
-    // Two packs, so the target has to be chosen: bedshock, by its script module.
+    // Two packs, and still no target: attaching slows the pack (see choose_target).
     event({ type: 'ProtocolEvent', version: 11, plugins: [{ name: 'Portal Arena', module_uuid: 'aaa' }, { name: 'bedshock', module_uuid: BEDSHOCK_SCRIPT }] });
     for (const message of [
       'BEDSHOCK BEGIN 2026-09-27T00:00:00.000Z',
@@ -85,7 +85,7 @@ test('a connected game becomes a log that collect records', async () => {
     const sent = deframe(received) as any[];
     // No stopOnException: protocol 10 answers it with "unhandled packet" (seen on an iPhone).
     assert.deepEqual(sent.map((m) => m.type), ['protocol', 'resume', 'minecraftCommand']);
-    assert.equal(sent[0].target_module_uuid, BEDSHOCK_SCRIPT);
+    assert.equal(sent[0].target_module_uuid, undefined);
     // Protocol 8 and later take the flat command shape.
     assert.equal(sent[2].command, 'scriptevent bedshock:probe storage');
 

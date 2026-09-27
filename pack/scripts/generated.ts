@@ -7,7 +7,7 @@ export interface DurabilityId { declared: number; id: string }
 export interface StateBlockId { states: number; values: number; bits: number; id: string }
 
 export const NAMESPACE = "bedshock";
-export const PACK_VERSION = "0.1.0";
+export const PACK_VERSION = "0.1.1";
 
 export const IDS: {
   durability: DurabilityId[];
@@ -156,9 +156,9 @@ export const IDS: {
     },
     {
       "states": 1,
-      "values": 64,
-      "bits": 6,
-      "id": "bedshock:probe_states_1x64"
+      "values": 17,
+      "bits": 4.087,
+      "id": "bedshock:probe_states_1x17"
     },
     {
       "states": 2,
@@ -177,18 +177,6 @@ export const IDS: {
       "values": 16,
       "bits": 16,
       "id": "bedshock:probe_states_4x16"
-    },
-    {
-      "states": 5,
-      "values": 16,
-      "bits": 20,
-      "id": "bedshock:probe_states_5x16"
-    },
-    {
-      "states": 6,
-      "values": 16,
-      "bits": 24,
-      "id": "bedshock:probe_states_6x16"
     }
   ]
 };
@@ -403,7 +391,7 @@ export const PARAMS = {
       },
       {
         "states": 1,
-        "values": 64
+        "values": 17
       },
       {
         "states": 2,
@@ -415,14 +403,6 @@ export const PARAMS = {
       },
       {
         "states": 4,
-        "values": 16
-      },
-      {
-        "states": 5,
-        "values": 16
-      },
-      {
-        "states": 6,
         "values": 16
       }
     ],

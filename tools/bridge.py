@@ -41,8 +41,6 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 PORT = 19144
 CONTROL = 19145
-# bedshock's script module, from content/pack.yaml -- attached to by default when present.
-BEDSHOCK_SCRIPT = "b4164069-329a-47f1-be3e-00daaaac5fbb"
 
 
 def frame(message):
@@ -61,16 +59,19 @@ def read_exact(sock, n):
 
 
 def choose_target(plugins, want=None):
-    """The pack asked for (by name or uuid), else bedshock, else the only one there is."""
-    if want:
-        for p in plugins:
-            if p.get("module_uuid") == want or want.lower() in p.get("name", "").lower():
-                return p
+    """The pack asked for, by name or uuid -- and by default, none.
+
+    ATTACH TO NOTHING UNLESS ASKED. A debugger attached to a pack slows every line it runs: on an
+    iPhone, attaching to bedshock gave "InternalError: interrupted" at load, a 6.4 s watchdog hang
+    and a steady 160 ms slowdown. Prints arrive without attaching -- the whole content log does --
+    so a bridge that only wants the log has no reason to attach.
+    """
+    if not want:
         return None
     for p in plugins:
-        if p.get("module_uuid") == BEDSHOCK_SCRIPT:
+        if p.get("module_uuid") == want or want.lower() in p.get("name", "").lower():
             return p
-    return plugins[0] if len(plugins) == 1 else None
+    return None
 
 
 def command_message(version, command):

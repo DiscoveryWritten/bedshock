@@ -12,10 +12,10 @@
  * @requires bedshock:storage.block.permutations_round_trip_exactly
  */
 
-import { BlockPermutation, BlockTypes } from '@minecraft/server';
+import { BlockPermutation, BlockTypes, StructureSaveMode, world } from '@minecraft/server';
 
-import { IDS, STATE_PREFIX, type StateBlockId } from './generated.ts';
-import { digits, undigits } from './codec.ts';
+import { IDS, NAMESPACE, STATE_PREFIX, type StateBlockId } from './generated.ts';
+import { digits, size, undigits } from './codec.ts';
 import { firstLine } from './emit.ts';
 
 export type Symbols = StateBlockId;
@@ -43,12 +43,57 @@ export function acceptance(): Acceptance[] {
   });
 }
 
-/** The accepted block with the most bits per symbol, or undefined if none were. */
+export interface RoundTrip {
+  id: string;
+  sampled: number;
+  wrong: number;
+  firstWrong?: number;
+}
+
+/**
+ * Write `samples` symbols spread across the alphabet into a one-cell memory structure and read
+ * each back. A block that exists but does not hold what it declares -- which is what the game does
+ * with a block declared past 16 bits -- shows up here as wrong symbols, and nowhere else.
+ */
+export function roundTrip(block: Symbols, samples: number): RoundTrip {
+  const id = `${NAMESPACE}:symbols_roundtrip`;
+  world.structureManager.delete(id);
+  const cell = world.structureManager.createEmpty(id, { x: 1, y: 1, z: 1 }, StructureSaveMode.Memory);
+  const n = Math.min(samples, size(block));
+  const step = size(block) / n;
+  let wrong = 0;
+  let firstWrong: number | undefined;
+  try {
+    for (let i = 0; i < n; i++) {
+      const symbol = Math.floor(i * step);
+      cell.setBlockPermutation({ x: 0, y: 0, z: 0 }, toPermutation(block, symbol));
+      if (fromPermutation(block, cell.getBlockPermutation({ x: 0, y: 0, z: 0 })) !== symbol) {
+        wrong++;
+        firstWrong ??= symbol;
+      }
+    }
+  } finally {
+    world.structureManager.delete(id);
+  }
+  return { id: block.id, sampled: n, wrong, ...(firstWrong === undefined ? {} : { firstWrong }) };
+}
+
+/** Enough to catch a block that drops a state, cheap enough to ask on every use. */
+const QUICK = 64;
+let cached: Symbols | null | undefined;
+
+/**
+ * The densest accepted block that holds every sampled symbol -- not merely the densest that exists.
+ * Asked once per load: the answer cannot change while the pack is running.
+ */
 export function densest(): Symbols | undefined {
-  return acceptance()
-    .filter((a) => a.accepted)
-    .map((a) => a.block)
-    .sort((a, b) => b.bits - a.bits)[0];
+  if (cached === undefined) {
+    cached = acceptance()
+      .filter((a) => a.accepted && roundTrip(a.block, QUICK).wrong === 0)
+      .map((a) => a.block)
+      .sort((a, b) => b.bits - a.bits)[0] ?? null;
+  }
+  return cached ?? undefined;
 }
 
 const stateName = (i: number) => `${STATE_PREFIX}${i}`;
