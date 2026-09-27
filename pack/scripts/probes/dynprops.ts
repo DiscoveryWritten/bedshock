@@ -16,24 +16,17 @@
  * answers the question — which is a defect in the instrument, not in the report, and it is the
  * kind that produces a confident answer to a question nobody asked.
  *
- * So the stamp carries a token computed at MODULE SCOPE. Script modules are re-evaluated on
- * every world load, so that value is new each session by construction — nothing has to
- * remember to change it. The follow-up compares, and says outright whether a reload happened.
- * The protocol is enforced rather than described.
+ * So the stamp carries the session token from `reload.ts`, new on every world load by
+ * construction. The follow-up compares, and says outright whether a reload happened. The
+ * protocol is enforced rather than described.
  */
 
 import { ItemStack, world, type Player } from '@minecraft/server';
 
 import { IDS } from '../generated.ts';
 import { firstLine, result, look, skipped, HEADLESS_AT, type Ctx } from '../emit.ts';
+import { SESSION, freshToken, reloadedSince } from '../reload.ts';
 
-/**
- * New on every world load, by construction rather than by discipline.
- *
- * Deliberately not a timestamp: two loads within the same second would collide, and the one
- * time that matters is a quick quit-and-reload.
- */
-const SESSION = `s${Math.floor(Math.random() * 1e9).toString(36)}`;
 
 const KEY = 'bedshock:token';
 const STAMP_RECORD = 'bedshock:dynprop_stamp';
@@ -47,7 +40,7 @@ function stamped(token: string): ItemStack {
 
 /** The automated half: does the property survive `setItem` then `getItem`? */
 export function run(ctx: Ctx): void {
-  const token = `${SESSION}-${Math.floor(Math.random() * 1e6)}`;
+  const token = freshToken();
 
   let survived: boolean;
   let readBack: unknown;
@@ -110,7 +103,7 @@ export function run(ctx: Ctx): void {
 
 /** `/scriptevent bedshock:probe dynprops.stamp` — set up both eyes-only halves at once. */
 export function stamp(ctx: Ctx, player: Player): void {
-  const token = `${SESSION}-${Math.floor(Math.random() * 1e6)}`;
+  const token = freshToken();
   world.setDynamicProperty(STAMP_RECORD, JSON.stringify({ token, session: SESSION, at: Date.now() }));
 
   const inventory = player.getComponent('minecraft:inventory')?.container;
@@ -143,7 +136,7 @@ export function token(ctx: Ctx, player: Player): void {
     return;
   }
   const record = JSON.parse(raw) as { token: string; session: string };
-  const reloaded = record.session !== SESSION;
+  const reloaded = reloadedSince(record.session);
 
   const inventory = player.getComponent('minecraft:inventory')?.container;
   let found: string | undefined;

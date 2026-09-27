@@ -1,0 +1,153 @@
+# The world as storage: whether a pack can keep arbitrary state in blocks and structures the
+# world owns, and read it back exactly.
+#
+# THESE ROWS STACK. Each rests on the one before it through `depends_on`, and that is load-bearing:
+# a structure that returns the wrong symbol says nothing about structures until the symbol row says
+# symbols are exact. A pack that cites the top of the stack inherits the bottom of it, and the
+# ledger marks the top UNDERMINED while anything under it is open.
+#
+# Promoted from docs/WANTED.md, "The world as storage". The rest of that section is still there.
+
+domain: storage
+about: >-
+  Keeping state in the world itself rather than in scoreboards or dynamic properties: blocks as
+  symbols, structures as block arrays the save file owns, and what reading and writing them costs.
+  The shape these are for is a reader -- state read when it is needed and written a little at a
+  time -- never a save that stalls the game.
+
+capabilities:
+  - id: storage.block.state_permutation_bits
+    question: >-
+      How many bits can one custom block position hold -- that is, how many permutations of its
+      states will the game accept on a single block?
+    decides: >-
+      The density of anything stored as blocks: how many blocks a page of state costs. States
+      multiply, so the answer is set by whichever limit arrives first -- values per state, number of
+      states, or total permutations.
+    method: solved
+    surface: content
+    probe: storage
+    measures:
+      unit: bits_per_block
+      direction: maximum
+      # The candidates in content/pack.yaml step by at least two bits. The answer cannot be finer
+      # than the ladder it is read off.
+      tolerance: 2
+    notes: >-
+      Read off declared candidates rather than searched: a block definition cannot be changed at
+      runtime, so each candidate is its own block and the game's refusal of one is the reading. The
+      measurement lists every candidate and whether it was accepted, so a limit on values per state
+      can be told apart from a limit on total permutations.
+
+  - id: storage.block.permutations_round_trip_exactly
+    question: >-
+      Does every permutation of an accepted custom state block come back as exactly itself after
+      being written and read?
+    decides: >-
+      Whether a block can be a symbol at all. A permutation that silently becomes another one is
+      corruption with no error.
+    method: automated
+    surface: script
+    probe: storage
+    depends_on: [storage.block.state_permutation_bits]
+
+  - id: storage.structure.script_edits_read_back
+    question: >-
+      Does a World-mode structure made by script with createEmpty, written cell by cell and saved,
+      come back through structureManager.get with every cell as written?
+    decides: >-
+      Whether a structure can hold state at all: a block array addressed without loading any chunk.
+      Everything else in this file is about how durable and how cheap that is.
+    method: automated
+    surface: script
+    probe: storage
+    depends_on: [storage.block.permutations_round_trip_exactly]
+
+  - id: storage.structure.survive_world_reload
+    question: Does a script-written World-mode structure survive quitting to title and reloading?
+    decides: >-
+      Whether a structure can be the canonical copy of state, or only a cache rebuilt every load.
+    method: observed
+    surface: engine
+    probe: storage
+    look_at: >-
+      Run `/scriptevent bedshock:probe storage.stamp`, QUIT TO TITLE and reload the world, then run
+      `/scriptevent bedshock:probe storage.token`. The page carries the session that wrote it, so the
+      readout says outright whether a reload happened, and checks every cell against the seed.
+    outcomes:
+      - id: survived
+        label: The readout says the page came back exactly, and a reload happened
+        verdict: YES
+      - id: lost
+        label: The readout says no stamped page was found, or it did not come back exactly
+        verdict: 'NO'
+      - id: no_reload
+        label: The readout says no reload happened between the two halves
+        verdict: INCONCLUSIVE
+        means: The protocol was not followed. Quit to title -- leaving to the menu is not always enough.
+    depends_on: [storage.structure.script_edits_read_back]
+
+  - id: storage.structure.survive_hard_kill
+    question: >-
+      Does a World-mode structure survive the server or app being killed seconds after saveToWorld,
+      with no save and no quit?
+    decides: >-
+      What a power cut costs. If this holds, a reader that saves each small write as it goes loses at
+      most the write in flight; if not, state is only as durable as the game's own autosave.
+    method: observed
+    surface: engine
+    probe: storage
+    look_at: >-
+      Run `/scriptevent bedshock:probe storage.stamp`, then KILL the server process or force-close the
+      app within 10 seconds of the time it prints -- no save, no quit. Start it again and run
+      `/scriptevent bedshock:probe storage.token`.
+    outcomes:
+      - id: survived
+        label: The page came back exactly, and a reload happened
+        verdict: YES
+      - id: lost
+        label: No stamped page was found, or it did not come back exactly
+        verdict: 'NO'
+      - id: slow_kill
+        label: The kill came more than 10 seconds after the stamp, or you are not sure it did
+        verdict: INCONCLUSIVE
+        means: An autosave may have run in between, so this measured the autosave. Do it again, faster.
+      - id: no_reload
+        label: The readout says no reload happened
+        verdict: INCONCLUSIVE
+        means: The process was not actually killed.
+    depends_on: [storage.structure.survive_world_reload]
+
+  - id: storage.structure.save_cost_is_incremental
+    question: >-
+      Does saveToWorld after changing one cell cost a fraction of saving a freshly filled structure,
+      or about the same?
+    decides: >-
+      The page size of anything stored this way. If a save writes the whole structure, state has to
+      be split into many small structures each saved alone; if only the change, one big one will do.
+    method: automated
+    surface: engine
+    probe: storage_save
+    depends_on: [storage.structure.script_edits_read_back]
+
+  - id: storage.structure.largest_edge_saved_within_a_tick
+    question: >-
+      What is the largest cube a filled World-mode structure can be and still saveToWorld inside one
+      tick (50ms)?
+    decides: >-
+      The biggest page that can be saved without a player feeling it. Paired with the row above: if
+      saves are whole-structure, this is the page size.
+    method: solved
+    surface: engine
+    probe: storage_save
+    measures:
+      unit: blocks
+      direction: maximum
+      # Wall-clock timing in whole milliseconds, on whatever machine runs it. Neighbouring edges
+      # differ by a few percent of volume; closer than this is the machine, not the game.
+      tolerance: 4
+      search: { from: 2, to: 64 }
+    notes: >-
+      This one measures the machine as much as the game, so the measurement carries each trial's
+      milliseconds. Compare it only against runs on the same hardware.
+    depends_on: [storage.structure.script_edits_read_back]

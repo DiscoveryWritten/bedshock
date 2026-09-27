@@ -89,6 +89,15 @@ export interface ProbeConfig {
     spread: number;
     lane: number;
   };
+  storage: {
+    state_blocks: { states: number; values: number }[];
+    round_trip_samples: number;
+    page_edge: number;
+    save_cost_edge: number;
+    save_repeats: number;
+    tick_budget_ms: number;
+    solve: { repeats: number; max_trials: number };
+  };
 }
 
 export interface PackConfig {
@@ -360,6 +369,20 @@ export function validatePackConfig(c: PackConfig): string[] {
   if (new Set(ids).size !== ids.length) problems.push('probes.menu_variants has a duplicate id');
   const cids = (p.containers ?? []).map((v) => v.id);
   if (new Set(cids).size !== cids.length) problems.push('probes.containers has a duplicate id');
+
+  // --- the world as storage ------------------------------------------------
+  const blocks = p.storage?.state_blocks ?? [];
+  if (!blocks.length) problems.push('probes.storage.state_blocks is empty');
+  if (blocks.some((b) => !(b.states >= 1 && b.values >= 2))) {
+    problems.push('probes.storage.state_blocks: every candidate needs states >= 1 and values >= 2');
+  }
+  // A control that cannot fail: one state of at most sixteen values is what vanilla blocks do.
+  // Without it, "nothing was accepted" cannot be told apart from "blocks never loaded at all".
+  if (!blocks.some((b) => b.states === 1 && b.values <= 16)) {
+    problems.push('probes.storage.state_blocks needs a control: one state of at most 16 values');
+  }
+  const keys = blocks.map((b) => `${b.states}x${b.values}`);
+  if (new Set(keys).size !== keys.length) problems.push('probes.storage.state_blocks has a duplicate');
 
   return problems;
 }

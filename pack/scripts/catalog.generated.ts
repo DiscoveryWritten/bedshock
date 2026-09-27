@@ -23,7 +23,7 @@ export interface SolveSpec {
   tolerance: number;
 }
 
-export const CATALOG_REVISION = "r19ee73b1";
+export const CATALOG_REVISION = "re2cab5ca";
 export const SNAPSHOT_VERSION = "1.21.120";
 export const QUESTIONS: SessionQuestion[] = [
   {
@@ -1058,6 +1058,70 @@ export const QUESTIONS: SessionQuestion[] = [
   },
   {
     "index": 32,
+    "id": "storage.structure.survive_hard_kill",
+    "probe": "storage",
+    "question": "Does a World-mode structure survive the server or app being killed seconds after saveToWorld, with no save and no quit?",
+    "look_at": "Run `/scriptevent bedshock:probe storage.stamp`, then KILL the server process or force-close the app within 10 seconds of the time it prints -- no save, no quit. Start it again and run `/scriptevent bedshock:probe storage.token`.",
+    "askByDefault": true,
+    "priorStatus": "OPEN",
+    "outcomes": [
+      {
+        "id": "survived",
+        "label": "The page came back exactly, and a reload happened",
+        "verdict": "YES",
+        "means": ""
+      },
+      {
+        "id": "lost",
+        "label": "No stamped page was found, or it did not come back exactly",
+        "verdict": "NO",
+        "means": ""
+      },
+      {
+        "id": "slow_kill",
+        "label": "The kill came more than 10 seconds after the stamp, or you are not sure it did",
+        "verdict": "INCONCLUSIVE",
+        "means": "An autosave may have run in between, so this measured the autosave. Do it again, faster."
+      },
+      {
+        "id": "no_reload",
+        "label": "The readout says no reload happened",
+        "verdict": "INCONCLUSIVE",
+        "means": "The process was not actually killed."
+      }
+    ]
+  },
+  {
+    "index": 33,
+    "id": "storage.structure.survive_world_reload",
+    "probe": "storage",
+    "question": "Does a script-written World-mode structure survive quitting to title and reloading?",
+    "look_at": "Run `/scriptevent bedshock:probe storage.stamp`, QUIT TO TITLE and reload the world, then run `/scriptevent bedshock:probe storage.token`. The page carries the session that wrote it, so the readout says outright whether a reload happened, and checks every cell against the seed.",
+    "askByDefault": true,
+    "priorStatus": "OPEN",
+    "outcomes": [
+      {
+        "id": "survived",
+        "label": "The readout says the page came back exactly, and a reload happened",
+        "verdict": "YES",
+        "means": ""
+      },
+      {
+        "id": "lost",
+        "label": "The readout says no stamped page was found, or it did not come back exactly",
+        "verdict": "NO",
+        "means": ""
+      },
+      {
+        "id": "no_reload",
+        "label": "The readout says no reload happened between the two halves",
+        "verdict": "INCONCLUSIVE",
+        "means": "The protocol was not followed. Quit to title -- leaving to the menu is not always enough."
+      }
+    ]
+  },
+  {
+    "index": 34,
     "id": "ui.form.button_icon_resolves_a_bare_atlas_key",
     "probe": "formicon",
     "question": "Does a bare atlas short-name work where a path is expected?",
@@ -1086,7 +1150,7 @@ export const QUESTIONS: SessionQuestion[] = [
     ]
   },
   {
-    "index": 33,
+    "index": 35,
     "id": "ui.form.button_icon_resolves_an_unindexed_path",
     "probe": "formicon",
     "question": "Does `ActionFormData.button(text, iconPath)` draw a texture that has NO `item_texture.json` entry?",
@@ -1115,7 +1179,7 @@ export const QUESTIONS: SessionQuestion[] = [
     ]
   },
   {
-    "index": 34,
+    "index": 36,
     "id": "ui.form.missing_icon_is_visually_distinct",
     "probe": "formicon",
     "question": "Does a deliberately wrong icon path render as a broken-texture mark, or as nothing?",
@@ -1189,5 +1253,14 @@ export const SOLVES: SolveSpec[] = [
     "from": 0,
     "to": 24,
     "tolerance": 0.25
+  },
+  {
+    "id": "storage.structure.largest_edge_saved_within_a_tick",
+    "probe": "storage_save",
+    "unit": "blocks",
+    "direction": "maximum",
+    "from": 2,
+    "to": 64,
+    "tolerance": 4
   }
 ];

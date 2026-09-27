@@ -1,13 +1,13 @@
 {
   "schema": 1,
   "minecraft": "1.21.120",
-  "catalog_revision": "r19ee73b1",
-  "release": "mc-1.21.120-r19ee73b1",
+  "catalog_revision": "re2cab5ca",
+  "release": "mc-1.21.120-re2cab5ca",
   "measured_through": "2026-08-03T00:00:00Z",
   "counts": {
     "SETTLED": 22,
     "CLOSED-NEGATIVE": 5,
-    "OPEN": 26,
+    "OPEN": 33,
     "INCONCLUSIVE": 1,
     "DRIFT": 0,
     "UNDERMINED": 0,
@@ -1748,6 +1748,140 @@
         "render.attachable.draws_on_custom_item"
       ],
       "legacy": "P3c"
+    },
+    {
+      "id": "storage.block.state_permutation_bits",
+      "question": "How many bits can one custom block position hold -- that is, how many permutations of its states will the game accept on a single block?",
+      "decides": "The density of anything stored as blocks: how many blocks a page of state costs. States multiply, so the answer is set by whichever limit arrives first -- values per state, number of states, or total permutations.",
+      "method": "solved",
+      "surface": "content",
+      "status": "OPEN",
+      "inherited": false,
+      "measures": {
+        "unit": "bits_per_block",
+        "direction": "maximum",
+        "tolerance": 2
+      }
+    },
+    {
+      "id": "storage.block.permutations_round_trip_exactly",
+      "question": "Does every permutation of an accepted custom state block come back as exactly itself after being written and read?",
+      "decides": "Whether a block can be a symbol at all. A permutation that silently becomes another one is corruption with no error.",
+      "method": "automated",
+      "surface": "script",
+      "status": "OPEN",
+      "inherited": false,
+      "depends_on": [
+        "storage.block.state_permutation_bits"
+      ]
+    },
+    {
+      "id": "storage.structure.script_edits_read_back",
+      "question": "Does a World-mode structure made by script with createEmpty, written cell by cell and saved, come back through structureManager.get with every cell as written?",
+      "decides": "Whether a structure can hold state at all: a block array addressed without loading any chunk. Everything else in this file is about how durable and how cheap that is.",
+      "method": "automated",
+      "surface": "script",
+      "status": "OPEN",
+      "inherited": false,
+      "depends_on": [
+        "storage.block.permutations_round_trip_exactly"
+      ]
+    },
+    {
+      "id": "storage.structure.survive_world_reload",
+      "question": "Does a script-written World-mode structure survive quitting to title and reloading?",
+      "decides": "Whether a structure can be the canonical copy of state, or only a cache rebuilt every load.",
+      "method": "observed",
+      "surface": "engine",
+      "status": "OPEN",
+      "inherited": false,
+      "outcomes": [
+        {
+          "id": "survived",
+          "label": "The readout says the page came back exactly, and a reload happened",
+          "verdict": "YES"
+        },
+        {
+          "id": "lost",
+          "label": "The readout says no stamped page was found, or it did not come back exactly",
+          "verdict": "NO"
+        },
+        {
+          "id": "no_reload",
+          "label": "The readout says no reload happened between the two halves",
+          "verdict": "INCONCLUSIVE"
+        }
+      ],
+      "depends_on": [
+        "storage.structure.script_edits_read_back"
+      ]
+    },
+    {
+      "id": "storage.structure.survive_hard_kill",
+      "question": "Does a World-mode structure survive the server or app being killed seconds after saveToWorld, with no save and no quit?",
+      "decides": "What a power cut costs. If this holds, a reader that saves each small write as it goes loses at most the write in flight; if not, state is only as durable as the game's own autosave.",
+      "method": "observed",
+      "surface": "engine",
+      "status": "OPEN",
+      "inherited": false,
+      "outcomes": [
+        {
+          "id": "survived",
+          "label": "The page came back exactly, and a reload happened",
+          "verdict": "YES"
+        },
+        {
+          "id": "lost",
+          "label": "No stamped page was found, or it did not come back exactly",
+          "verdict": "NO"
+        },
+        {
+          "id": "slow_kill",
+          "label": "The kill came more than 10 seconds after the stamp, or you are not sure it did",
+          "verdict": "INCONCLUSIVE"
+        },
+        {
+          "id": "no_reload",
+          "label": "The readout says no reload happened",
+          "verdict": "INCONCLUSIVE"
+        }
+      ],
+      "depends_on": [
+        "storage.structure.survive_world_reload"
+      ]
+    },
+    {
+      "id": "storage.structure.save_cost_is_incremental",
+      "question": "Does saveToWorld after changing one cell cost a fraction of saving a freshly filled structure, or about the same?",
+      "decides": "The page size of anything stored this way. If a save writes the whole structure, state has to be split into many small structures each saved alone; if only the change, one big one will do.",
+      "method": "automated",
+      "surface": "engine",
+      "status": "OPEN",
+      "inherited": false,
+      "depends_on": [
+        "storage.structure.script_edits_read_back"
+      ]
+    },
+    {
+      "id": "storage.structure.largest_edge_saved_within_a_tick",
+      "question": "What is the largest cube a filled World-mode structure can be and still saveToWorld inside one tick (50ms)?",
+      "decides": "The biggest page that can be saved without a player feeling it. Paired with the row above: if saves are whole-structure, this is the page size.",
+      "method": "solved",
+      "surface": "engine",
+      "status": "OPEN",
+      "inherited": false,
+      "measures": {
+        "unit": "blocks",
+        "direction": "maximum",
+        "tolerance": 4,
+        "search": {
+          "from": 2,
+          "to": 64
+        }
+      },
+      "depends_on": [
+        "storage.structure.script_edits_read_back"
+      ]
     },
     {
       "id": "ui.form.button_icon_resolves_an_unindexed_path",

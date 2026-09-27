@@ -393,7 +393,7 @@ test('the probes not yet ported are exactly the ones we know about', () => {
   const implemented = new Set([
     'durability', 'dynprops', 'container', 'offhand', 'menu', 'fallingblock',
     'fallcurve', 'anvilgap', 'throw', 'knockback', 'repair', 'distribution', 'ruler', 'glyphs',
-    'flipbook', 'formicon',
+    'flipbook', 'formicon', 'storage', 'storage_save',
   ]);
   const missing = [...new Set(
     catalog.capabilities.filter((c) => c.probe && !implemented.has(c.probe)).map((c) => c.probe!),
@@ -427,6 +427,12 @@ test('every solved row uses the tool that matches its shape', () => {
   // A boundary: the apparatus can only say whether something worked, so it is bisected.
   assert.ok(imports('anvilgap').includes('solve'), 'anvilgap should search for a boundary');
   assert.ok(!imports('anvilgap').includes('measure'), 'anvilgap measures a number it cannot produce');
+
+  // The largest structure saved inside a tick is a boundary too: a trial can only say whether one
+  // save fitted. (`storage_save` lives in storage.ts.) Its sibling, bits per block, is neither: it
+  // is read once off a declared ladder of blocks, like the durability ceilings, and reports that.
+  assert.ok(imports('storage').includes('solve'), 'storage_save should search for a boundary');
+  assert.ok(!imports('storage').includes('measure'), 'storage has no reading to repeat');
 
   // Measurements: the apparatus hands back a distance, so the readings are summarised.
   for (const probe of ['throw', 'knockback']) {

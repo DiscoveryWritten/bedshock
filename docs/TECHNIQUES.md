@@ -84,6 +84,40 @@ That is also the honest answer to credibility. Not "we did this" — **"here is 
 thing that does it, here is what it rests on, here is the version it last stood up on, run
 it yourself."**
 
+## A candidate: paged world state
+
+Written down 2026-09-27 as the first thing that would want to be a technique rather than a
+capability. Every question it rests on is in `WANTED.md` under *The world as storage*.
+
+**The shape.** State has a canonical home the pack owns: a `World`-mode structure, or blocks in
+chunks the pack owns. It is split into pages. A page is read when something needs it and written
+back a little at a time, never all at once, so a save is never a stall and a power cut loses at
+most one small write. Where a page holds a reference to something large (a configured structure),
+the reference is what is stored, and the large thing is placed when the page is read.
+
+**Why it is a technique and not a capability.** It stacks five or six primitives (persistence,
+save cost, symbol density, round-trip exactness, read latency, per-tick throughput), any of which
+could move under it. If one of those moves, this goes `SUSPECT`, which is exactly the state this
+document is for.
+
+**Its parts already exist, as units rather than prose.** `pack/scripts/codec.ts` (numbers to
+symbols, pure and tested in Node), `symbols.ts` (which state blocks the game accepted, and
+symbol to permutation), `pages.ts` (a self-describing page in a structure) and `reload.ts` (did a
+reload happen). The storage probes are built out of them, so what was measured is exactly the
+code a pack would import, not a second copy of it. Each unit names the rows it rests on with
+`@requires bedshock:<id>`, and the rows chain through `depends_on`.
+
+**A technique is composed, to any depth, and carries its parts' evidence with it.** A pack that
+takes one in should take the whole tree: the technique's own test, and every capability under it,
+each with its ledger. Citing the top row is meant to be enough, because `depends_on` makes the
+ledger mark it UNDERMINED while anything beneath is open. Not yet enough: `bedshock check` reads
+`@requires` from the consumer's own files and does not yet follow them into the bedshock units a
+consumer imports. That is the gap to close before a mod depends on this.
+
+**Its reference implementation** would be a key-value store with nothing else: put, get, and a
+page count, with a test that writes, kills the server, and reads back. Anything more than that
+belongs to the pack using it.
+
 ## Open questions
 
 - **Naming.** "Technique" is a placeholder. The repo's existing vocabulary is questions,

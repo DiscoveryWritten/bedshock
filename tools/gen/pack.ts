@@ -68,7 +68,44 @@ export function probeIds(c: PackConfig) {
     attach_pose: `${ns}:${PREFIX}_att_pose`,
     stash_carrier: p.stash.carrier,
     stash_holder: p.stash.holder,
+    states: p.storage.state_blocks.map(({ states, values }) => ({
+      states,
+      values,
+      bits: Number((states * Math.log2(values)).toFixed(3)),
+      id: `${ns}:${PREFIX}_states_${states}x${values}`,
+    })),
   };
+}
+
+// ---------------------------------------------------------------------------
+// State blocks
+// ---------------------------------------------------------------------------
+
+/** The name of state `i` on every state block. Shared with the runtime through GENERATED ids. */
+export const stateName = (c: PackConfig, i: number) => `${c.namespace}:d${i}`;
+
+/**
+ * One block per candidate, and nothing on it but its states. No geometry, no texture, no
+ * behaviour: the question is only whether the game accepts the declaration, and every extra
+ * component is another way for it to be refused for a reason that is not the one being asked.
+ */
+function stateBlockFiles(c: PackConfig): OutFile[] {
+  return probeIds(c).states.map(({ id, states, values }) => ({
+    path: `BP/blocks/${id.split(':')[1]}.json`,
+    data: j({
+      format_version: c.format_versions.block,
+      'minecraft:block': {
+        description: {
+          identifier: id,
+          menu_category: { category: 'none' },
+          states: Object.fromEntries(
+            Array.from({ length: states }, (_, i) => [stateName(c, i), Array.from({ length: values }, (_, v) => v)]),
+          ),
+        },
+        components: {},
+      },
+    }),
+  }));
 }
 
 // ---------------------------------------------------------------------------
@@ -713,6 +750,7 @@ export function generatedModule(c: PackConfig): string {
     'export interface MenuId { id: string; label: string; category?: string; group?: string }',
     'export interface ContainerId { id: string; container_type: string; size: number }',
     'export interface DurabilityId { declared: number; id: string }',
+    'export interface StateBlockId { states: number; values: number; bits: number; id: string }',
     '',
     `export const NAMESPACE = ${JSON.stringify(c.namespace)};`,
     `export const PACK_VERSION = ${JSON.stringify(c.version.join('.'))};`,
@@ -733,7 +771,9 @@ export function generatedModule(c: PackConfig): string {
     '  attach_pose: string;',
     '  stash_carrier: string;',
     '  stash_holder: string;',
+    '  states: StateBlockId[];',
     `} = ${JSON.stringify(ids, null, 2)};`,
+    `export const STATE_PREFIX = ${JSON.stringify(stateName(c, 0).slice(0, -1))};`,
     '',
     `export const PARAMS = ${JSON.stringify(p, null, 2)} as const;`,
     `export const GLYPHS = ${JSON.stringify(p.glyphs.swatches.map((_, i) => glyphChar(p.glyphs.page, i)))};`,
@@ -749,6 +789,7 @@ export function packFiles(c: PackConfig): OutFile[] {
     ...manifests(c),
     ...itemSpecs(c).map((spec) => itemFile(c, spec)),
     ...ids.containers.map((v) => containerEntity(c, v)),
+    ...stateBlockFiles(c),
     ...entityClientFiles(c),
     ...attachableFiles(c),
     ...textureFiles(c),

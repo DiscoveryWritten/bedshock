@@ -37,6 +37,7 @@ import * as throwProbe from './probes/throw.ts';
 import * as scenes from './probes/scenes.ts';
 import * as attachable from './probes/attachable.ts';
 import * as stash from './probes/stash.ts';
+import * as storage from './probes/storage.ts';
 import * as session from './session.ts';
 import * as chapter from './chapter.ts';
 import * as kiosk from './kiosk.ts';
@@ -52,6 +53,7 @@ const PROBES: Record<string, Probe> = {
   durability: durability.run,
   menu: menu.run,
   dynprops: dynprops.run,
+  storage: storage.run,
   container: container.run,
   offhand: offhand.run,
   fallingblock: fallingblock.run,
@@ -60,6 +62,9 @@ const PROBES: Record<string, Probe> = {
   // minutes where the others take ticks. Everything cheap has already reported by the time this
   // starts, so a run cut short still carries the rest of the battery.
   anvilgap: anvilgap.run,
+  // A fill of up to a quarter of a million cells per trial, spread across ticks: slow, so last
+  // among the solves for the same reason anvilgap is.
+  storage_save: storage.runSave,
   throw: throwProbe.run,
   knockback: knockback.run,
   repair: repair.run,
@@ -82,6 +87,9 @@ const FOLLOW_UPS: Record<string, (ctx: Ctx, player: Player) => void> = {
   // The half of the stash that has to happen AFTER something -- a walk, or a quit to title.
   // See `stash.ts` for why a same-session fetch deliberately does not spend the stash.
   'stash.fetch': (ctx) => stash.fetch(ctx),
+  // The world-as-storage page: stamp, then quit-to-title or kill, then read it back.
+  'storage.stamp': (ctx) => storage.stamp(ctx),
+  'storage.token': (ctx) => storage.token(ctx),
 };
 
 /**

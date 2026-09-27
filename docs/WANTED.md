@@ -94,3 +94,55 @@ Nothing on any of it — no potion, effect, projectile or arrow question exists.
 - **Can a cauldron hold anything an add-on defines, and can its fill state be read and written
   by script?** — Decides whether the cauldron is a reusable custom container with vanilla
   affordances already attached, or whether custom content has to build its own.
+
+## The world as storage
+
+Nothing in the battery asks whether a pack can keep **arbitrary state in the world itself**:
+as blocks it owns, in a block array the save file keeps, or in chunks nobody visits. The only
+persistence rows are `item.dynamic_properties.*`, which cover one item's properties and nothing
+larger. Every answer below is wanted *as a primitive*, so any pack can cite it. None of it is a
+storage design.
+
+The shape these questions are for is a **reader**, not a dump. State lives canonically in
+storage the pack owns. It is read when it is needed and written a little at a time, so that
+nothing ever spends fifteen seconds of load writing everything out, and a power cut loses at most
+the last small write. Scoreboards used as a RAM stand-in are explicitly not this.
+
+**Promoted 2026-09-27** to `content/capabilities/storage.yaml`: whether a script-written
+structure reads back, survives a reload and a hard kill, what saving it costs, and how many bits
+one custom block holds and whether every symbol comes back exactly. What is left here has no
+probe yet.
+
+- **How large can one `createEmpty` be, and how many world structures before something
+  complains?** — Decides how much a pack can keep this way, and how it is paged.
+- **Can a structure made by one behavior pack be read by another in the same world?** — Decides
+  whether world state can be shared between packs installed side by side. `item.dynamic_properties`
+  rows do not answer this for world dynamic properties, which are believed to be scoped to the pack
+  that wrote them. If structures are not scoped that way, they are the shared channel that
+  dynamic properties are not.
+
+**Chunks the pack owns.**
+
+- **Can script write and read blocks in the bedrock floor (y -64 to -60), and does anything put
+  bedrock back?** — Decides whether state can live directly under the chunks a pack already uses,
+  out of the player's way, with no extra chunks to keep loaded.
+- **Can a pack load a far region on demand without a player** (a ticking area through
+  `runCommand`, or anything else), how many at once, how large, and how many ticks from asking to
+  the first readable block? — Decides whether storage somewhere nobody goes is readable when it is
+  needed. The tick count is the latency of every cold read. A number.
+- **Do `setBlockPermutation`, `getBlock` and `getBlocks` keep working, exactly, at extreme
+  coordinates**: the far lands and the stripe lands, where the float error that dampens player
+  movement lives? — Block positions are integers, so they might be untouched by what breaks
+  movement there. Nobody has to walk to storage for it to work. Decides whether the extremes of
+  the world are usable address space.
+- **How many block writes, and how many reads, fit in one tick before the tick overruns?** —
+  Decides how fast a reader can page state in and out without being felt. Separately for single
+  calls, `fillBlocks` and `getBlocks`, because the bulk calls may be the whole answer. Numbers.
+
+**Structure blocks as references.**
+
+- **Can script read or write a placed structure block's configuration** (structure name, size,
+  offset)? — Decides whether a block in storage can point at a structure by name, which is the
+  cheap way to store something large: the reference is serialised, and the thing it refers to is
+  placed when read. If the answer is no, the name has to be encoded in blocks like any other
+  string.

@@ -4,6 +4,7 @@
 export interface MenuId { id: string; label: string; category?: string; group?: string }
 export interface ContainerId { id: string; container_type: string; size: number }
 export interface DurabilityId { declared: number; id: string }
+export interface StateBlockId { states: number; values: number; bits: number; id: string }
 
 export const NAMESPACE = "bedshock";
 export const PACK_VERSION = "0.1.0";
@@ -24,6 +25,7 @@ export const IDS: {
   attach_pose: string;
   stash_carrier: string;
   stash_holder: string;
+  states: StateBlockId[];
 } = {
   "durability": [
     {
@@ -144,8 +146,53 @@ export const IDS: {
   "start": "bedshock:probe_start",
   "attach_pose": "bedshock:probe_att_pose",
   "stash_carrier": "minecraft:shulker_box",
-  "stash_holder": "bedshock:probe_box_chest5"
+  "stash_holder": "bedshock:probe_box_chest5",
+  "states": [
+    {
+      "states": 1,
+      "values": 16,
+      "bits": 4,
+      "id": "bedshock:probe_states_1x16"
+    },
+    {
+      "states": 1,
+      "values": 64,
+      "bits": 6,
+      "id": "bedshock:probe_states_1x64"
+    },
+    {
+      "states": 2,
+      "values": 16,
+      "bits": 8,
+      "id": "bedshock:probe_states_2x16"
+    },
+    {
+      "states": 3,
+      "values": 16,
+      "bits": 12,
+      "id": "bedshock:probe_states_3x16"
+    },
+    {
+      "states": 4,
+      "values": 16,
+      "bits": 16,
+      "id": "bedshock:probe_states_4x16"
+    },
+    {
+      "states": 5,
+      "values": 16,
+      "bits": 20,
+      "id": "bedshock:probe_states_5x16"
+    },
+    {
+      "states": 6,
+      "values": 16,
+      "bits": 24,
+      "id": "bedshock:probe_states_6x16"
+    }
+  ]
 };
+export const STATE_PREFIX = "bedshock:d";
 
 export const PARAMS = {
   "durability": {
@@ -347,6 +394,47 @@ export const PARAMS = {
     "samples": 5,
     "spread": 0.2,
     "lane": 20
+  },
+  "storage": {
+    "state_blocks": [
+      {
+        "states": 1,
+        "values": 16
+      },
+      {
+        "states": 1,
+        "values": 64
+      },
+      {
+        "states": 2,
+        "values": 16
+      },
+      {
+        "states": 3,
+        "values": 16
+      },
+      {
+        "states": 4,
+        "values": 16
+      },
+      {
+        "states": 5,
+        "values": 16
+      },
+      {
+        "states": 6,
+        "values": 16
+      }
+    ],
+    "round_trip_samples": 512,
+    "page_edge": 8,
+    "save_cost_edge": 48,
+    "save_repeats": 3,
+    "tick_budget_ms": 50,
+    "solve": {
+      "repeats": 1,
+      "max_trials": 8
+    }
   }
 } as const;
 export const GLYPHS = ["","","",""];

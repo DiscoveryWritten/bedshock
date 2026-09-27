@@ -160,6 +160,13 @@ export const CHAPTERS: Chapter[] = [
     lookAt: { f: 20, u: 0, s: 0 },
   },
   {
+    name: 'storage',
+    about: 'Keeping state in the world: blocks as symbols, structures the save file owns, and what saving them costs.',
+    probes: ['storage', 'storage_save'],
+    blueprint: { name: 'storage', steps: pad(3) },
+    viewFrom: { f: 0, u: 0, s: 0 },
+  },
+  {
     name: 'distribution',
     about: 'How this pack got here, which decides how expensive everything else is to repeat.',
     probes: ['distribution'],

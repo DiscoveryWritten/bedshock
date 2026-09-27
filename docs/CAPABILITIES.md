@@ -99,6 +99,14 @@ is how you find out the day it starts working.
 | `render.attachable.several_controllers_at_once` | · |
 | `render.attachable.sits_at_model_origin_without_animation` | — |
 | `render.attachable.accepts_vanilla_hold_animations` | · |
+| **storage** |  |
+| `storage.block.state_permutation_bits` | · |
+| `storage.block.permutations_round_trip_exactly` | · |
+| `storage.structure.script_edits_read_back` | · |
+| `storage.structure.survive_world_reload` | · |
+| `storage.structure.survive_hard_kill` | · |
+| `storage.structure.save_cost_is_incremental` | · |
+| `storage.structure.largest_edge_saved_within_a_tick` | · |
 | **ui** |  |
 | `ui.form.button_icon_resolves_an_unindexed_path` | · |
 | `ui.form.button_icon_resolves_a_bare_atlas_key` | · |
@@ -144,7 +152,7 @@ answer. Shown on 1.21.120.
 
 *None measured yet. The questions are written; nobody has run them.*
 
-5 solved row(s) have no value yet: `physics.falling_block.gravity_curve`, `physics.falling_block.min_clearance_under_a_falling_anvil`, `physics.throw.item_travel_distance`, `physics.knockback.blocks_per_unit`, `physics.knockback.blocks_per_unit_on_an_entity`
+7 solved row(s) have no value yet: `physics.falling_block.gravity_curve`, `physics.falling_block.min_clearance_under_a_falling_anvil`, `physics.throw.item_travel_distance`, `physics.knockback.blocks_per_unit`, `physics.knockback.blocks_per_unit_on_an_entity`, `storage.block.state_permutation_bits`, `storage.structure.largest_edge_saved_within_a_tick`
 
 ## distribution
 
@@ -1519,6 +1527,113 @@ What can be drawn, and what the thing drawing it is allowed to know. The load-be
 
 </details>
 
+## storage
+
+Keeping state in the world itself rather than in scoreboards or dynamic properties: blocks as symbols, structures as block arrays the save file owns, and what reading and writing them costs. The shape these are for is a reader -- state read when it is needed and written a little at a time -- never a save that stalls the game.
+
+### `storage.block.state_permutation_bits`
+
+**How many bits can one custom block position hold -- that is, how many permutations of its states will the game accept on a single block?**
+
+*Decides:* The density of anything stored as blocks: how many blocks a page of state costs. States multiply, so the answer is set by whichever limit arrives first -- values per state, number of states, or total permutations.
+
+<sub>method: `solved` · surface: `content` · probe: `storage`</sub>
+
+*Solves for the maximum* in `bits_per_block`, tolerating ±2 before a move counts as a finding.
+
+**Never measured.** This row is a guess, however confident the prose around it sounds.
+
+> Read off declared candidates rather than searched: a block definition cannot be changed at runtime, so each candidate is its own block and the game's refusal of one is the reading. The measurement lists every candidate and whether it was accepted, so a limit on values per state can be told apart from a limit on total permutations.
+
+### `storage.block.permutations_round_trip_exactly`
+
+**Does every permutation of an accepted custom state block come back as exactly itself after being written and read?**
+
+*Decides:* Whether a block can be a symbol at all. A permutation that silently becomes another one is corruption with no error.
+
+<sub>method: `automated` · surface: `script` · probe: `storage` · rests on: `storage.block.state_permutation_bits`</sub>
+
+**Never measured.** This row is a guess, however confident the prose around it sounds.
+
+### `storage.structure.script_edits_read_back`
+
+**Does a World-mode structure made by script with createEmpty, written cell by cell and saved, come back through structureManager.get with every cell as written?**
+
+*Decides:* Whether a structure can hold state at all: a block array addressed without loading any chunk. Everything else in this file is about how durable and how cheap that is.
+
+<sub>method: `automated` · surface: `script` · probe: `storage` · rests on: `storage.block.permutations_round_trip_exactly`</sub>
+
+**Never measured.** This row is a guess, however confident the prose around it sounds.
+
+### `storage.structure.survive_world_reload`
+
+**Does a script-written World-mode structure survive quitting to title and reloading?**
+
+*Decides:* Whether a structure can be the canonical copy of state, or only a cache rebuilt every load.
+
+<sub>method: `observed` · surface: `engine` · probe: `storage` · rests on: `storage.structure.script_edits_read_back`</sub>
+
+**Never measured.** This row is a guess, however confident the prose around it sounds.
+
+*To answer it:* Run `/scriptevent bedshock:probe storage.stamp`, QUIT TO TITLE and reload the world, then run `/scriptevent bedshock:probe storage.token`. The page carries the session that wrote it, so the readout says outright whether a reload happened, and checks every cell against the seed.
+
+<details><summary>The answer space this probe can distinguish</summary>
+
+| Outcome | Means | |
+|---|---|---|
+| `survived` | The readout says the page came back exactly, and a reload happened | YES |
+| `lost` | The readout says no stamped page was found, or it did not come back exactly | NO |
+| `no_reload` | The readout says no reload happened between the two halves | INCONCLUSIVE — The protocol was not followed. Quit to title -- leaving to the menu is not always enough. |
+
+</details>
+
+### `storage.structure.survive_hard_kill`
+
+**Does a World-mode structure survive the server or app being killed seconds after saveToWorld, with no save and no quit?**
+
+*Decides:* What a power cut costs. If this holds, a reader that saves each small write as it goes loses at most the write in flight; if not, state is only as durable as the game's own autosave.
+
+<sub>method: `observed` · surface: `engine` · probe: `storage` · rests on: `storage.structure.survive_world_reload`</sub>
+
+**Never measured.** This row is a guess, however confident the prose around it sounds.
+
+*To answer it:* Run `/scriptevent bedshock:probe storage.stamp`, then KILL the server process or force-close the app within 10 seconds of the time it prints -- no save, no quit. Start it again and run `/scriptevent bedshock:probe storage.token`.
+
+<details><summary>The answer space this probe can distinguish</summary>
+
+| Outcome | Means | |
+|---|---|---|
+| `survived` | The page came back exactly, and a reload happened | YES |
+| `lost` | No stamped page was found, or it did not come back exactly | NO |
+| `slow_kill` | The kill came more than 10 seconds after the stamp, or you are not sure it did | INCONCLUSIVE — An autosave may have run in between, so this measured the autosave. Do it again, faster. |
+| `no_reload` | The readout says no reload happened | INCONCLUSIVE — The process was not actually killed. |
+
+</details>
+
+### `storage.structure.save_cost_is_incremental`
+
+**Does saveToWorld after changing one cell cost a fraction of saving a freshly filled structure, or about the same?**
+
+*Decides:* The page size of anything stored this way. If a save writes the whole structure, state has to be split into many small structures each saved alone; if only the change, one big one will do.
+
+<sub>method: `automated` · surface: `engine` · probe: `storage_save` · rests on: `storage.structure.script_edits_read_back`</sub>
+
+**Never measured.** This row is a guess, however confident the prose around it sounds.
+
+### `storage.structure.largest_edge_saved_within_a_tick`
+
+**What is the largest cube a filled World-mode structure can be and still saveToWorld inside one tick (50ms)?**
+
+*Decides:* The biggest page that can be saved without a player feeling it. Paired with the row above: if saves are whole-structure, this is the page size.
+
+<sub>method: `solved` · surface: `engine` · probe: `storage_save` · rests on: `storage.structure.script_edits_read_back`</sub>
+
+*Solves for the maximum* in `blocks`, tolerating ±4 before a move counts as a finding, searching 2…64.
+
+**Never measured.** This row is a guess, however confident the prose around it sounds.
+
+> This one measures the machine as much as the game, so the measurement carries each trial's milliseconds. Compare it only against runs on the same hardware.
+
 ## ui
 
 `@minecraft/server-ui` is the only surface where a pack can draw an arbitrary picture per stack, which makes what a button's icon path actually resolves the most valuable unmeasured thing in this file. Everything else here is about the boundaries of the form API -- what it cannot be made to do, recorded so nobody spends a session finding out.
@@ -1655,5 +1770,5 @@ other repositories can carry `@requires bedshock:<id>` and `bedshock check` will
 if the cited row is not settled at that pack's `min_engine_version` — so a design can never
 quietly come to rest on a guess.
 
-<sub>70 capabilities · 28 observations · 1 version(s): 1.21.120</sub>
+<sub>77 capabilities · 28 observations · 1 version(s): 1.21.120</sub>
 

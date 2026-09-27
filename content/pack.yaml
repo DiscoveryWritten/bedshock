@@ -62,6 +62,7 @@ format_versions:
   item: "1.21.0"
   item_texture: "1.16.100"
   entity: "1.21.0"
+  block: "1.21.40"
 
 # ---------------------------------------------------------------------------
 # Probe parameters
@@ -461,3 +462,34 @@ probes:
     samples: 5
     spread: 0.2
     lane: 20
+
+  # --- the world as storage ---------------------------------------------------
+  #
+  # One custom block per candidate, each declaring `states` integer states of `values` values:
+  # values^states permutations, which is log2 of that in bits a block. Same shape as the
+  # durability ceilings: a definition the game rejects simply is not there, and the probe reports
+  # which ones it could find. That absence IS the measurement.
+  #
+  # IF THE WHOLE PACK STOPS LOADING after a change here, suspect this list first. A block the
+  # game refuses is expected to vanish on its own, like an item does; if instead it takes the
+  # pack with it, that is a finding about Bedrock and worth recording before the list is trimmed.
+  storage:
+    state_blocks:
+      - { states: 1, values: 16 }    # 4 bits: the control -- one ordinary state
+      - { states: 1, values: 64 }    # 6 bits: is sixteen values a per-state limit?
+      - { states: 2, values: 16 }    # 8
+      - { states: 3, values: 16 }    # 12
+      - { states: 4, values: 16 }    # 16
+      - { states: 5, values: 16 }    # 20
+      - { states: 6, values: 16 }    # 24
+    # Permutations sampled per accepted block when checking that every symbol comes back as itself.
+    round_trip_samples: 512
+    # Edge of the page the read-back and reload probes write: edge^3 cells.
+    page_edge: 8
+    # Edge of the cube the save-cost comparison fills. Big enough that a whole-structure save
+    # takes measurable milliseconds; a comparison under the clock's resolution tells nothing.
+    save_cost_edge: 48
+    save_repeats: 3
+    # A tick at 20 TPS. A save that takes longer than this is a save a player feels.
+    tick_budget_ms: 50
+    solve: { repeats: 1, max_trials: 8 }
