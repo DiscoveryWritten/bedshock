@@ -77,8 +77,17 @@ export class Director {
     return this.program([{ get: path(dotted) }]);
   }
 
-  keys(dotted: string) {
-    return this.program([{ keys: path(dotted) }]);
+  /**
+   * Every name an object has. Paged through the list's own `slice`, 50 at a time, because packs up
+   * to 0.1.4 cap any list they send at 50 -- so this works without anyone installing a new pack.
+   */
+  async keys(dotted: string): Promise<string[]> {
+    const all: string[] = [];
+    for (let from = 0; ; from += 50) {
+      const page = (await this.program([{ keys: path(dotted) }, { call: ['$0', 'slice'], args: [from, from + 50] }])) as string[];
+      all.push(...page);
+      if (page.length < 50) return all;
+    }
   }
 
   call(dotted: string, args: unknown[] = []) {
