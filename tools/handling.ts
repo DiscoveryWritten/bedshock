@@ -6,8 +6,9 @@
  *
  *   1. a few words on the action bar, so they know it is the harness and not the game
  *   2. the camera pulls back above and behind them, facing them. A near move glides after them; a
- *      far one (past FAR) is a cut under a fade, waiting for the destination to load, because
- *      gliding out of loaded terrain into ungenerated void was the jarring part when watched
+ *      far one (past FAR) is the satellite move: up over home, a hidden cut in the sky, down onto
+ *      the destination once it has loaded. Both gliding out of loaded terrain and a bare cut read
+ *      badly when watched on an iPad
  *   3. it is cleared afterwards, even if the test failed, so nobody is left in a free camera
  *   4. they end where they started, facing the same way
  *
@@ -27,8 +28,8 @@ const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 /** Above and behind a point, far enough back to see the player in context. */
 const pulledBack = (p: Vec): Vec => ({ x: p.x - 6, y: p.y + 5, z: p.z - 6 });
 
-/** Point the free camera at the player from somewhere near `around`, easing if asked. */
-async function frame(d: Director, around: Vec, easeTime?: number): Promise<void> {
+/** Put the free camera at `location`, facing the player, easing there if asked. */
+async function place(d: Director, location: Vec, easeTime?: number): Promise<void> {
   await d.program([
     { get: ['player'] },
     {
@@ -36,7 +37,7 @@ async function frame(d: Director, around: Vec, easeTime?: number): Promise<void>
       args: [
         'minecraft:free',
         {
-          location: pulledBack(around),
+          location,
           facingEntity: { $: 0 },
           ...(easeTime ? { easeOptions: { easeTime, easeType: 'InOutSine' } } : {}),
         },
@@ -44,6 +45,16 @@ async function frame(d: Director, around: Vec, easeTime?: number): Promise<void>
     },
   ]);
 }
+
+/** Point the free camera at the player from above and behind `around`, easing if asked. */
+const frame = (d: Director, around: Vec, easeTime?: number) => place(d, pulledBack(around), easeTime);
+
+/**
+ * High over a point, looking down at it. Up here the ground is far away and every place looks
+ * alike -- sky, haze, a distant floor -- which is what makes a cut between two of them invisible.
+ * Higher for further jumps, so the climb itself says how far.
+ */
+const overhead = (p: Vec, distance: number): Vec => ({ x: p.x - 2, y: p.y + Math.min(260, 60 + 40 * Math.log10(distance)), z: p.z - 2 });
 
 /**
  * Wait until the ground at `to` exists. A fresh far destination has no chunks yet when the player
@@ -60,7 +71,7 @@ async function landed(d: Director, to: Vec, ms = 6000): Promise<boolean> {
   return false;
 }
 
-/** Far enough that the destination is probably not loaded, so the move is covered by a fade. */
+/** Far enough that the destination is probably not loaded: past this, the satellite move. */
 const FAR = 500;
 
 /**
@@ -74,22 +85,26 @@ export async function handled<T>(d: Director, words: string, from: Vec, to: Vec,
   await d.call('player.onScreenDisplay.setActionBar', [`§e⟳ ${words}`]);
   await frame(d, from);
   try {
-    const far = distance > FAR;
-    // Cover a long jump in black while the destination generates, rather than show the void.
-    if (far) {
-      await d.call('player.camera.fade', [{ fadeTime: { fadeInTime: 0.3, holdTime: 2, fadeOutTime: 0.6 }, fadeColor: { red: 0, green: 0, blue: 0 } }]);
-      await wait(300);
+    if (distance > FAR) {
+      // THE SATELLITE MOVE. Gliding across a far jump crossed everything between, out of loaded
+      // terrain and through the void; a bare cut read as going 100k in zero time. Instead the camera
+      // climbs straight up over home, the cut happens up there behind a quick haze where both places
+      // look alike, and it descends onto the destination once the ground there exists. The climb
+      // and descent take longer the further the jump, so the distance is felt, never crossed.
+      const climb = Math.min(2.5, 0.8 + 0.35 * Math.log10(distance));
+      await place(d, overhead(from, distance), climb);
+      await wait(climb * 1000);
+      await d.call('player.camera.fade', [{ fadeTime: { fadeInTime: 0.2, holdTime: 0.5, fadeOutTime: 0.4 }, fadeColor: { red: 0.75, green: 0.82, blue: 0.9 } }]);
+      await wait(200);
+      const out = await act();
+      await landed(d, to);
+      await place(d, overhead(to, distance));
+      await place(d, pulledBack(to), climb);
+      await wait(climb * 1000 + 600);
+      return out;
     }
     const out = await act();
     await landed(d, to);
-    if (far) {
-      // A CUT, NOT A GLIDE. Gliding from home to a far destination crosses everything between, out
-      // of loaded terrain and through the void -- the jarring part. Under the fade the camera is
-      // simply put where it ends up, and the picture comes back on the ground the player is on.
-      await frame(d, to);
-      await wait(1500);
-      return out;
-    }
     // Near moves stay inside loaded terrain, so they glide; further reads as slower.
     const ease = Math.min(1.5, 0.6 + Math.log10(1 + distance) * 0.4);
     await frame(d, to, ease);
