@@ -40,6 +40,8 @@ import * as stash from './probes/stash.ts';
 import * as storage from './probes/storage.ts';
 import * as presence from './probes/presence.ts';
 import * as pulse from './pulse.ts';
+import * as harness from './probes/harness.ts';
+import * as rpc from './rpc.ts';
 import * as session from './session.ts';
 import * as chapter from './chapter.ts';
 import * as kiosk from './kiosk.ts';
@@ -53,6 +55,7 @@ type Probe = (ctx: Ctx) => void;
  */
 const PROBES: Record<string, Probe> = {
   presence: presence.run,
+  harness: harness.run,
   durability: durability.run,
   menu: menu.run,
   dynprops: dynprops.run,
@@ -174,6 +177,12 @@ system.afterEvents.scriptEventReceive.subscribe(
     // inside it would be a reading about the rig.
     if (event.id === `${NAMESPACE}:sitecheck`) {
       chapter.checkEveryBlueprint(makeCtx(playerOf(event)));
+      return;
+    }
+
+    // The test server's requests. See rpc.ts: the pack runs them without knowing what they are.
+    if (event.id === `${NAMESPACE}:rpc`) {
+      rpc.handle(event.message, playerOf(event));
       return;
     }
 

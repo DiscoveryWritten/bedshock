@@ -162,7 +162,7 @@ export const CHAPTERS: Chapter[] = [
   {
     name: 'presence',
     about: 'Whether script sees you and can act on you. Runs by itself when you spawn; here only to run it again.',
-    probes: ['presence'],
+    probes: ['presence', 'harness'],
     blueprint: { name: 'presence', steps: pad(3) },
     viewFrom: { f: 0, u: 0, s: 0 },
   },

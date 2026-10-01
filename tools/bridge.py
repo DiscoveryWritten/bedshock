@@ -102,9 +102,27 @@ class Bridge:
         self.target, self.passcode = target, passcode
         self.game = None  # (socket, protocol version)
         self.lock = threading.Lock()
+        # Every line heard, in order, for GET /events: how a program on this machine follows the game.
+        self.lines = []
+        self.heard = threading.Condition()
 
     def say(self, line):
         print(line, flush=True)
+
+    def hear(self, line):
+        with self.heard:
+            self.lines.append(line)
+            self.heard.notify_all()
+
+    def events(self, since, wait):
+        """Lines from index `since` on; waits up to `wait` seconds for the first new one. A negative
+        `since` means "from now": nothing old, just where to start."""
+        with self.heard:
+            if since < 0:
+                return len(self.lines), []
+            if len(self.lines) <= since:
+                self.heard.wait(timeout=wait)
+            return len(self.lines), self.lines[since:]
 
     # --- one connection ---------------------------------------------------------------------------
 
@@ -130,6 +148,7 @@ class Bridge:
             with open(log, "a", encoding="utf-8") as f:
                 f.write(line + "\n")
             self.say(line)
+            self.hear(line)
 
         api = set()
         self.say("connection from %s" % addr[0])
@@ -211,6 +230,20 @@ class Bridge:
                 if not bridge.send(body):
                     return self.reply(409, "no game is connected")
                 self.reply(200, "sent: " + body.strip())
+
+            def do_GET(self):
+                # GET /events?since=N  ->  {"next": M, "lines": [...]}, waiting up to 25 s for one.
+                path, _, query = self.path.partition("?")
+                if path != "/events":
+                    return self.reply(404, "GET /events?since=N")
+                params = dict(p.split("=", 1) for p in query.split("&") if "=" in p)
+                nxt, lines = bridge.events(int(params.get("since", "0")), 25)
+                data = json.dumps({"next": nxt, "lines": lines}).encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
 
             def reply(self, code, text):
                 data = (text + "\n").encode()

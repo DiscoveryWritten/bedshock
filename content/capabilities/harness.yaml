@@ -1,0 +1,19 @@
+# The harness: what a pack can do to be driven from outside, so the tests can live somewhere else.
+
+domain: harness
+about: >-
+  Whether the pack can be thin firmware -- receiving what to run rather than carrying every test
+  in its own build. Each answer here decides how much of the battery has to ship inside the pack.
+
+capabilities:
+  - id: harness.eval.compiles_received_code
+    question: >-
+      Can a behavior pack compile and run JavaScript it received at runtime (new Function), and get
+      its result back?
+    decides: >-
+      Whether the tests can live on the test server, sent to a pack that does not know what they
+      are, or whether every new test is a new build of the pack.
+    method: automated
+    surface: script
+    probe: harness
+    depends_on: [presence.player.visible_to_script]

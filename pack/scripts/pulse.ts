@@ -10,6 +10,7 @@ import { system, world } from '@minecraft/server';
 
 import { begin, done, firstLine, makeCtx } from './emit.ts';
 import { run, snapshot } from './probes/presence.ts';
+import { run as runHarness } from './probes/harness.ts';
 
 
 const HEARTBEAT_TICKS = 100;
@@ -42,6 +43,7 @@ export function install(): void {
       begin();
       try {
         run(ctx);
+        runHarness(ctx);
       } catch (err) {
         console.warn(`BEDSHOCK ERROR presence ${firstLine(err)}`);
       }

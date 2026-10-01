@@ -332,6 +332,12 @@ async function main(): Promise<void> {
       process.exit(r.status ?? 1);
     }
 
+    case 'director': {
+      const { main: director } = await import('./director.ts');
+      await director(process.argv.slice(3)).catch((e: Error) => fail(e.message));
+      break;
+    }
+
     // -----------------------------------------------------------------------
     case 'harvest': {
       const file = str(args.issues) ?? fail('usage: bedshock harvest --issues <file.json> [--record]');

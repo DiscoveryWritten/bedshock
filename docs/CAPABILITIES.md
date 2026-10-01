@@ -58,6 +58,8 @@ is how you find out the day it starts working.
 | `equipment.offhand.custom_item_declaring_allow_off_hand_persists` | **yes** |
 | `equipment.offhand.player_can_place_an_arbitrary_item` | — |
 | `equipment.offhand.has_a_use_input` | — |
+| **harness** |  |
+| `harness.eval.compiles_received_code` | · |
 | **item** |  |
 | `item.max_durability.int16_ceiling` | **yes** |
 | `item.max_durability.overflow_wraps_rather_than_clamps` | **yes** |
@@ -692,6 +694,20 @@ What script can put in a player's equipment slots, and whether it stays there. T
 <sub>method: `derived` · surface: `engine`</sub>
 
 *Established by:* Bedrock has no off-hand use input on any platform.
+
+## harness
+
+Whether the pack can be thin firmware -- receiving what to run rather than carrying every test in its own build. Each answer here decides how much of the battery has to ship inside the pack.
+
+### `harness.eval.compiles_received_code`
+
+**Can a behavior pack compile and run JavaScript it received at runtime (new Function), and get its result back?**
+
+*Decides:* Whether the tests can live on the test server, sent to a pack that does not know what they are, or whether every new test is a new build of the pack.
+
+<sub>method: `automated` · surface: `script` · probe: `harness` · rests on: `presence.player.visible_to_script`</sub>
+
+**Never measured.** This row is a guess, however confident the prose around it sounds.
 
 ## item
 
@@ -1819,5 +1835,5 @@ other repositories can carry `@requires bedshock:<id>` and `bedshock check` will
 if the cited row is not settled at that pack's `min_engine_version` — so a design can never
 quietly come to rest on a guess.
 
-<sub>81 capabilities · 28 observations · 1 version(s): 1.21.120</sub>
+<sub>82 capabilities · 28 observations · 1 version(s): 1.21.120</sub>
 

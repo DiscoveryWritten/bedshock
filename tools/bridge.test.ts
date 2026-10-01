@@ -99,6 +99,45 @@ test('a connected game becomes a log that collect records', async () => {
   }
 });
 
+test('the director sends code through the bridge and gets the answer back', async () => {
+  const { Director } = await import('./director.ts');
+  const { bridge, port, control } = await start(mkdtempSync(join(tmpdir(), 'bridge-')));
+  try {
+    // A fake game that does what rpc.ts does: reassemble the request, "run" it, print the answer.
+    const game = connect(port, '127.0.0.1');
+    await new Promise((r) => game.once('connect', r));
+    const event = (e: unknown) => game.write(frame({ type: 'event', event: e }));
+    const parts = new Map<string, string[]>();
+    let buf = Buffer.alloc(0);
+    game.on('data', (c) => {
+      buf = Buffer.concat([buf, c]);
+      const msgs = deframe(buf) as any[];
+      if (!msgs.length) return;
+      buf = Buffer.alloc(0);
+      for (const m of msgs) {
+        const r = /^scriptevent bedshock:rpc (\S+) (\d+)\/(\d+) (\S*)$/.exec(m.command ?? '');
+        if (!r) continue;
+        const got = parts.get(r[1]!) ?? [];
+        got[Number(r[2]) - 1] = r[4]!;
+        parts.set(r[1]!, got);
+        if (got.filter(Boolean).length < Number(r[3])) continue;
+        const req = JSON.parse(decodeURIComponent(got.join('')));
+        event({ type: 'PrintEvent', message: `[Scripting][warning]-BEDSHOCK RPC ${r[1]} OK ${JSON.stringify({ method: req.method, length: req.args.code.length })}`, logLevel: 2 });
+      }
+    });
+    event({ type: 'ProtocolEvent', version: 11, plugins: [] });
+    await wait(150);
+
+    const d = new Director(control);
+    // Long enough to be split into several parts on the way in.
+    const code = `return ${JSON.stringify('x'.repeat(4000))}.length`;
+    assert.deepEqual(await d.eval(code), { method: 'eval', length: code.length });
+    game.destroy();
+  } finally {
+    bridge.kill();
+  }
+});
+
 test('with no game connected, a command is refused rather than lost', async () => {
   const { bridge, control } = await start(mkdtempSync(join(tmpdir(), 'bridge-')));
   try {

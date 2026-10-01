@@ -1,13 +1,13 @@
 {
   "schema": 1,
   "minecraft": "1.21.120",
-  "catalog_revision": "rf60944f1",
-  "release": "mc-1.21.120-rf60944f1",
+  "catalog_revision": "r8466d172",
+  "release": "mc-1.21.120-r8466d172",
   "measured_through": "2026-08-03T00:00:00Z",
   "counts": {
     "SETTLED": 22,
     "CLOSED-NEGATIVE": 5,
-    "OPEN": 37,
+    "OPEN": 38,
     "INCONCLUSIVE": 1,
     "DRIFT": 0,
     "UNDERMINED": 0,
@@ -680,6 +680,18 @@
       "status": "SETTLED",
       "inherited": false,
       "established_by": "Bedrock has no off-hand use input on any platform."
+    },
+    {
+      "id": "harness.eval.compiles_received_code",
+      "question": "Can a behavior pack compile and run JavaScript it received at runtime (new Function), and get its result back?",
+      "decides": "Whether the tests can live on the test server, sent to a pack that does not know what they are, or whether every new test is a new build of the pack.",
+      "method": "automated",
+      "surface": "script",
+      "status": "OPEN",
+      "inherited": false,
+      "depends_on": [
+        "presence.player.visible_to_script"
+      ]
     },
     {
       "id": "item.max_durability.int16_ceiling",
