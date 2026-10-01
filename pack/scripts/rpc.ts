@@ -57,7 +57,11 @@ export function describe(v: unknown, depth = 2): unknown {
     return typeof v === 'function' ? `[function ${(v as Function).name}]` : v ?? null;
   }
   if (depth < 0) return `[${(v as object).constructor?.name ?? 'object'}]`;
-  if (Array.isArray(v)) return v.slice(0, 50).map((x) => describe(x, depth - 1));
+  // Lists of names (what `keys` returns) are cheap and are the point; lists of objects are not.
+  if (Array.isArray(v)) {
+    const cheap = v.every((x) => x === null || typeof x !== 'object');
+    return v.slice(0, cheap ? 2000 : 50).map((x) => describe(x, depth - 1));
+  }
   const out: Record<string, unknown> = { $type: (v as object).constructor?.name ?? 'Object' };
   const methods: string[] = [];
   for (const k of names(v).slice(0, 80)) {
