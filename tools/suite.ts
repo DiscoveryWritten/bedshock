@@ -21,6 +21,7 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } fr
 import { join } from 'node:path';
 
 import { Director } from './director.ts';
+import { handled, type Vec } from './handling.ts';
 
 type Verdict = 'YES' | 'NO' | 'INCONCLUSIVE';
 interface Answer {
@@ -55,6 +56,34 @@ const LIVE: Live[] = [
         verdict: found.length ? 'YES' : 'NO',
         measurement: { searched: ['system', 'mc', 'world'], found },
         evidence: found.length ? `candidates: ${found.join(', ')}` : 'no version anywhere in system, mc or world',
+      };
+    },
+  },
+  {
+    id: 'presence.player.teleport_lands_where_asked',
+    async run(d) {
+      // A fractional offset that a 32-bit float cannot hold far out: .37 is 0.0101111... in binary.
+      const frac = 0.37;
+      const start = (await d.get('player.location')) as Vec;
+      const samples: { distance: number; asked: Vec; got: Vec; error: number }[] = [];
+      for (const distance of [100, 1_000, 10_000, 100_000, 1_000_000, 10_000_000]) {
+        const asked = { x: distance + frac, y: 200 + frac, z: distance + frac };
+        const got = await handled(d, `teleport ${distance.toLocaleString('en-US')} out`, start, asked, async () =>
+          (await d.program([{ call: ['player', 'teleport'], args: [asked] }, { get: ['player', 'location'] }])) as Vec,
+        );
+        const error = Math.max(Math.abs(got.x - asked.x), Math.abs(got.y - asked.y), Math.abs(got.z - asked.z));
+        samples.push({ distance, asked, got, error: Number(error.toPrecision(4)) });
+      }
+      // The question is the first million blocks; ten million rides along as what happens past it.
+      const within = samples.filter((s) => s.distance <= 1_000_000);
+      const exact = within.every((s) => s.error < 0.001);
+      const first = samples.find((s) => s.error >= 0.001);
+      return {
+        verdict: exact ? 'YES' : 'NO',
+        measurement: { samples },
+        evidence: first
+          ? `lands within 0.001 out to ${samples[samples.indexOf(first) - 1]?.distance ?? 0}; at ${first.distance} off by ${first.error}`
+          : 'within 0.001 everywhere tried, to ten million',
       };
     },
   },

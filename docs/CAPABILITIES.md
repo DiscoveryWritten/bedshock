@@ -100,6 +100,7 @@ is how you find out the day it starts working.
 | `presence.player.where_and_looking` | · |
 | `presence.player.input_readable` | · |
 | `presence.player.can_be_acted_on` | · |
+| `presence.player.teleport_lands_where_asked` | · |
 | **render** |  |
 | `render.molang.unknown_query_resolves_to_zero` | — |
 | `render.molang.integer_precision` | — |
@@ -1467,6 +1468,18 @@ The person at the device, as script sees them: present, located, looking somewhe
 
 **Never measured.** This row is a guess, however confident the prose around it sounds.
 
+### `presence.player.teleport_lands_where_asked`
+
+**Does teleporting a player land them exactly where asked -- within a thousandth of a block -- out to a million blocks from the origin?**
+
+*Decides:* How far out a mechanic can place a player precisely. Positions far from the origin lose their fractional part if the engine holds them as 32-bit floats, which is the arithmetic behind the far lands; this measures where it starts for a player rather than assuming it.
+
+<sub>method: `automated` · surface: `engine` · probe: `director` · rests on: `presence.player.where_and_looking`</sub>
+
+**Never measured.** This row is a guess, however confident the prose around it sounds.
+
+> Run by the test server (tools/suite.ts) inside the visible handling in tools/handling.ts: a few words on the action bar, a pulled-back camera following the move, the player put back where they started. The measurement carries every distance tried, including ten million.
+
 ## render
 
 What can be drawn, and what the thing drawing it is allowed to know. The load-bearing question in the whole battery lives here: whether a render controller can be told which item it is drawing. If it can, one item type renders every configuration. If it cannot, every distinguishable configuration needs its own item type, and the asset count multiplies instead of layering.
@@ -1862,5 +1875,5 @@ other repositories can carry `@requires bedshock:<id>` and `bedshock check` will
 if the cited row is not settled at that pack's `min_engine_version` — so a design can never
 quietly come to rest on a guess.
 
-<sub>84 capabilities · 28 observations · 1 version(s): 1.21.120</sub>
+<sub>85 capabilities · 28 observations · 1 version(s): 1.21.120</sub>
 

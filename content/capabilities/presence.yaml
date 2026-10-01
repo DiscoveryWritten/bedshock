@@ -54,3 +54,20 @@ capabilities:
     surface: script
     probe: presence
     depends_on: [presence.player.visible_to_script]
+
+  - id: presence.player.teleport_lands_where_asked
+    question: >-
+      Does teleporting a player land them exactly where asked -- within a thousandth of a block --
+      out to a million blocks from the origin?
+    decides: >-
+      How far out a mechanic can place a player precisely. Positions far from the origin lose their
+      fractional part if the engine holds them as 32-bit floats, which is the arithmetic behind the
+      far lands; this measures where it starts for a player rather than assuming it.
+    method: automated
+    surface: engine
+    probe: director
+    depends_on: [presence.player.where_and_looking]
+    notes: >-
+      Run by the test server (tools/suite.ts) inside the visible handling in tools/handling.ts: a
+      few words on the action bar, a pulled-back camera following the move, the player put back
+      where they started. The measurement carries every distance tried, including ten million.

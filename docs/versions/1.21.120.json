@@ -1,13 +1,13 @@
 {
   "schema": 1,
   "minecraft": "1.21.120",
-  "catalog_revision": "r2b78d4eb",
-  "release": "mc-1.21.120-r2b78d4eb",
+  "catalog_revision": "r94cc1c65",
+  "release": "mc-1.21.120-r94cc1c65",
   "measured_through": "2026-08-03T00:00:00Z",
   "counts": {
     "SETTLED": 22,
     "CLOSED-NEGATIVE": 5,
-    "OPEN": 40,
+    "OPEN": 41,
     "INCONCLUSIVE": 1,
     "DRIFT": 0,
     "UNDERMINED": 0,
@@ -1607,6 +1607,18 @@
       "inherited": false,
       "depends_on": [
         "presence.player.visible_to_script"
+      ]
+    },
+    {
+      "id": "presence.player.teleport_lands_where_asked",
+      "question": "Does teleporting a player land them exactly where asked -- within a thousandth of a block -- out to a million blocks from the origin?",
+      "decides": "How far out a mechanic can place a player precisely. Positions far from the origin lose their fractional part if the engine holds them as 32-bit floats, which is the arithmetic behind the far lands; this measures where it starts for a player rather than assuming it.",
+      "method": "automated",
+      "surface": "engine",
+      "status": "OPEN",
+      "inherited": false,
+      "depends_on": [
+        "presence.player.where_and_looking"
       ]
     },
     {
