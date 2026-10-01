@@ -21,7 +21,7 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } fr
 import { join } from 'node:path';
 
 import { Director } from './director.ts';
-import { handled, type Vec } from './handling.ts';
+import { handled, settled, type Vec } from './handling.ts';
 import { lab } from './lab.ts';
 
 type Verdict = 'YES' | 'NO' | 'INCONCLUSIVE';
@@ -33,6 +33,8 @@ interface Answer {
 
 interface Live {
   id: string;
+  /** Moves or relies on the player standing still, so it waits out touch input rather than fight it. */
+  still?: boolean;
   run(d: Director): Promise<Answer>;
 }
 
@@ -62,6 +64,7 @@ const LIVE: Live[] = [
   },
   {
     id: 'presence.player.teleport_lands_where_asked',
+    still: true,
     async run(d) {
       // A fractional offset that a 32-bit float cannot hold far out: .37 is 0.0101111... in binary.
       const frac = 0.37;
@@ -150,6 +153,12 @@ export async function suite(opts: { retest?: boolean; say?: (l: string) => void 
   for (const t of LIVE) {
     if (skip(t.id)) {
       write(`BEDSHOCK SKIP ${t.id} already answered for ${fp}: ${done[t.id]}`);
+      continue;
+    }
+    // Touch input moving the player is the iPad's screen, not the game. Set this one aside -- not
+    // answered, so it runs next time -- and carry on with the rest. Never a pause, never a finding.
+    if (t.still && !(await settled(d, 5000))) {
+      write(`BEDSHOCK SKIP ${t.id} touch input active -- player not still; next run will try again`);
       continue;
     }
     try {

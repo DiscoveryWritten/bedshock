@@ -71,6 +71,31 @@ async function landed(d: Director, to: Vec, ms = 6000): Promise<boolean> {
   return false;
 }
 
+/**
+ * Is the player still? The iPad this harness runs on has a broken screen that fires touches by
+ * itself (docs/HARNESS.md). Touch input steering the player is the screen, not the game, and a
+ * reading taken under it is about the screen. So before a test that needs the player still, wait
+ * for two readings a second apart that agree; if they never do within `ms`, the caller sets that
+ * one test aside for next time and carries on. Never a pause, never a finding.
+ */
+export async function settled(d: Director, ms = 15000): Promise<boolean> {
+  const read = async () => {
+    const [loc, rot] = (await Promise.all([d.get('player.location'), d.call('player.getRotation')])) as [Vec, { x: number; y: number }];
+    return { loc, rot };
+  };
+  const deadline = Date.now() + ms;
+  let a = await read();
+  while (Date.now() < deadline) {
+    await wait(1000);
+    const b = await read();
+    const moved = Math.hypot(b.loc.x - a.loc.x, b.loc.y - a.loc.y, b.loc.z - a.loc.z);
+    const turned = Math.abs(b.rot.x - a.rot.x) + Math.abs(b.rot.y - a.rot.y);
+    if (moved < 0.05 && turned < 1) return true;
+    a = b;
+  }
+  return false;
+}
+
 /** Far enough that the destination is probably not loaded: past this, the satellite move. */
 const FAR = 500;
 
