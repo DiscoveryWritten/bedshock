@@ -132,14 +132,25 @@ const FAR = 500;
  * Run `act`, which moves the player from `from` towards `to`, inside the visible handling. Returns
  * whatever `act` returns. The player is put back where they were, facing the same way.
  */
-export async function handled<T>(d: Director, words: string, from: Vec, to: Vec, act: () => Promise<T>): Promise<T> {
+export async function handled<T>(
+  d: Director,
+  words: string,
+  from: Vec,
+  to: Vec,
+  act: () => Promise<T>,
+  /** `stay`: a move that is the point, not a test -- the player is not put back afterwards. */
+  opts: { stay?: boolean } = {},
+): Promise<T> {
   const home = (await d.get('player.location')) as Vec;
   const rotation = (await d.call('player.getRotation')) as { x: number; y: number };
   const distance = Math.hypot(to.x - from.x, to.y - from.y, to.z - from.z);
   await d.call('player.onScreenDisplay.setActionBar', [`§e⟳ ${words}`]);
   await frame(d, from);
   try {
-    if (distance > FAR) {
+    // The satellite move for anything far -- or near but not loaded yet, since gliding into
+    // ungenerated ground is the same void whatever the distance.
+    const loaded = distance <= FAR && !!(await d.call('player.dimension.getBlock', [{ x: Math.floor(to.x), y: Math.floor(to.y) - 1, z: Math.floor(to.z) }]).catch(() => null));
+    if (!loaded) {
       // THE SATELLITE MOVE. Gliding across a far jump crossed everything between, out of loaded
       // terrain and through the void; a bare cut read as going 100k in zero time. Instead the camera
       // climbs straight up over home, the cut happens up there behind a quick haze where both places
@@ -165,7 +176,7 @@ export async function handled<T>(d: Director, words: string, from: Vec, to: Vec,
     await wait(ease * 1000 + 500);
     return out;
   } finally {
-    await d.call('player.teleport', [home, { rotation }]).catch(() => {});
+    if (!opts.stay) await d.call('player.teleport', [home, { rotation }]).catch(() => {});
     await d.call('player.camera.clear').catch(() => {});
     await d.call('player.onScreenDisplay.setActionBar', ['§7back']).catch(() => {});
   }
