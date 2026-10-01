@@ -7,7 +7,7 @@ export interface DurabilityId { declared: number; id: string }
 export interface StateBlockId { states: number; values: number; bits: number; id: string }
 
 export const NAMESPACE = "bedshock";
-export const PACK_VERSION = "0.1.3";
+export const PACK_VERSION = "0.1.4";
 
 export const IDS: {
   durability: DurabilityId[];

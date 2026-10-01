@@ -1,15 +1,19 @@
 /**
  * Can a pack run code it was handed at runtime?
  *
- * The question the thin client rests on. If yes, the tests live on the test server and the pack
- * only runs what it is sent (rpc.ts). If no, the pack's fixed methods are the whole surface and
- * every new kind of test is a new build.
+ * Answered NO on an iPad client (2026-10-01): "TypeError: Function from string is not supported".
+ * Kept as a row so the day it changes, something says so. Until then rpc.ts drives the game by
+ * reflection over its own API instead of by code.
  */
 
 import { firstLine, result, willReportLater, type Ctx } from '../emit.ts';
-import { compile } from '../rpc.ts';
 
 const ROW = 'harness.eval.compiles_received_code';
+
+/** Compile `code` as an async function body. Measured, not relied on: see rpc.ts for what is. */
+function compile(code: string): () => Promise<unknown> {
+  return new Function(`return (async () => {\n${code}\n})();`) as never;
+}
 
 export function run(ctx: Ctx): void {
   let f: ReturnType<typeof compile>;

@@ -122,16 +122,17 @@ test('the director sends code through the bridge and gets the answer back', asyn
         parts.set(r[1]!, got);
         if (got.filter(Boolean).length < Number(r[3])) continue;
         const req = JSON.parse(decodeURIComponent(got.join('')));
-        event({ type: 'PrintEvent', message: `[Scripting][warning]-BEDSHOCK RPC ${r[1]} OK ${JSON.stringify({ method: req.method, length: req.args.code.length })}`, logLevel: 2 });
+        const answer = { method: req.method, steps: req.args.program.length, arg: req.args.program[0].args[0].length };
+        event({ type: 'PrintEvent', message: `[Scripting][warning]-BEDSHOCK RPC ${r[1]} OK ${JSON.stringify(answer)}`, logLevel: 2 });
       }
     });
     event({ type: 'ProtocolEvent', version: 11, plugins: [] });
     await wait(150);
 
     const d = new Director(control);
-    // Long enough to be split into several parts on the way in.
-    const code = `return ${JSON.stringify('x'.repeat(4000))}.length`;
-    assert.deepEqual(await d.eval(code), { method: 'eval', length: code.length });
+    // An argument long enough that the request is split into several parts on the way in.
+    const long = 'x'.repeat(4000);
+    assert.deepEqual(await d.call('player.sendMessage', [long]), { method: 'run', steps: 1, arg: long.length });
     game.destroy();
   } finally {
     bridge.kill();
