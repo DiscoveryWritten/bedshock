@@ -53,6 +53,7 @@ is how you find out the day it starts working.
 | `entity.stash.holder_findable_after_chunk_unload` | **yes** |
 | `entity.stash.holder_findable_after_world_reload` | **yes** |
 | `entity.falling_block.is_trackable_by_script` | **yes** |
+| `entity.item.nearby_stacks_merge` | · |
 | **equipment** |  |
 | `equipment.offhand.vanilla_permitted_item_persists` | · |
 | `equipment.offhand.accepts_a_script_placed_item` | **yes** |
@@ -122,6 +123,8 @@ is how you find out the day it starts working.
 | `storage.structure.round_trips_a_built_room` | · |
 | `storage.region.loads_without_a_player` | · |
 | `storage.block.exact_at_extreme_coordinates` | · |
+| `storage.block.bedrock_floor_writable` | · |
+| `storage.structure.largest_empty` | · |
 | **ui** |  |
 | `ui.form.button_icon_resolves_an_unindexed_path` | · |
 | `ui.form.button_icon_resolves_a_bare_atlas_key` | · |
@@ -600,6 +603,16 @@ Entities are the only container host Bedrock offers, so every design that needs 
 </details>
 
 > The measurement records the sampled velocities as well as the sighting count. Vanilla falling-block gravity is a known curve, so the numbers confirm the entity being watched is the real one rather than a look-alike -- and that `getVelocity()` on it is not zeroed the way a collided entity's is.
+
+### `entity.item.nearby_stacks_merge`
+
+**Do two stacks of the same item, dropped by script a fraction of a block apart, merge into one item entity on their own within a few seconds -- and what does the item entity expose about its own age or despawn?**
+
+*Decides:* Whether a mechanic that gathers dropped items gets stack consolidation from the game for free, and whether anything in the API can hold an item against despawning.
+
+<sub>method: `automated` · surface: `engine` · probe: `director`</sub>
+
+**Never measured.** This row is a guess, however confident the prose around it sounds.
 
 ## equipment
 
@@ -1787,6 +1800,26 @@ Keeping state in the world itself rather than in scoreboards or dynamic properti
 
 > The question stops at ten million on purpose; the measurement goes to 29,999,000 and records what happens there. On an iPad (2026-10-01) everything to ten million was exact, and past 2^24 (16,777,216) the block API's coordinates are float32 too: asked for x 29,999,003 and z 29,999,005, it answered with the block at 29,999,004 for both. Two addresses alias one block, silently. Anything storing state out there must stay inside +-16.7 million or use even coordinates only.
 
+### `storage.block.bedrock_floor_writable`
+
+**Can script replace a block of the bedrock floor (y -64) and read it back, and does anything in the game put bedrock back on its own over the following ten seconds?**
+
+*Decides:* Whether state can live directly under the chunks a pack already uses, out of every player's way, with no extra chunks to keep loaded.
+
+<sub>method: `automated` · surface: `engine` · probe: `director`</sub>
+
+**Never measured.** This row is a guess, however confident the prose around it sounds.
+
+### `storage.structure.largest_empty`
+
+**What is the largest structure createEmpty will make -- trying 64, 96 and 128 wide at 384 tall, and 64 wide at 512 tall?**
+
+*Decides:* How much one structure can hold, and so how state stored in structures has to be paged.
+
+<sub>method: `automated` · surface: `engine` · probe: `director`</sub>
+
+**Never measured.** This row is a guess, however confident the prose around it sounds.
+
 ## ui
 
 `@minecraft/server-ui` is the only surface where a pack can draw an arbitrary picture per stack, which makes what a button's icon path actually resolves the most valuable unmeasured thing in this file. Everything else here is about the boundaries of the form API -- what it cannot be made to do, recorded so nobody spends a session finding out.
@@ -1923,5 +1956,5 @@ other repositories can carry `@requires bedshock:<id>` and `bedshock check` will
 if the cited row is not settled at that pack's `min_engine_version` — so a design can never
 quietly come to rest on a guess.
 
-<sub>89 capabilities · 28 observations · 1 version(s): 1.21.120</sub>
+<sub>92 capabilities · 28 observations · 1 version(s): 1.21.120</sub>
 

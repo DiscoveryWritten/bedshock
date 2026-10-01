@@ -1,13 +1,13 @@
 {
   "schema": 1,
   "minecraft": "1.21.120",
-  "catalog_revision": "r32a3cf91",
-  "release": "mc-1.21.120-r32a3cf91",
+  "catalog_revision": "r49dfa109",
+  "release": "mc-1.21.120-r49dfa109",
   "measured_through": "2026-08-03T00:00:00Z",
   "counts": {
     "SETTLED": 22,
     "CLOSED-NEGATIVE": 5,
-    "OPEN": 45,
+    "OPEN": 48,
     "INCONCLUSIVE": 1,
     "DRIFT": 0,
     "UNDERMINED": 0,
@@ -590,6 +590,15 @@
           10
         ]
       }
+    },
+    {
+      "id": "entity.item.nearby_stacks_merge",
+      "question": "Do two stacks of the same item, dropped by script a fraction of a block apart, merge into one item entity on their own within a few seconds -- and what does the item entity expose about its own age or despawn?",
+      "decides": "Whether a mechanic that gathers dropped items gets stack consolidation from the game for free, and whether anything in the API can hold an item against despawning.",
+      "method": "automated",
+      "surface": "engine",
+      "status": "OPEN",
+      "inherited": false
     },
     {
       "id": "equipment.offhand.vanilla_permitted_item_persists",
@@ -2014,6 +2023,24 @@
       "depends_on": [
         "storage.region.loads_without_a_player"
       ]
+    },
+    {
+      "id": "storage.block.bedrock_floor_writable",
+      "question": "Can script replace a block of the bedrock floor (y -64) and read it back, and does anything in the game put bedrock back on its own over the following ten seconds?",
+      "decides": "Whether state can live directly under the chunks a pack already uses, out of every player's way, with no extra chunks to keep loaded.",
+      "method": "automated",
+      "surface": "engine",
+      "status": "OPEN",
+      "inherited": false
+    },
+    {
+      "id": "storage.structure.largest_empty",
+      "question": "What is the largest structure createEmpty will make -- trying 64, 96 and 128 wide at 384 tall, and 64 wide at 512 tall?",
+      "decides": "How much one structure can hold, and so how state stored in structures has to be paged.",
+      "method": "automated",
+      "surface": "engine",
+      "status": "OPEN",
+      "inherited": false
     },
     {
       "id": "ui.form.button_icon_resolves_an_unindexed_path",

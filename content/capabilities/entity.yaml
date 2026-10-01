@@ -397,3 +397,15 @@ capabilities:
       falling-block gravity is a known curve, so the numbers confirm the entity being watched
       is the real one rather than a look-alike -- and that `getVelocity()` on it is not zeroed
       the way a collided entity's is.
+
+  - id: entity.item.nearby_stacks_merge
+    question: >-
+      Do two stacks of the same item, dropped by script a fraction of a block apart, merge into one
+      item entity on their own within a few seconds -- and what does the item entity expose about its
+      own age or despawn?
+    decides: >-
+      Whether a mechanic that gathers dropped items gets stack consolidation from the game for free,
+      and whether anything in the API can hold an item against despawning.
+    method: automated
+    surface: engine
+    probe: director

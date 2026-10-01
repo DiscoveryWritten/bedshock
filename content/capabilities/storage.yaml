@@ -199,3 +199,24 @@ capabilities:
       29,999,005, it answered with the block at 29,999,004 for both. Two addresses alias one block,
       silently. Anything storing state out there must stay inside +-16.7 million or use even
       coordinates only.
+
+  - id: storage.block.bedrock_floor_writable
+    question: >-
+      Can script replace a block of the bedrock floor (y -64) and read it back, and does anything in
+      the game put bedrock back on its own over the following ten seconds?
+    decides: >-
+      Whether state can live directly under the chunks a pack already uses, out of every player's way,
+      with no extra chunks to keep loaded.
+    method: automated
+    surface: engine
+    probe: director
+
+  - id: storage.structure.largest_empty
+    question: >-
+      What is the largest structure createEmpty will make -- trying 64, 96 and 128 wide at 384 tall,
+      and 64 wide at 512 tall?
+    decides: >-
+      How much one structure can hold, and so how state stored in structures has to be paged.
+    method: automated
+    surface: engine
+    probe: director

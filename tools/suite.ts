@@ -180,6 +180,107 @@ const LIVE: Live[] = [
       return { verdict: ok ? 'YES' : 'NO', measurement: { readings, source: src }, evidence: `one block away: ${JSON.stringify(readings)}` };
     },
   },
+  {
+    id: 'storage.block.bedrock_floor_writable',
+    async run(d) {
+      const me = (await d.get('player.location')) as Vec;
+      const at = { x: Math.floor(me.x), y: -64, z: Math.floor(me.z) };
+      const read = async () => ((await d.call('player.dimension.getBlock', [at])) as { typeId?: string } | null)?.typeId ?? null;
+      const set = (block: string) => d.program([{ call: ['mc', 'BlockPermutation', 'resolve'], args: [block] }, { call: ['player', 'dimension', 'setBlockPermutation'], args: [at, { $: 0 }] }]);
+      const was = await read();
+      let wrote: string | null = null, after10s: string | null = null, error: string | undefined;
+      try {
+        await set('minecraft:gold_block');
+        wrote = await read();
+        await new Promise((r) => setTimeout(r, 10000));
+        after10s = await read();
+      } catch (e) {
+        error = (e as Error).message.slice(0, 160);
+      } finally {
+        if (was) await set(was).catch(() => {});
+      }
+      const ok = wrote === 'minecraft:gold_block' && after10s === 'minecraft:gold_block';
+      return {
+        verdict: error ? 'INCONCLUSIVE' : ok ? 'YES' : 'NO',
+        measurement: { at, was, wrote, after10s, ...(error ? { error } : {}) },
+        evidence: error ?? `was ${was}, wrote ${wrote}, after 10 s ${after10s}; ${was} put back`,
+      };
+    },
+  },
+  {
+    id: 'storage.structure.largest_empty',
+    async run(d) {
+      const tries = [
+        { x: 64, y: 384, z: 64 },
+        { x: 96, y: 384, z: 96 },
+        { x: 128, y: 384, z: 128 },
+        { x: 64, y: 512, z: 64 },
+      ];
+      const out: { size: Vec; ok: boolean; error?: string }[] = [];
+      for (const size of tries) {
+        const id = `bedshock:size_${size.x}x${size.y}x${size.z}`;
+        try {
+          await d.call('world.structureManager.createEmpty', [id, size, 'Memory']);
+          out.push({ size, ok: true });
+        } catch (e) {
+          out.push({ size, ok: false, error: (e as Error).message.slice(0, 140) });
+        } finally {
+          await d.call('world.structureManager.delete', [id]).catch(() => {});
+        }
+      }
+      const largest = out.filter((o) => o.ok).sort((a, b) => b.size.x * b.size.y * b.size.z - a.size.x * a.size.y * a.size.z)[0];
+      return {
+        verdict: largest ? 'YES' : 'NO',
+        measurement: { tries: out },
+        evidence: out.map((o) => `${o.size.x}x${o.size.y}x${o.size.z} ${o.ok ? 'made' : `refused (${o.error})`}`).join('; '),
+      };
+    },
+  },
+  {
+    id: 'entity.item.nearby_stacks_merge',
+    async run(d) {
+      // On solid ground, out of the player's reach: straight down from a point 3 blocks beside them,
+      // to the first block, and one above it. The first run dropped them over an edge, where they
+      // fell out of the counting radius and read as "merged into nothing".
+      const me = (await d.get('player.location')) as Vec;
+      const over = { x: Math.floor(me.x) + 3.5, y: Math.floor(me.y) + 1, z: Math.floor(me.z) - 6.5 };
+      const ground = (await d.call('player.dimension.getBlockFromRay', [over, { x: 0, y: -1, z: 0 }, { maxDistance: 64 }])) as { block?: { location?: Vec } } | null;
+      const floor = ground?.block?.location;
+      if (!floor) return { verdict: 'INCONCLUSIVE', evidence: 'no ground found to drop onto' };
+      const at = { x: floor.x + 0.5, y: floor.y + 1.2, z: floor.z + 0.5 };
+      const count = async () =>
+        ((await d.program([{ call: ['player', 'dimension', 'getEntities'], args: [{ type: 'minecraft:item', location: at, maxDistance: 3 }] }, { get: ['$0', 'length'] }])) as number) ?? 0;
+      const before = await count();
+      for (const dx of [0, 0.3]) {
+        await d.program([
+          { new: ['mc', 'ItemStack'], args: ['minecraft:diamond', 1] },
+          { call: ['player', 'dimension', 'spawnItem'], args: [{ $: 0 }, { x: at.x + dx, y: at.y, z: at.z }] },
+        ]);
+      }
+      const spawned = (await count()) - before;
+      await new Promise((r) => setTimeout(r, 5000));
+      const after = (await count()) - before;
+      const keys = (await d.program([
+        { call: ['player', 'dimension', 'getEntities'], args: [{ type: 'minecraft:item', location: at, maxDistance: 3 }] },
+        { get: ['$0', '0'] },
+        { keys: ['$1'] },
+      ]).catch(() => [])) as string[];
+      const comp = (await d.program([
+        { call: ['player', 'dimension', 'getEntities'], args: [{ type: 'minecraft:item', location: at, maxDistance: 3 }] },
+        { get: ['$0', '0'] },
+        { call: ['$1', 'getComponent'], args: ['minecraft:item'] },
+        { keys: ['$2'] },
+      ]).catch(() => [])) as string[];
+      await d.call('player.runCommand', [`kill @e[type=item,x=${at.x},y=${at.y},z=${at.z},r=3]`]).catch(() => {});
+      // "applyDamage" ends in "age"; match the word, not the letters.
+      const ageish = [...keys, ...comp].filter((k) => /^age$|[a-z]Age$|despawn|lifetime|persist|pickup/i.test(k));
+      return {
+        verdict: spawned === 2 && after === 1 ? 'YES' : spawned === 2 ? 'NO' : 'INCONCLUSIVE',
+        measurement: { spawned, afterFiveSeconds: after, itemComponent: comp, ageOrDespawnKeys: ageish },
+        evidence: `${spawned} dropped, ${after} after 5 s; age/despawn API: ${ageish.join(', ') || 'none'}`,
+      };
+    },
+  },
 ];
 
 /** Pack probes safe to run with nobody asked: headless rows only, nothing on the player's screen. */
