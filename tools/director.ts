@@ -97,6 +97,20 @@ export class Director {
     return this.rpc('run', { program: steps });
   }
 
+  /** Subscribe to a world event on the device; firings arrive as `BEDSHOCK EVENT <id> ...` lines. */
+  async tap(event: string, phase: 'before' | 'after' = 'after', cancel?: { item?: string; block?: string }): Promise<string> {
+    return ((await this.rpc('tap', { event, phase, ...(cancel ? { cancel } : {}) })) as { tap: string }).tap;
+  }
+
+  /** Run a program every `every` ticks on the device; changes arrive as `BEDSHOCK WATCH <id> ...`. */
+  async watch(program: Step[], every = 1): Promise<string> {
+    return ((await this.rpc('watch', { program, every })) as { watch: string }).watch;
+  }
+
+  stop(id: string) {
+    return this.rpc('stop', { id });
+  }
+
   get(dotted: string) {
     return this.program([{ get: path(dotted) }]);
   }

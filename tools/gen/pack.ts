@@ -68,6 +68,7 @@ export function probeIds(c: PackConfig) {
     attach_pose: `${ns}:${PREFIX}_att_pose`,
     stash_carrier: p.stash.carrier,
     stash_holder: p.stash.holder,
+    goo: `${ns}:${PREFIX}_goo`,
     states: p.storage.state_blocks.map(({ states, values }) => ({
       states,
       values,
@@ -75,6 +76,69 @@ export function probeIds(c: PackConfig) {
       id: `${ns}:${PREFIX}_states_${states}x${values}`,
     })),
   };
+}
+
+// ---------------------------------------------------------------------------
+// The goo lab block
+// ---------------------------------------------------------------------------
+
+/**
+ * A stand-in for goo, built to be MEASURED rather than played: heights 1..8 eighths, each with its
+ * own collision box (2 px to 16 px), attachable to any face (placement_position, block_face), and a
+ * `lit` state that makes it a redstone producer. Every custom-component hook it has logs what it saw
+ * (pack/scripts/goo.ts), so a device says which heights can be stepped on, fallen on, interacted
+ * with and powered. The model is a full cube at every height on purpose: this measures collision and
+ * events, not looks, and a custom model is a second thing that could be wrong.
+ */
+function gooFiles(c: PackConfig): OutFile[] {
+  const id = probeIds(c).goo;
+  const box = (h: number) => ({ origin: [-8, 0, -8], size: [16, h * 2, 16] });
+  const texture = `${PREFIX}_goo`;
+  return [
+    {
+      path: `BP/blocks/${id.split(':')[1]}.json`,
+      data: j({
+        format_version: c.format_versions.goo_block,
+        'minecraft:block': {
+          description: {
+            identifier: id,
+            menu_category: { category: 'none' },
+            states: {
+              [`${c.namespace}:height`]: [1, 2, 3, 4, 5, 6, 7, 8],
+              [`${c.namespace}:lit`]: [false, true],
+            },
+            traits: { 'minecraft:placement_position': { enabled_states: ['minecraft:block_face'] } },
+          },
+          components: {
+            'minecraft:geometry': 'minecraft:geometry.full_block',
+            'minecraft:material_instances': { '*': { texture, render_method: 'alpha_test' } },
+            'minecraft:collision_box': box(1),
+            'minecraft:selection_box': box(1),
+            [`${c.namespace}:goo_lab`]: {},
+          },
+          permutations: [
+            ...[1, 2, 3, 4, 5, 6, 7, 8].map((h) => ({
+              condition: `q.block_state('${c.namespace}:height') == ${h}`,
+              components: { 'minecraft:collision_box': box(h), 'minecraft:selection_box': box(h) },
+            })),
+            {
+              condition: `q.block_state('${c.namespace}:lit')`,
+              components: { 'minecraft:redstone_producer': { power: 15 } },
+            },
+          ],
+        },
+      }),
+    },
+    { path: `RP/textures/blocks/${texture}.png`, data: solid(16, '#66dd33') },
+    {
+      path: 'RP/textures/terrain_texture.json',
+      data: j({
+        resource_pack_name: c.name,
+        texture_name: 'atlas.terrain',
+        texture_data: { [texture]: { textures: `textures/blocks/${texture}` } },
+      }),
+    },
+  ];
 }
 
 // ---------------------------------------------------------------------------
@@ -773,6 +837,7 @@ export function generatedModule(c: PackConfig): string {
     '  attach_pose: string;',
     '  stash_carrier: string;',
     '  stash_holder: string;',
+    '  goo: string;',
     '  states: StateBlockId[];',
     `} = ${JSON.stringify(ids, null, 2)};`,
     `export const STATE_PREFIX = ${JSON.stringify(stateName(c, 0).slice(0, -1))};`,
@@ -792,6 +857,7 @@ export function packFiles(c: PackConfig): OutFile[] {
     ...itemSpecs(c).map((spec) => itemFile(c, spec)),
     ...ids.containers.map((v) => containerEntity(c, v)),
     ...stateBlockFiles(c),
+    ...gooFiles(c),
     ...entityClientFiles(c),
     ...attachableFiles(c),
     ...textureFiles(c),

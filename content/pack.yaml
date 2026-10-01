@@ -15,7 +15,7 @@ namespace: bedshock
 name: bedshock
 description: A capability battery. Measures what Bedrock can do; ships no gameplay.
 
-version: [0, 1, 4]
+version: [0, 1, 5]
 
 # !! THIS PACK PINS THE NEWEST SCRIPT API, ALWAYS. !!
 #
@@ -63,6 +63,9 @@ format_versions:
   item_texture: "1.16.100"
   entity: "1.21.0"
   block: "1.21.40"
+  # The goo lab block needs redstone_producer (1.21.120+) and custom components by name in its
+  # components (1.21.90+), so it declares its own, newer format.
+  goo_block: "1.21.120"
 
 # ---------------------------------------------------------------------------
 # Probe parameters

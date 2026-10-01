@@ -136,10 +136,87 @@ function reply(id: string, ok: boolean, value: unknown): void {
   console.warn(`BEDSHOCK RPC ${id} ${ok ? 'OK' : 'ERR'} ${text}`);
 }
 
+// --- taps and watches: what reflection alone cannot do -------------------------------------------
+//
+// Reflection can call anything but cannot register a callback, and cannot loop on the device. These
+// are the two generic exceptions, both data rather than code:
+//
+//   TAP    subscribe to any world event; every firing is logged as `BEDSHOCK EVENT <id> <json>`.
+//          A before-event may be cancelled by a rule: { item?: typeId, block?: typeId } -- cancel
+//          when the event's itemStack and block match.
+//   WATCH  run a program on the device every N ticks; log `BEDSHOCK WATCH <id> <json>` only when the
+//          answer changes. Polling-based detection, measured where it would run.
+
+const taps = new Map<string, () => void>();
+const watches = new Map<string, number>();
+let serial = 0;
+
+function tap(a: { event: string; phase?: 'before' | 'after'; cancel?: { item?: string; block?: string } }): { tap: string } {
+  const phase = a.phase ?? 'after';
+  const signal = (world as unknown as Record<string, Record<string, { subscribe: Function; unsubscribe: Function }>>)[`${phase}Events`]?.[a.event];
+  if (!signal) throw new Error(`no ${phase} event ${a.event}`);
+  const id = `t${++serial}`;
+  const handler = (ev: Record<string, any>) => {
+    if (a.cancel && phase === 'before') {
+      const itemOk = !a.cancel.item || ev.itemStack?.typeId === a.cancel.item;
+      const blockOk = !a.cancel.block || ev.block?.typeId === a.cancel.block;
+      if (itemOk && blockOk) ev.cancel = true;
+    }
+    let text: string;
+    try {
+      text = JSON.stringify(describe(ev, 1));
+    } catch (err) {
+      text = JSON.stringify({ error: String(err) });
+    }
+    console.warn(`BEDSHOCK EVENT ${id} ${a.event} ${text}`);
+  };
+  signal.subscribe(handler);
+  taps.set(id, () => signal.unsubscribe(handler));
+  return { tap: id };
+}
+
+function watch(a: { program: Step[]; every?: number }, player: Player | undefined): { watch: string } {
+  const id = `w${++serial}`;
+  let last = '';
+  const handle = system.runInterval(async () => {
+    let text: string;
+    try {
+      text = JSON.stringify(describe(await runProgram(a.program, player ?? world.getPlayers()[0]), 2));
+    } catch (err) {
+      text = JSON.stringify({ error: String(err) });
+    }
+    if (text === last) return;
+    last = text;
+    console.warn(`BEDSHOCK WATCH ${id} ${system.currentTick} ${text}`);
+  }, Math.max(1, a.every ?? 1));
+  watches.set(id, handle);
+  return { watch: id };
+}
+
+function stop(a: { id: string }): { stopped: boolean } {
+  const untap = taps.get(a.id);
+  if (untap) {
+    untap();
+    taps.delete(a.id);
+    return { stopped: true };
+  }
+  const handle = watches.get(a.id);
+  if (handle !== undefined) {
+    system.clearRun(handle);
+    watches.delete(a.id);
+    return { stopped: true };
+  }
+  return { stopped: false };
+}
+
 const METHODS: Record<string, (args: any, player: Player | undefined) => unknown> = {
   hello: () => ({ pack: PACK_VERSION, players: world.getPlayers().length, methods: Object.keys(METHODS) }),
   players: () => world.getPlayers().map(snapshot),
   run: (a, player) => runProgram(Array.isArray(a?.program) ? a.program : [], player),
+  tap: (a) => tap(a),
+  watch: (a, player) => watch(a, player),
+  stop: (a) => stop(a),
+  active: () => ({ taps: [...taps.keys()], watches: [...watches.keys()] }),
 };
 
 export function handle(message: string, source: Player | undefined): void {

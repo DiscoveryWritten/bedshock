@@ -7,7 +7,7 @@ export interface DurabilityId { declared: number; id: string }
 export interface StateBlockId { states: number; values: number; bits: number; id: string }
 
 export const NAMESPACE = "bedshock";
-export const PACK_VERSION = "0.1.4";
+export const PACK_VERSION = "0.1.5";
 
 export const IDS: {
   durability: DurabilityId[];
@@ -25,6 +25,7 @@ export const IDS: {
   attach_pose: string;
   stash_carrier: string;
   stash_holder: string;
+  goo: string;
   states: StateBlockId[];
 } = {
   "durability": [
@@ -147,6 +148,7 @@ export const IDS: {
   "attach_pose": "bedshock:probe_att_pose",
   "stash_carrier": "minecraft:shulker_box",
   "stash_holder": "bedshock:probe_box_chest5",
+  "goo": "bedshock:probe_goo",
   "states": [
     {
       "states": 1,

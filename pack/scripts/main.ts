@@ -42,6 +42,7 @@ import * as presence from './probes/presence.ts';
 import * as pulse from './pulse.ts';
 import * as harness from './probes/harness.ts';
 import * as rpc from './rpc.ts';
+import * as goo from './goo.ts';
 import * as session from './session.ts';
 import * as chapter from './chapter.ts';
 import * as kiosk from './kiosk.ts';
@@ -266,6 +267,9 @@ kiosk.install();
 
 // THE THIN START: a player spawning is all it takes. See probes/presence.ts.
 pulse.install();
+
+// The goo lab block's hooks, registered at startup -- the only time a custom component can be.
+goo.install();
 
 world.afterEvents.worldLoad.subscribe(() => {
   console.warn(
