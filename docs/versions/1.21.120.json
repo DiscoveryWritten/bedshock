@@ -1,13 +1,13 @@
 {
   "schema": 1,
   "minecraft": "1.21.120",
-  "catalog_revision": "rbd1c524d",
-  "release": "mc-1.21.120-rbd1c524d",
+  "catalog_revision": "r32a3cf91",
+  "release": "mc-1.21.120-r32a3cf91",
   "measured_through": "2026-08-03T00:00:00Z",
   "counts": {
     "SETTLED": 22,
     "CLOSED-NEGATIVE": 5,
-    "OPEN": 42,
+    "OPEN": 45,
     "INCONCLUSIVE": 1,
     "DRIFT": 0,
     "UNDERMINED": 0,
@@ -1840,6 +1840,15 @@
       "legacy": "P3c"
     },
     {
+      "id": "render.light.script_light_reaches_neighbours",
+      "question": "Does a light source placed by script (minecraft:light_block at a chosen level) change the light level script reads one block away, and does removing it put the level back?",
+      "decides": "Whether anything script controls can light a space as an effect, at a chosen strength, and be animated. Says nothing about COLOURED light, which is a separate question.",
+      "method": "automated",
+      "surface": "engine",
+      "status": "OPEN",
+      "inherited": false
+    },
+    {
       "id": "storage.block.state_permutation_bits",
       "question": "How many bits can one custom block position hold -- that is, how many permutations of its states will the game accept on a single block?",
       "decides": "The density of anything stored as blocks: how many blocks a page of state costs. States multiply, so the answer is set by whichever limit arrives first -- values per state, number of states, or total permutations.",
@@ -1983,6 +1992,27 @@
       "inherited": false,
       "depends_on": [
         "storage.structure.script_edits_read_back"
+      ]
+    },
+    {
+      "id": "storage.region.loads_without_a_player",
+      "question": "Can script load a region far from any player (world.tickingAreaManager.createTickingArea) and read a block there once the promise resolves -- and how many ticks does that take?",
+      "decides": "Whether storage somewhere nobody goes is readable when it is needed, and the latency of every cold read from it. Also how much can be held open at once (maxChunkCount).",
+      "method": "automated",
+      "surface": "script",
+      "status": "OPEN",
+      "inherited": false
+    },
+    {
+      "id": "storage.block.exact_at_extreme_coordinates",
+      "question": "Does a block written by script at extreme coordinates -- out to ten million blocks, and as near the world's edge as the game allows -- read back as the same block at the same integer position?",
+      "decides": "Whether the far reaches of the world are usable address space for state. Player positions are float32 (presence.player.teleport_lands_where_asked); block positions are integers, and this asks whether that keeps them exact where an entity's would not be.",
+      "method": "automated",
+      "surface": "engine",
+      "status": "OPEN",
+      "inherited": false,
+      "depends_on": [
+        "storage.region.loads_without_a_player"
       ]
     },
     {

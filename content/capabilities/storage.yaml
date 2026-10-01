@@ -168,3 +168,34 @@ capabilities:
     notes: >-
       Run by the test server (tools/lab.ts). Costs are in ticks from the device's own clock. Builds
       beside the player, so it says so on the action bar first.
+
+  - id: storage.region.loads_without_a_player
+    question: >-
+      Can script load a region far from any player (world.tickingAreaManager.createTickingArea) and
+      read a block there once the promise resolves -- and how many ticks does that take?
+    decides: >-
+      Whether storage somewhere nobody goes is readable when it is needed, and the latency of every
+      cold read from it. Also how much can be held open at once (maxChunkCount).
+    method: automated
+    surface: script
+    probe: director
+
+  - id: storage.block.exact_at_extreme_coordinates
+    question: >-
+      Does a block written by script at extreme coordinates -- out to ten million blocks, and as near
+      the world's edge as the game allows -- read back as the same block at the same integer position?
+    decides: >-
+      Whether the far reaches of the world are usable address space for state. Player positions are
+      float32 (presence.player.teleport_lands_where_asked); block positions are integers, and this asks
+      whether that keeps them exact where an entity's would not be.
+    method: automated
+    surface: engine
+    probe: director
+    depends_on: [storage.region.loads_without_a_player]
+    notes: >-
+      The question stops at ten million on purpose; the measurement goes to 29,999,000 and records
+      what happens there. On an iPad (2026-10-01) everything to ten million was exact, and past 2^24
+      (16,777,216) the block API's coordinates are float32 too: asked for x 29,999,003 and z
+      29,999,005, it answered with the block at 29,999,004 for both. Two addresses alias one block,
+      silently. Anything storing state out there must stay inside +-16.7 million or use even
+      coordinates only.

@@ -105,6 +105,81 @@ const LIVE: Live[] = [
       };
     },
   },
+  {
+    id: 'storage.region.loads_without_a_player',
+    async run(d) {
+      const far = { x: 1_000_000, y: 0, z: 1_000_000 };
+      const max = (await d.get('world.tickingAreaManager.maxChunkCount')) as number;
+      const t0 = (await d.get('system.currentTick')) as number;
+      await d.tickingArea('bedshock_far', far, { x: far.x + 15, y: 0, z: far.z + 15 });
+      const t1 = (await d.get('system.currentTick')) as number;
+      const block = (await d.call('player.dimension.getBlock', [{ x: far.x + 3, y: 64, z: far.z + 3 }]).catch(() => null)) as { typeId?: string } | null;
+      await d.call('world.tickingAreaManager.removeTickingArea', ['bedshock_far']).catch(() => {});
+      const ok = !!block?.typeId;
+      return {
+        verdict: ok ? 'YES' : 'NO',
+        measurement: { at: far, ticksUntilResolved: t1 - t0, read: block?.typeId ?? null, maxChunkCount: max },
+        evidence: ok ? `a million blocks out, readable ${t1 - t0} ticks after asking (network included); ${max} chunks allowed` : 'the area was created but the block did not read',
+      };
+    },
+  },
+  {
+    id: 'storage.block.exact_at_extreme_coordinates',
+    async run(d) {
+      const samples: { distance: number; wrote: string; read: string | null; at: unknown; error?: string }[] = [];
+      for (const distance of [1_000, 100_000, 10_000_000, 29_999_000]) {
+        const at = { x: distance + 3, y: 300, z: distance + 5 };
+        const name = `bedshock_x${distance}`;
+        try {
+          await d.tickingArea(name, at, at);
+          await d.program([{ call: ['mc', 'BlockPermutation', 'resolve'], args: ['minecraft:gold_block'] }, { call: ['player', 'dimension', 'setBlockPermutation'], args: [at, { $: 0 }] }]);
+          const got = (await d.call('player.dimension.getBlock', [at])) as { typeId?: string; location?: unknown } | null;
+          samples.push({ distance, wrote: 'minecraft:gold_block', read: got?.typeId ?? null, at: got?.location ?? null });
+          await d.program([{ call: ['mc', 'BlockPermutation', 'resolve'], args: ['minecraft:air'] }, { call: ['player', 'dimension', 'setBlockPermutation'], args: [at, { $: 0 }] }]);
+        } catch (err) {
+          samples.push({ distance, wrote: 'minecraft:gold_block', read: null, at: null, error: (err as Error).message.slice(0, 160) });
+        } finally {
+          await d.call('world.tickingAreaManager.removeTickingArea', [name]).catch(() => {});
+        }
+      }
+      const exact = (s: (typeof samples)[number]) => {
+        const l = s.at as { x: number; y: number; z: number } | null;
+        return s.read === s.wrote && !!l && l.x === s.distance + 3 && l.y === 300 && l.z === s.distance + 5;
+      };
+      const core = samples.filter((s) => s.distance <= 10_000_000);
+      const ok = core.every(exact);
+      return {
+        verdict: ok ? 'YES' : 'NO',
+        measurement: { samples },
+        evidence: samples.map((s) => `${s.distance}: ${exact(s) ? 'exact' : s.error ?? `read ${s.read}`}`).join('; '),
+      };
+    },
+  },
+  {
+    id: 'render.light.script_light_reaches_neighbours',
+    async run(d) {
+      const me = (await d.get('player.location')) as Vec;
+      const src = { x: Math.floor(me.x), y: Math.min(318, Math.floor(me.y) + 12), z: Math.floor(me.z) };
+      const probe = { x: src.x + 1, y: src.y, z: src.z };
+      const level = async () => (await d.program([{ call: ['player', 'dimension', 'getBlock'], args: [probe] }, { call: ['$0', 'getLightLevel'] }])) as number;
+      const place = (block: string, states?: object) =>
+        d.program([{ call: ['mc', 'BlockPermutation', 'resolve'], args: [block, ...(states ? [states] : [])] }, { call: ['player', 'dimension', 'setBlockPermutation'], args: [src, { $: 0 }] }]);
+      const was = await d.call('world.getTimeOfDay');
+      await d.call('world.setTimeOfDay', [18000]);
+      const readings: Record<string, number> = { none: await level() };
+      for (const l of [15, 7]) {
+        await place('minecraft:light_block', { block_light_level: l });
+        await new Promise((r) => setTimeout(r, 300));
+        readings[`source ${l}`] = await level();
+      }
+      await place('minecraft:air');
+      await new Promise((r) => setTimeout(r, 300));
+      readings.removed = await level();
+      await d.call('world.setTimeOfDay', [typeof was === 'number' ? was : 6000]);
+      const ok = readings['source 15']! > readings.none! && readings['source 7']! < readings['source 15']! && readings.removed === readings.none;
+      return { verdict: ok ? 'YES' : 'NO', measurement: { readings, source: src }, evidence: `one block away: ${JSON.stringify(readings)}` };
+    },
+  },
 ];
 
 /** Pack probes safe to run with nobody asked: headless rows only, nothing on the player's screen. */

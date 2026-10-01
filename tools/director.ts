@@ -111,6 +111,39 @@ export class Director {
     return this.rpc('stop', { id });
   }
 
+  /**
+   * Steps that build `{ key: value, ... }` ON THE DEVICE, where values may be earlier steps' results
+   * (`{ $: n }`). Packs up to 0.1.4 only resolve a reference at the top level of an argument, so an
+   * options object holding a game object (a Dimension, an Entity) has to be assembled there, out of
+   * the game's own Array.of and Object.fromEntries. Returns the steps and the index of the object.
+   */
+  static object(at: number, entries: [string, unknown][]): { steps: Step[]; index: number } {
+    const steps: Step[] = [
+      { call: ['player', 'getTags'] },
+      { get: [`$${at}`, 'constructor'] },
+      { get: ['player', 'location', 'constructor'] },
+    ];
+    const ArrayRef = at + 1, ObjectRef = at + 2;
+    const pairs: number[] = [];
+    for (const [k, v] of entries) {
+      steps.push({ call: [`$${ArrayRef}`, 'of'], args: [k, v] });
+      pairs.push(at + steps.length - 1);
+    }
+    steps.push({ call: [`$${ArrayRef}`, 'of'], args: pairs.map((i) => ({ $: i })) });
+    steps.push({ call: [`$${ObjectRef}`, 'fromEntries'], args: [{ $: at + steps.length - 1 }] });
+    return { steps, index: at + steps.length - 1 };
+  }
+
+  /** Create a ticking area over [from, to] in the player's dimension; resolves once it has loaded. */
+  async tickingArea(name: string, from: unknown, to: unknown): Promise<void> {
+    const o = Director.object(1, [['dimension', { $: 0 }], ['from', from], ['to', to]]);
+    await this.program([
+      { get: ['player', 'dimension'] },
+      ...o.steps,
+      { call: ['world', 'tickingAreaManager', 'createTickingArea'], args: [name, { $: o.index }] },
+    ]);
+  }
+
   get(dotted: string) {
     return this.program([{ get: path(dotted) }]);
   }

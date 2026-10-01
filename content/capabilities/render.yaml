@@ -242,3 +242,14 @@ capabilities:
           memory.
     depends_on: [render.attachable.draws_on_custom_item]
     legacy: P3c
+
+  - id: render.light.script_light_reaches_neighbours
+    question: >-
+      Does a light source placed by script (minecraft:light_block at a chosen level) change the light
+      level script reads one block away, and does removing it put the level back?
+    decides: >-
+      Whether anything script controls can light a space as an effect, at a chosen strength, and be
+      animated. Says nothing about COLOURED light, which is a separate question.
+    method: automated
+    surface: engine
+    probe: director

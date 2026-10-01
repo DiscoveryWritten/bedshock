@@ -110,6 +110,7 @@ is how you find out the day it starts working.
 | `render.attachable.several_controllers_at_once` | · |
 | `render.attachable.sits_at_model_origin_without_animation` | — |
 | `render.attachable.accepts_vanilla_hold_animations` | · |
+| `render.light.script_light_reaches_neighbours` | · |
 | **storage** |  |
 | `storage.block.state_permutation_bits` | · |
 | `storage.block.permutations_round_trip_exactly` | · |
@@ -119,6 +120,8 @@ is how you find out the day it starts working.
 | `storage.structure.save_cost_is_incremental` | · |
 | `storage.structure.largest_edge_saved_within_a_tick` | · |
 | `storage.structure.round_trips_a_built_room` | · |
+| `storage.region.loads_without_a_player` | · |
+| `storage.block.exact_at_extreme_coordinates` | · |
 | **ui** |  |
 | `ui.form.button_icon_resolves_an_unindexed_path` | · |
 | `ui.form.button_icon_resolves_a_bare_atlas_key` | · |
@@ -1633,6 +1636,16 @@ What can be drawn, and what the thing drawing it is allowed to know. The load-be
 
 </details>
 
+### `render.light.script_light_reaches_neighbours`
+
+**Does a light source placed by script (minecraft:light_block at a chosen level) change the light level script reads one block away, and does removing it put the level back?**
+
+*Decides:* Whether anything script controls can light a space as an effect, at a chosen strength, and be animated. Says nothing about COLOURED light, which is a separate question.
+
+<sub>method: `automated` · surface: `engine` · probe: `director`</sub>
+
+**Never measured.** This row is a guess, however confident the prose around it sounds.
+
 ## storage
 
 Keeping state in the world itself rather than in scoreboards or dynamic properties: blocks as symbols, structures as block arrays the save file owns, and what reading and writing them costs. The shape these are for is a reader -- state read when it is needed and written a little at a time -- never a save that stalls the game.
@@ -1751,6 +1764,28 @@ Keeping state in the world itself rather than in scoreboards or dynamic properti
 **Never measured.** This row is a guess, however confident the prose around it sounds.
 
 > Run by the test server (tools/lab.ts). Costs are in ticks from the device's own clock. Builds beside the player, so it says so on the action bar first.
+
+### `storage.region.loads_without_a_player`
+
+**Can script load a region far from any player (world.tickingAreaManager.createTickingArea) and read a block there once the promise resolves -- and how many ticks does that take?**
+
+*Decides:* Whether storage somewhere nobody goes is readable when it is needed, and the latency of every cold read from it. Also how much can be held open at once (maxChunkCount).
+
+<sub>method: `automated` · surface: `script` · probe: `director`</sub>
+
+**Never measured.** This row is a guess, however confident the prose around it sounds.
+
+### `storage.block.exact_at_extreme_coordinates`
+
+**Does a block written by script at extreme coordinates -- out to ten million blocks, and as near the world's edge as the game allows -- read back as the same block at the same integer position?**
+
+*Decides:* Whether the far reaches of the world are usable address space for state. Player positions are float32 (presence.player.teleport_lands_where_asked); block positions are integers, and this asks whether that keeps them exact where an entity's would not be.
+
+<sub>method: `automated` · surface: `engine` · probe: `director` · rests on: `storage.region.loads_without_a_player`</sub>
+
+**Never measured.** This row is a guess, however confident the prose around it sounds.
+
+> The question stops at ten million on purpose; the measurement goes to 29,999,000 and records what happens there. On an iPad (2026-10-01) everything to ten million was exact, and past 2^24 (16,777,216) the block API's coordinates are float32 too: asked for x 29,999,003 and z 29,999,005, it answered with the block at 29,999,004 for both. Two addresses alias one block, silently. Anything storing state out there must stay inside +-16.7 million or use even coordinates only.
 
 ## ui
 
@@ -1888,5 +1923,5 @@ other repositories can carry `@requires bedshock:<id>` and `bedshock check` will
 if the cited row is not settled at that pack's `min_engine_version` — so a design can never
 quietly come to rest on a guess.
 
-<sub>86 capabilities · 28 observations · 1 version(s): 1.21.120</sub>
+<sub>89 capabilities · 28 observations · 1 version(s): 1.21.120</sub>
 
