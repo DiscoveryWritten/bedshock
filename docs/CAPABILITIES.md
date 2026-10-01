@@ -118,6 +118,7 @@ is how you find out the day it starts working.
 | `storage.structure.survive_hard_kill` | · |
 | `storage.structure.save_cost_is_incremental` | · |
 | `storage.structure.largest_edge_saved_within_a_tick` | · |
+| `storage.structure.round_trips_a_built_room` | · |
 | **ui** |  |
 | `ui.form.button_icon_resolves_an_unindexed_path` | · |
 | `ui.form.button_icon_resolves_a_bare_atlas_key` | · |
@@ -1739,6 +1740,18 @@ Keeping state in the world itself rather than in scoreboards or dynamic properti
 
 > This one measures the machine as much as the game, so the measurement carries each trial's milliseconds. Compare it only against runs on the same hardware.
 
+### `storage.structure.round_trips_a_built_room`
+
+**Can a 16^3 room built and terraformed by script be saved as a World-mode structure and put back -- beside itself, and in its own place after being torn down -- so that the game's own /testforblocks finds it identical?**
+
+*Decides:* Whether a module of the arena, shaped at runtime, can be serialised and restored exactly, and what building, saving and placing one costs on the device. Partial-height blocks (snow layers, standing in for goo) are included because those are the states most likely to be lost.
+
+<sub>method: `automated` · surface: `engine` · probe: `director` · rests on: `storage.structure.script_edits_read_back`</sub>
+
+**Never measured.** This row is a guess, however confident the prose around it sounds.
+
+> Run by the test server (tools/lab.ts). Costs are in ticks from the device's own clock. Builds beside the player, so it says so on the action bar first.
+
 ## ui
 
 `@minecraft/server-ui` is the only surface where a pack can draw an arbitrary picture per stack, which makes what a button's icon path actually resolves the most valuable unmeasured thing in this file. Everything else here is about the boundaries of the form API -- what it cannot be made to do, recorded so nobody spends a session finding out.
@@ -1875,5 +1888,5 @@ other repositories can carry `@requires bedshock:<id>` and `bedshock check` will
 if the cited row is not settled at that pack's `min_engine_version` — so a design can never
 quietly come to rest on a guess.
 
-<sub>85 capabilities · 28 observations · 1 version(s): 1.21.120</sub>
+<sub>86 capabilities · 28 observations · 1 version(s): 1.21.120</sub>
 

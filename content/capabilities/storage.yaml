@@ -151,3 +151,20 @@ capabilities:
       This one measures the machine as much as the game, so the measurement carries each trial's
       milliseconds. Compare it only against runs on the same hardware.
     depends_on: [storage.structure.script_edits_read_back]
+
+  - id: storage.structure.round_trips_a_built_room
+    question: >-
+      Can a 16^3 room built and terraformed by script be saved as a World-mode structure and put back
+      -- beside itself, and in its own place after being torn down -- so that the game's own
+      /testforblocks finds it identical?
+    decides: >-
+      Whether a module of the arena, shaped at runtime, can be serialised and restored exactly, and
+      what building, saving and placing one costs on the device. Partial-height blocks (snow layers,
+      standing in for goo) are included because those are the states most likely to be lost.
+    method: automated
+    surface: engine
+    probe: director
+    depends_on: [storage.structure.script_edits_read_back]
+    notes: >-
+      Run by the test server (tools/lab.ts). Costs are in ticks from the device's own clock. Builds
+      beside the player, so it says so on the action bar first.

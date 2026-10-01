@@ -22,6 +22,7 @@ import { join } from 'node:path';
 
 import { Director } from './director.ts';
 import { handled, type Vec } from './handling.ts';
+import { lab } from './lab.ts';
 
 type Verdict = 'YES' | 'NO' | 'INCONCLUSIVE';
 interface Answer {
@@ -84,6 +85,20 @@ const LIVE: Live[] = [
         evidence: first
           ? `lands within 0.001 out to ${samples[samples.indexOf(first) - 1]?.distance ?? 0}; at ${first.distance} off by ${first.error}`
           : 'within 0.001 everywhere tried, to ten million',
+      };
+    },
+  },
+  {
+    id: 'storage.structure.round_trips_a_built_room',
+    async run(d) {
+      await d.call('player.onScreenDisplay.setActionBar', ['§e⟳ building a test room beside you']);
+      const r = await lab(d);
+      await d.call('player.onScreenDisplay.setActionBar', ['§7room done']);
+      const ok = r.identicalCopy && r.identicalAfterRebuild;
+      return {
+        verdict: ok ? 'YES' : 'NO',
+        measurement: r,
+        evidence: `${ok ? 'identical' : r.notes.join('; ')} -- ticks: shell ${r.ticks.shell}, terrain ${r.ticks.terrain} (${r.steps} steps), save ${r.ticks.save}, place ${r.ticks.restore}`,
       };
     },
   },

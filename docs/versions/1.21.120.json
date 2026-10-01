@@ -1,13 +1,13 @@
 {
   "schema": 1,
   "minecraft": "1.21.120",
-  "catalog_revision": "r94cc1c65",
-  "release": "mc-1.21.120-r94cc1c65",
+  "catalog_revision": "rbd1c524d",
+  "release": "mc-1.21.120-rbd1c524d",
   "measured_through": "2026-08-03T00:00:00Z",
   "counts": {
     "SETTLED": 22,
     "CLOSED-NEGATIVE": 5,
-    "OPEN": 41,
+    "OPEN": 42,
     "INCONCLUSIVE": 1,
     "DRIFT": 0,
     "UNDERMINED": 0,
@@ -1969,6 +1969,18 @@
           "to": 64
         }
       },
+      "depends_on": [
+        "storage.structure.script_edits_read_back"
+      ]
+    },
+    {
+      "id": "storage.structure.round_trips_a_built_room",
+      "question": "Can a 16^3 room built and terraformed by script be saved as a World-mode structure and put back -- beside itself, and in its own place after being torn down -- so that the game's own /testforblocks finds it identical?",
+      "decides": "Whether a module of the arena, shaped at runtime, can be serialised and restored exactly, and what building, saving and placing one costs on the device. Partial-height blocks (snow layers, standing in for goo) are included because those are the states most likely to be lost.",
+      "method": "automated",
+      "surface": "engine",
+      "status": "OPEN",
+      "inherited": false,
       "depends_on": [
         "storage.structure.script_edits_read_back"
       ]
