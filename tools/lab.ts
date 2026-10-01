@@ -31,9 +31,9 @@ export interface LabResult {
 const at = (o: Vec, x: number, y: number, z: number): Vec => ({ x: o.x + x, y: o.y + y, z: o.z + z });
 
 /** A hill field that is the same every run, so two runs can be compared. 1..10 tall. */
-const height = (x: number, z: number) => Math.max(1, Math.min(10, Math.round(4 + 3 * Math.sin(x / 2.3) * Math.cos(z / 2.9) + (x + z) / 7)));
+export const height = (x: number, z: number) => Math.max(1, Math.min(10, Math.round(4 + 3 * Math.sin(x / 2.3) * Math.cos(z / 2.9) + (x + z) / 7)));
 /** The "goo": a snow layer of 1..8 eighths on every hilltop, varying across the room. */
-const eighths = (x: number, z: number) => ((x * 3 + z * 5) % 8) + 1;
+export const eighths = (x: number, z: number) => ((x * 3 + z * 5) % 8) + 1;
 
 async function tick(d: Director): Promise<number> {
   return (await d.get('system.currentTick')) as number;

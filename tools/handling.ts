@@ -96,6 +96,35 @@ export async function settled(d: Director, ms = 15000): Promise<boolean> {
   return false;
 }
 
+/**
+ * KNOW WHAT THE PLAYER IS BEING MADE TO SEE. A camera aimed at coordinates without looking once
+ * showed treetops and a black roof instead of the goo wave it was pointed at: spruce leaves stood on
+ * both sight lines, and the room had a ceiling. So a shot is chosen, not assumed: candidates are
+ * tried in order and the first whose ray reaches the subject unobstructed wins. A ray that stops
+ * inside `inside` (the subject's own box, when the subject is enclosed) counts as reaching it.
+ * Returns the chosen spot and, for each rejected one, what was in the way.
+ */
+export async function aim(
+  d: Director,
+  subject: Vec,
+  candidates: Vec[],
+  inside?: { min: Vec; max: Vec },
+): Promise<{ camera?: Vec; rejected: { at: Vec; blocked: string }[] }> {
+  const rejected: { at: Vec; blocked: string }[] = [];
+  const within = (p: Vec) => !!inside && [p.x, p.y, p.z].every((n, i) => n >= [inside.min.x, inside.min.y, inside.min.z][i]! && n <= [inside.max.x, inside.max.y, inside.max.z][i]!);
+  for (const at of candidates) {
+    const dir = { x: subject.x - at.x, y: subject.y - at.y, z: subject.z - at.z };
+    const len = Math.hypot(dir.x, dir.y, dir.z);
+    const hit = (await d.call('player.dimension.getBlockFromRay', [at, { x: dir.x / len, y: dir.y / len, z: dir.z / len }, { maxDistance: Math.max(0, len - 1.5) }]).catch(() => null)) as
+      | { block?: { typeId?: string; location?: Vec } }
+      | null;
+    const where = hit?.block?.location;
+    if (!hit || (where && within(where))) return { camera: at, rejected };
+    rejected.push({ at, blocked: `${hit.block?.typeId ?? 'something'} at ${where ? `${where.x} ${where.y} ${where.z}` : '?'}` });
+  }
+  return { rejected };
+}
+
 /** Far enough that the destination is probably not loaded: past this, the satellite move. */
 const FAR = 500;
 
