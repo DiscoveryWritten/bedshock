@@ -1,0 +1,34 @@
+# The client: what a connected device can say about itself, asked from the test server.
+#
+# These rows are run by the director (tools/suite.ts) through reflection, not by a probe in the
+# pack -- `probe: director` means "lives on the test server". A new one is a change on the server
+# and never a new build of the pack.
+
+domain: client
+about: >-
+  What the device in front of the player reports about itself through the script API: platform,
+  memory, render distance, graphics, controls -- and what it will not report. This is how a client
+  result is identified when the game's own version is not available to script.
+
+capabilities:
+  - id: client.system.describes_itself
+    question: >-
+      Does player.clientSystemInfo report the platform, memory tier, render distance and locale, and
+      what are they?
+    decides: >-
+      Whether results from different devices can be told apart without asking the person holding
+      them. The measurement is the device's fingerprint.
+    method: automated
+    surface: script
+    probe: director
+    depends_on: [presence.player.visible_to_script]
+
+  - id: client.api.reveals_engine_version
+    question: Does anything in @minecraft/server or `system` expose the game's own version number?
+    decides: >-
+      Whether a client run can file its results under the version it ran on without anyone reading
+      it off a title screen. If not, results are identified by the script API version and the
+      device's fingerprint, and the game version stays unknown until somebody supplies it.
+    method: automated
+    surface: script
+    probe: director

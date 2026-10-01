@@ -1,13 +1,13 @@
 {
   "schema": 1,
   "minecraft": "1.21.120",
-  "catalog_revision": "r8466d172",
-  "release": "mc-1.21.120-r8466d172",
+  "catalog_revision": "r2b78d4eb",
+  "release": "mc-1.21.120-r2b78d4eb",
   "measured_through": "2026-08-03T00:00:00Z",
   "counts": {
     "SETTLED": 22,
     "CLOSED-NEGATIVE": 5,
-    "OPEN": 38,
+    "OPEN": 40,
     "INCONCLUSIVE": 1,
     "DRIFT": 0,
     "UNDERMINED": 0,
@@ -21,6 +21,27 @@
     "render.attachable.reads_held_item_durability"
   ],
   "capabilities": [
+    {
+      "id": "client.system.describes_itself",
+      "question": "Does player.clientSystemInfo report the platform, memory tier, render distance and locale, and what are they?",
+      "decides": "Whether results from different devices can be told apart without asking the person holding them. The measurement is the device's fingerprint.",
+      "method": "automated",
+      "surface": "script",
+      "status": "OPEN",
+      "inherited": false,
+      "depends_on": [
+        "presence.player.visible_to_script"
+      ]
+    },
+    {
+      "id": "client.api.reveals_engine_version",
+      "question": "Does anything in @minecraft/server or `system` expose the game's own version number?",
+      "decides": "Whether a client run can file its results under the version it ran on without anyone reading it off a title screen. If not, results are identified by the script API version and the device's fingerprint, and the game version stays unknown until somebody supplies it.",
+      "method": "automated",
+      "surface": "script",
+      "status": "OPEN",
+      "inherited": false
+    },
     {
       "id": "distribution.mcaddon.reinstall_replaces_in_place",
       "question": "Does importing an `.mcaddon` whose UUID is already installed replace the installed copy?",

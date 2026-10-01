@@ -69,6 +69,30 @@ export class Director {
     throw new Error(`no answer to ${method} within ${timeoutMs / 1000}s -- is a game connected, with bedshock 0.1.4 or later?`);
   }
 
+  /** The script API the client runs, as the bridge noted it from the load lines. */
+  async api(): Promise<string> {
+    const res = await fetch(this.url('/events?since=0'));
+    const { lines } = (await res.json()) as { lines: string[] };
+    const notes = lines.map((l) => /client runs @minecraft\/server (\S+)/.exec(l)?.[1]).filter(Boolean);
+    return notes.at(-1) ?? 'unknown';
+  }
+
+  /** Trigger a probe already in the pack and collect what it prints, up to its DONE. */
+  async runProbe(name: string, timeoutMs = 180000): Promise<string[]> {
+    if (this.cursor < 0) await this.lines();
+    else await this.lines();
+    await this.command(`scriptevent bedshock:probe ${name}`);
+    const seen: string[] = [];
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      for (const line of await this.lines()) {
+        seen.push(line);
+        if (/BEDSHOCK DONE \d+/.test(line)) return seen;
+      }
+    }
+    throw new Error(`probe ${name} did not finish within ${timeoutMs / 1000}s`);
+  }
+
   program(steps: Step[]): Promise<unknown> {
     return this.rpc('run', { program: steps });
   }
@@ -106,5 +130,10 @@ export async function main(argv: string[]): Promise<void> {
   if (verb === 'keys' && target) return show(await d.keys(target));
   if (verb === 'call' && target) return show(await d.call(target, extra ? JSON.parse(extra) : []));
   if (verb === 'program' && target) return show(await d.program(JSON.parse(readFileSync(target, 'utf8'))));
-  throw new Error('usage: bedshock director hello | get <path> | keys <path> | call <path> [json args] | program <file.json>');
+  if (verb === 'suite') {
+    const { suite } = await import('./suite.ts');
+    process.stdout.write(`log: ${await suite({ retest: argv.includes('--retest') })}\n`);
+    return;
+  }
+  throw new Error('usage: bedshock director hello | get <path> | keys <path> | call <path> [json args] | program <file.json> | suite [--retest]');
 }

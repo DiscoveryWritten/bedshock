@@ -394,6 +394,8 @@ test('the probes not yet ported are exactly the ones we know about', () => {
     'durability', 'dynprops', 'container', 'offhand', 'menu', 'fallingblock',
     'fallcurve', 'anvilgap', 'throw', 'knockback', 'repair', 'distribution', 'ruler', 'glyphs',
     'flipbook', 'formicon', 'storage', 'storage_save', 'presence', 'harness',
+    // Not a pack probe: rows run by the test server, tools/suite.ts.
+    'director',
   ]);
   const missing = [...new Set(
     catalog.capabilities.filter((c) => c.probe && !implemented.has(c.probe)).map((c) => c.probe!),

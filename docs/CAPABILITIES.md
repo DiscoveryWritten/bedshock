@@ -30,6 +30,9 @@ is how you find out the day it starts working.
 
 | Capability | 1.21.120 |
 |---|---|
+| **client** |  |
+| `client.system.describes_itself` | · |
+| `client.api.reveals_engine_version` | · |
 | **distribution** |  |
 | `distribution.mcaddon.reinstall_replaces_in_place` | — |
 | `distribution.mcworld.carries_its_own_packs` | · |
@@ -160,6 +163,30 @@ answer. Shown on 1.21.120.
 *None measured yet. The questions are written; nobody has run them.*
 
 7 solved row(s) have no value yet: `physics.falling_block.gravity_curve`, `physics.falling_block.min_clearance_under_a_falling_anvil`, `physics.throw.item_travel_distance`, `physics.knockback.blocks_per_unit`, `physics.knockback.blocks_per_unit_on_an_entity`, `storage.block.state_permutation_bits`, `storage.structure.largest_edge_saved_within_a_tick`
+
+## client
+
+What the device in front of the player reports about itself through the script API: platform, memory, render distance, graphics, controls -- and what it will not report. This is how a client result is identified when the game's own version is not available to script.
+
+### `client.system.describes_itself`
+
+**Does player.clientSystemInfo report the platform, memory tier, render distance and locale, and what are they?**
+
+*Decides:* Whether results from different devices can be told apart without asking the person holding them. The measurement is the device's fingerprint.
+
+<sub>method: `automated` · surface: `script` · probe: `director` · rests on: `presence.player.visible_to_script`</sub>
+
+**Never measured.** This row is a guess, however confident the prose around it sounds.
+
+### `client.api.reveals_engine_version`
+
+**Does anything in @minecraft/server or `system` expose the game's own version number?**
+
+*Decides:* Whether a client run can file its results under the version it ran on without anyone reading it off a title screen. If not, results are identified by the script API version and the device's fingerprint, and the game version stays unknown until somebody supplies it.
+
+<sub>method: `automated` · surface: `script` · probe: `director`</sub>
+
+**Never measured.** This row is a guess, however confident the prose around it sounds.
 
 ## distribution
 
@@ -1835,5 +1862,5 @@ other repositories can carry `@requires bedshock:<id>` and `bedshock check` will
 if the cited row is not settled at that pack's `min_engine_version` — so a design can never
 quietly come to rest on a guess.
 
-<sub>82 capabilities · 28 observations · 1 version(s): 1.21.120</sub>
+<sub>84 capabilities · 28 observations · 1 version(s): 1.21.120</sub>
 
