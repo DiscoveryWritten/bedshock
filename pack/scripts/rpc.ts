@@ -93,10 +93,19 @@ function resolve(path: unknown[], roots: Record<string, unknown>, steps: unknown
   return { owner, value };
 }
 
+/** `{ $: n }` anywhere in an argument -- nested in objects and arrays too -- is step n's result. */
+function ref(v: unknown, steps: unknown[]): unknown {
+  if (Array.isArray(v)) return v.map((x) => ref(x, steps));
+  if (v && typeof v === 'object') {
+    const o = v as Record<string, unknown>;
+    if (typeof o.$ === 'number' && Object.keys(o).length === 1) return steps[o.$];
+    return Object.fromEntries(Object.entries(o).map(([k, x]) => [k, ref(x, steps)]));
+  }
+  return v;
+}
+
 function args(list: unknown[] | undefined, steps: unknown[]): unknown[] {
-  return (list ?? []).map((a) =>
-    a && typeof a === 'object' && !Array.isArray(a) && typeof (a as { $?: unknown }).$ === 'number' ? steps[(a as { $: number }).$] : a,
-  );
+  return (list ?? []).map((a) => ref(a, steps));
 }
 
 export async function runProgram(program: Step[], player: Player | undefined): Promise<unknown> {

@@ -126,15 +126,9 @@ probe yet.
 - **Can script write and read blocks in the bedrock floor (y -64 to -60), and does anything put
   bedrock back?** — Decides whether state can live directly under the chunks a pack already uses,
   out of the player's way, with no extra chunks to keep loaded.
-- **Can a pack load a far region on demand without a player** (a ticking area through
-  `runCommand`, or anything else), how many at once, how large, and how many ticks from asking to
-  the first readable block? — Decides whether storage somewhere nobody goes is readable when it is
-  needed. The tick count is the latency of every cold read. A number.
-- **Do `setBlockPermutation`, `getBlock` and `getBlocks` keep working, exactly, at extreme
-  coordinates**: the far lands and the stripe lands, where the float error that dampens player
-  movement lives? — Block positions are integers, so they might be untouched by what breaks
-  movement there. Nobody has to walk to storage for it to work. Decides whether the extremes of
-  the world are usable address space.
+- Promoted 2026-10-01: loading a far region without a player
+  (`storage.region.loads_without_a_player`) and block exactness at extreme coordinates
+  (`storage.block.exact_at_extreme_coordinates`, which found aliasing past 2^24).
 - **How many block writes, and how many reads, fit in one tick before the tick overruns?** —
   Decides how fast a reader can page state in and out without being felt. Separately for single
   calls, `fillBlocks` and `getBlocks`, because the bulk calls may be the whole answer. Numbers.
