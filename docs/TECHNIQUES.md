@@ -3,6 +3,9 @@
 **This is a proposal, not a built thing.** Nothing in `tools/` implements it yet. It is
 written down so the shape can be argued with before anybody builds it.
 
+[`PARTS.md`](PARTS.md) takes this further: a technique you can import is a **part**, lodged on
+Waterfall, and stacks of parts are attested on a public board here.
+
 ## The gap
 
 A capability answers *can Bedrock do X*. It is a primitive, it is measured by one probe, and

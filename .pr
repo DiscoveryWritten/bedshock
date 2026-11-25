@@ -1,1 +1,23 @@
-no draft yet - replace this file: line 1 becomes the PR title, the rest the body
+PARTS.md: parts on Waterfall, stacks attested here, outside testers who only release a result
+
+A proposal doc, no code. It turns TECHNIQUES.md into a shape and logs one rule as settled.
+
+## The rule it records
+- Every upload carries a needs list of human/hardware tests.
+- Anyone can take the bedshock-rigged build; results fold back in.
+- The tester's only act is releasing the result: no accounts, keys, tokens, passwords, codes or forms. Flows that need one are not candidates.
+- Minimum: a completion manifest, verified on return, and public stats.
+- Transport deliberately unsolved; the space stays open rather than filled with a compromised flow.
+
+## The shape
+- part / library / stack / board. Waterfall keeps the files, bedshock vouches for them.
+- `features` (written) vs `spec` (computed from the bundle, incl. API members checked against the declared module, which is what would have caught Zero Fall 1.0.0).
+- Board: append-only attestations, STANDING / SUSPECT / BROKEN per stack per version, collision and double-load checks.
+- A one-page brief for an agent building and lodging a part.
+- Build order: check follows imports, spec extractor, part kind on Waterfall, board, rigged build.
+
+## Merge qualifications
+- [x] docs only; README "Where things are" row and a pointer from TECHNIQUES.md
+- [ ] owner reads the rule section and confirms it says what was meant
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
