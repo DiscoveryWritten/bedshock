@@ -403,6 +403,7 @@ and get the same collection rules applied to it.
 | [`docs/DESIGN.md`](docs/DESIGN.md) | Why it is shaped this way, and which failures each rule is for |
 | [`docs/PORTING.md`](docs/PORTING.md) | Moving a messy in-repo test battery onto this |
 | [`docs/TECHNIQUES.md`](docs/TECHNIQUES.md) | **Proposal.** Reference implementations that carry the version they last stood up on |
+| [`docs/PARTS.md`](docs/PARTS.md) | **Proposal.** Parts lodged on Waterfall, stacks of them attested here, and outside testers who only release a result |
 | [`docs/SOLVING.md`](docs/SOLVING.md) | Measuring a number instead of a yes — and doing it with your own questions |
 | [`docs/WANTED.md`](docs/WANTED.md) | Questions with no row yet, and the decision each blocks |
 | [`docs/HARNESS.md`](docs/HARNESS.md) | **Design.** Measuring a *client* on real hardware, by mounting this engine on a station that has one attached |
